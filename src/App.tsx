@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { DataProvider } from './contexts/DataContext';
-import { LandingPage } from './pages/LandingPage';
 import { Login } from './pages/Login';
 import { Register } from './pages/Register';
 import { UserDashboard } from './pages/UserDashboard';
@@ -27,13 +26,11 @@ function AppContent() {
   };
 
   switch (currentPage) {
-    case 'login':
-      return <Login onNavigate={handleNavigate} />;
     case 'register':
       return <Register onNavigate={handleNavigate} onRegister={register} />;
     case 'home':
     default:
-      return <LandingPage onNavigate={handleNavigate} />;
+      return <Login onNavigate={handleNavigate} />;
   }
 }
 
