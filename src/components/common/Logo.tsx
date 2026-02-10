@@ -1,4 +1,5 @@
 import { ImageWithFallback } from '../figma/ImageWithFallback'
+import clubLogo from '@/images/logo/club-logo.png'
 
 interface LogoProps {
   size?: 'small' | 'medium' | 'large'
@@ -19,15 +20,14 @@ export function Logo({ size = 'medium', className = '', showPlaceholder = true }
     large: 'text-sm'
   }
 
-  // Aquí puedes cambiar la ruta cuando tengas un logo real
-  const logoPath = '/images/logo/club-logo.png'
-  const hasLogo = false // Cambiar a true cuando tengas un logo
+  // Logo imported as Vite asset
+  const hasLogo = true
 
   if (hasLogo) {
     return (
       <div className={`${sizes[size]} ${className}`}>
         <ImageWithFallback
-          src={logoPath}
+          src={clubLogo}
           alt="Logo del Club"
           className="w-full h-full object-contain rounded-xl"
         />
