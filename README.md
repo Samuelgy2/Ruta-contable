@@ -1,150 +1,818 @@
-# Sistema de Gestión Financiera del Club
+# Ruta contable - Documentación Completa del Código
 
-Sistema completo de gestión financiera para clubes con autenticación de usuarios, gestión de transacciones, socios y reportes.
+## Descripción General
 
-## 🎨 Características
+ClubFinance es una aplicación web para gestión financiera diseñada específicamente para clubes y organizaciones. Construida con React 18, TypeScript y Tailwind CSS, utiliza una arquitectura basada en características con localStorage para persistencia de datos.
 
-- **Sistema de autenticación** con roles de Usuario y Administrador
-- **Panel de Usuario**: Gestión de transacciones, consulta de socios y reportes básicos
-- **Panel de Administrador**: Control total del sistema con 5 secciones principales
-- **Gestión de transacciones**: Ingresos y gastos con categorización
-- **Gestión de socios**: Membresías, cuotas y seguimiento
-- **Exportación de datos**: CSV, JSON y reportes en texto
-- **Diseño minimalista**: Colores institucionales verde, negro y blanco
+---
 
-## 🏗️ Arquitectura del Proyecto
+## Tabla de Contenidos
+
+1. [Estructura del Proyecto](#estructura-del-proyecto)
+2. [Módulos Principales](#módulos-principales)
+3. [Componentes](#componentes)
+4. [Contextos y Gestión de Estado](#contextos-y-gestión-de-estado)
+5. [Utilidades](#utilidades)
+6. [Tipos e Interfaces](#tipos-e-interfaces)
+7. [Flujo de Datos](#flujo-de-datos)
+8. [Características](#características)
+9. [Consideraciones de Seguridad](#consideraciones-de-seguridad)
+10. [Referencia de API](#referencia-de-api)
+
+---
+
+## Estructura del Proyecto
 
 ```
-/
-├── App.tsx                 # Componente principal y enrutamiento
-├── types/
-│   └── index.ts           # Tipos TypeScript centralizados
-├── contexts/
-│   ├── AuthContext.tsx    # Contexto de autenticación
-│   └── DataContext.tsx    # Contexto de datos del sistema
-├── hooks/
-│   └── useStats.ts        # Hook para estadísticas calculadas
-├── utils/
-│   ├── initialData.ts     # Datos iniciales del sistema
-│   ├── export.ts          # Funciones de exportación
-│   ├── format.ts          # Funciones de formateo
-│   └── validation.ts      # Funciones de validación
-├── components/
-│   ├── Header.tsx         # Cabecera de la aplicación
-│   ├── StatCard.tsx       # Tarjetas de estadísticas
-│   ├── Logo.tsx           # Componente de logotipo
-│   └── ui/                # Componentes Shadcn UI
-├── pages/
-│   ├── Login.tsx          # Página de inicio de sesión
-│   ├── UserDashboard.tsx  # Panel de usuario
-│   └── AdminPanel.tsx     # Panel de administrador
-└── images/                # Recursos gráficos
-    └── logo/              # Logotipos del club
+src/
+├── App.tsx                      # Componente raíz de la aplicación
+├── main.tsx                     # Punto de entrada de la aplicación
+├── index.css                    # Estilos globales
+├── types/                       # Definiciones de tipos TypeScript
+│   └── index.ts                 # Tipos centralizados
+├── shared/                      # Código compartido/reutilizable
+│   ├── components/
+│   │   ├── Logo.tsx             # Componente de logo
+│   │   └── ImageWithFallback.tsx # Imagen con manejo de errores
+│   └── types/
+│       └── index.ts             # Tipos compartidos
+├── components/                  # Componentes de UI
+│   ├── auth/
+│   │   ├── LoginForm.tsx        # Formulario de inicio de sesión
+│   │   └── RegisterForm.tsx     # Formulario de registro
+│   ├── common/
+│   │   ├── Header.tsx           # Encabezado con información del usuario
+│   │   ├── Footer.tsx           # Pie de página
+│   │   ├── Navbar.tsx           # Barra de navegación
+│   │   ├── Logo.tsx             # Componente de logo
+│   │   └── StatCard.tsx         # Tarjeta para mostrar estadísticas
+│   ├── figma/
+│   │   └── ImageWithFallback.tsx
+│   ├── landing/
+│   │   ├── Hero.tsx             # Sección hero
+│   │   ├── Features.tsx         # Sección de características
+│   │   ├── About.tsx            # Sección sobre nosotros
+│   │   └── CTA.tsx              # Llamada a la acción
+│   └── ui/                      # Componentes shadcn/ui
+├── contexts/                     # Contextos de React
+│   ├── AuthContext.tsx          # Estado de autenticación
+│   └── DataContext.tsx          # Estado de datos de la aplicación
+├── hooks/                        # Hooks personalizados de React
+│   └── useStats.ts              # Cálculos de estadísticas
+├── features/                     # Módulos basados en características
+│   ├── auth/
+│   ├── landing/
+│   └── dashboard/
+├── pages/                        # Componentes de página
+│   ├── Login.tsx               # Página de inicio de sesión
+│   ├── Register.tsx            # Página de registro
+│   ├── UserDashboard.tsx       # Panel de usuario
+│   └── AdminPanel.tsx          # Panel de administrador
+├── utils/                        # Funciones utilitarias
+│   ├── format.ts               # Funciones de formato
+│   ├── export.ts               # Funciones de exportación
+│   ├── initialData.ts          # Datos iniciales
+│   └── validation.ts           # Utilidades de validación
+├── images/                       # Recursos de imagen
+│   └── logo/
+└── styles/
+    └── globals.css             # CSS global con variables
 ```
 
-## 👥 Credenciales de Acceso
+---
 
-### Administrador
-- **Usuario**: admin
-- **Contraseña**: admin123
+## Módulos Principales
 
-### Usuario Regular
-- **Usuario**: usuario
-- **Contraseña**: usuario123
+### Punto de Entrada ([`src/main.tsx`](src/main.tsx:1))
 
-## 📊 Panel de Administrador
+Punto de entrada de la aplicación que renderiza React en el DOM.
 
-El panel de administrador incluye 5 secciones:
+```typescript
+import { createRoot } from "react-dom/client";
+import App from "./App.tsx";
+import "./index.css";
 
-### 1. Resumen
-- Estadísticas generales del sistema
-- Información consolidada del club
-- Métricas clave de ingresos, gastos y socios
+createRoot(document.getElementById("root")!).render(<App />);
+```
 
-### 2. Usuarios
-- Crear, editar y eliminar usuarios
-- Asignar roles (Usuario/Administrador)
-- Gestión de estados (Activo/Inactivo)
+### App Raíz ([`src/App.tsx`](src/App.tsx:1))
 
-### 3. Categorías
-- Gestión de categorías de ingresos
-- Gestión de categorías de gastos
+Componente raíz que configura los proveedores y maneja la lógica de enrutamiento.
+
+**Características Clave:**
+- Envuelve la aplicación con `AuthProvider` y `DataProvider`
+- Maneja el estado de autenticación
+- Dirige a las páginas según el rol del usuario
+
+```typescript
+function AppContent() {
+  const { isAuthenticated, currentUser, register } = useAuth();
+  const [currentPage, setCurrentPage] = useState<Page>('home');
+
+  if (isAuthenticated) {
+    if (currentUser?.role === 'admin') {
+      return <AdminPanel />;
+    }
+    return <UserDashboard />;
+  }
+
+  // Muestra páginas de login/register para usuarios no autenticados
+}
+```
+
+---
+
+## Componentes
+
+### Componentes de Autenticación
+
+#### LoginForm ([`src/components/auth/LoginForm.tsx`](src/components/auth/LoginForm.tsx:1))
+
+Componente de formulario para autenticación de usuarios.
+
+**Props:**
+| Prop | Tipo | Descripción |
+|------|------|-------------|
+| `onNavigate` | `(page: 'home' \| 'login' \| 'register') => void` | Callback de navegación |
+
+**Características:**
+- Campos de nombre de usuario y contraseña
+- Manejo y visualización de errores
+- Credenciales de demostración mostradas debajo del formulario
+- Usa el hook `useAuth` para autenticación
+
+**Estado:**
+```typescript
+const [username, setUsername] = useState('');
+const [password, setPassword] = useState('');
+const [error, setError] = useState('');
+```
+
+#### RegisterForm ([`src/components/auth/RegisterForm.tsx`](src/components/auth/RegisterForm.tsx:1))
+
+Componente de formulario para registro de usuarios con validación.
+
+**Props:**
+| Prop | Tipo | Descripción |
+|------|------|-------------|
+| `onNavigate` | `(page: 'home' \| 'login' \| 'register') => void` | Callback de navegación |
+| `onRegister` | `(data: RegistrationData) => boolean` | Callback de registro |
+
+**Reglas de Validación:**
+- Nombre y apellido requeridos
+- Formato de email válido
+- Contraseña mínima de 6 caracteres
+- Confirmación de contraseña debe coincidir
+
+**Estado:**
+```typescript
+interface FormData {
+  firstName: string;
+  lastName: string;
+  email: string;
+  password: string;
+  confirmPassword: string;
+}
+```
+
+### Componentes Comunes
+
+#### Header ([`src/components/common/Header.tsx`](src/components/common/Header.tsx:1))
+
+Muestra información del usuario y proporciona funcionalidad de cierre de sesión.
+
+**Características:**
+- Muestra el nombre completo del usuario actual
+- Muestra insignia de rol (Administrador/Usuario)
+- Botón de cierre de sesión
+- Logo del club
+
+```typescript
+export function Header() {
+  const { currentUser, logout } = useAuth();
+  
+  return (
+    <div className="header">
+      <div className="user-info">
+        <span>{currentUser?.fullName}</span>
+        <span className="badge">
+          {currentUser?.role === 'admin' ? 'Administrador' : 'Usuario'}
+        </span>
+      </div>
+      <div className="header-actions">
+        <Logo />
+        <button onClick={logout}>Cerrar Sesión</button>
+      </div>
+    </div>
+  );
+}
+```
+
+#### StatCard ([`src/components/common/StatCard.tsx`](src/components/common/StatCard.tsx:1))
+
+Componente de tarjeta reutilizable para mostrar estadísticas.
+
+**Props:**
+| Prop | Tipo | Descripción |
+|------|------|-------------|
+| `title` | `string` | Título de la tarjeta |
+| `value` | `string \| number` | Valor a mostrar |
+| `description?` | `string` | Descripción opcional |
+| `className?` | `'positive' \| 'negative' \| 'neutral'` | Tema de color |
+
+#### Navbar ([`src/components/common/Navbar.tsx`](src/components/common/Navbar.tsx:1))
+
+Barra de navegación para páginas públicas.
+
+**Props:**
+| Prop | Tipo | Descripción |
+|------|------|-------------|
+| `onNavigate` | `(page: 'home' \| 'login' \| 'register') => void` | Callback de navegación |
+
+#### Footer ([`src/components/common/Footer.tsx`](src/components/common/Footer.tsx:1))
+
+Pie de página con información de contacto y enlaces rápidos.
+
+**Secciones:**
+- Sobre Nosotros
+- Información de Contacto
+- Enlaces Rápidos
+- Derechos de Autor
+
+#### Logo ([`src/shared/components/Logo.tsx`](src/shared/components/Logo.tsx:1))
+
+Muestra el logo del club con soporte de fallback.
+
+**Props:**
+| Prop | Tipo | Valor Predeterminado | Descripción |
+|------|------|---------|-------------|
+| `size` | `'small' \| 'medium' \| 'large'` | `'medium'` | Tamaño del logo |
+| `className` | `string` | `''` | Clases CSS adicionales |
+| `showPlaceholder` | `boolean` | `true` | Mostrar placeholder si falla la imagen |
+
+**Características:**
+- Usa `ImageWithFallback` para manejo de errores
+- Clases de tamaño Tailwind CSS
+- Visualización de placeholder cuando la imagen no está disponible
+
+#### ImageWithFallback ([`src/shared/components/ImageWithFallback.tsx`](src/shared/components/ImageWithFallback.tsx:1))
+
+Componente de imagen con fallback para imágenes rotas.
+
+**Características:**
+- Fallback automático si la imagen falla al cargar
+- Placeholder SVG para imágenes fallidas
+- Soporta todos los atributos estándar de img
+
+---
+
+## Contextos y Gestión de Estado
+
+### AuthContext ([`src/contexts/AuthContext.tsx`](src/contexts/AuthContext.tsx:1))
+
+Gestiona el estado de autenticación y sesiones de usuarios.
+
+**Claves de Almacenamiento:**
+- `clubfinance_auth` - Estado de auth actual
+- `clubfinance_users` - Usuarios registrados
+
+**Tipo de Contexto:**
+```typescript
+interface AuthContextType extends AuthState {
+  login: (username: string, password: string) => boolean;
+  register: (data: RegistrationData) => boolean;
+  logout: () => void;
+  isAdmin: () => boolean;
+}
+```
+
+**Métodos:**
+
+| Método | Parámetros | Retorna | Descripción |
+|--------|-----------|---------|-------------|
+| `login` | `username: string, password: string` | `boolean` | Autentica al usuario |
+| `register` | `RegistrationData` | `boolean` | Crea nuevo usuario |
+| `logout` | Ninguno | `void` | Limpia la sesión |
+| `isAdmin` | Ninguno | `boolean` | Verifica rol de administrador |
+
+**Datos de Registro de Usuario:**
+```typescript
+interface RegistrationData {
+  firstName: string;
+  lastName: string;
+  email: string;
+  password: string;
+}
+```
+
+**Objeto de Usuario:**
+```typescript
+interface User {
+  id: string;
+  username: string;
+  password: string;        // Texto plano - ADVERTENCIA
+  role: 'user' | 'admin';
+  fullName: string;
+  email: string;
+  active: boolean;
+  createdAt: string;
+}
+```
+
+### DataContext ([`src/contexts/DataContext.tsx`](src/contexts/DataContext.tsx:1))
+
+Gestiona todos los datos de la aplicación incluyendo usuarios, miembros, transacciones, categorías, cuotas y configuración del sistema.
+
+**Claves de Almacenamiento:**
+```typescript
+const STORAGE_KEYS = {
+  users: 'clubfinance_users',
+  members: 'clubfinance_members',
+  transactions: 'clubfinance_transactions',
+  categories: 'clubfinance_categories',
+  fees: 'clubfinance_fees',
+  systemData: 'clubfinance_systemData',
+};
+```
+
+**Tipo de Contexto:**
+```typescript
+interface DataContextType extends AppData {
+  addUser: (user: Omit<User, 'id' | 'createdAt'>) => void;
+  updateUser: (id: string, user: Partial<User>) => void;
+  deleteUser: (id: string) => void;
+  addMember: (member: Omit<Member, 'id'>) => void;
+  updateMember: (id: string, member: Partial<Member>) => void;
+  deleteMember: (id: string) => void;
+  addTransaction: (transaction: Omit<Transaction, 'id'>) => void;
+  updateTransaction: (id: string, transaction: Partial<Transaction>) => void;
+  deleteTransaction: (id: string) => void;
+  addCategory: (category: Omit<Category, 'id'>) => void;
+  updateCategory: (id: string, category: Partial<Category>) => void;
+  deleteCategory: (id: string) => void;
+  addFee: (fee: Omit<Fee, 'id'>) => void;
+  updateFee: (id: string, fee: Partial<Fee>) => void;
+  deleteFee: (id: string) => void;
+  updateSystemData: (data: Partial<SystemData>) => void;
+  resetAllData: () => void;
+}
+```
+
+**Operaciones CRUD:**
+Todos los métodos siguen el patrón de actualizar el estado local y persistir en localStorage.
+
+---
+
+## Utilidades
+
+### Hook useStats ([`src/hooks/useStats.ts`](src/hooks/useStats.ts:1))
+
+Hook personalizado para calcular estadísticas de transacciones, cuotas y miembros.
+
+**Uso:**
+```typescript
+const stats = useStats(transactions, fees, members);
+```
+
+**Retorna:**
+```typescript
+interface Stats {
+  totalIncome: number;           // Suma de todas las transacciones de ingreso
+  totalExpense: number;          // Suma de todas las transacciones de gasto
+  balance: number;              // Balance total (ingresos - gastos)
+  monthlyIncome: number;         // Ingresos del mes actual
+  monthlyExpense: number;        // Gastos del mes actual
+  monthlyBalance: number;        // Balance del mes actual
+  activeMembers: number;        // Cantidad de miembros activos
+  inactiveMembers: number;       // Cantidad de miembros inactivos
+  totalMembers: number;         // Total de miembros
+  paidFees: number;            // Cantidad de cuotas pagadas
+  pendingFees: number;         // Cantidad de cuotas pendientes
+  overdueFees: number;         // Cantidad de cuotas vencidas
+  totalPaidAmount: number;     // Suma de cuotas pagadas
+  totalPendingAmount: number;   // Suma de cuotas pendientes
+  totalTransactions: number;    // Total de transacciones
+}
+```
+
+### Utilidades de Formato ([`src/utils/format.ts`](src/utils/format.ts:1))
+
+| Función | Parámetros | Retorna | Descripción |
+|----------|-----------|---------|-------------|
+| `formatCurrency` | `amount: number, currency?: string` | `string` | Formatea moneda con símbolo |
+| `formatDate` | `dateString: string` | `string` | Fecha completa |
+| `formatDateShort` | `dateString: string` | `string` | Fecha corta |
+| `formatDateTime` | `dateString: string` | `string` | Fecha y hora |
+| `capitalizeFirst` | `str: string` | `string` | Mayúscula inicial |
+| `getMonthName` | `monthIndex: number` | `string` | Nombre del mes en español |
+| `truncateText` | `text: string, maxLength: number` | `string` | Trunca texto con puntos suspensivos |
+
+**Ejemplos:**
+```typescript
+formatCurrency(1500, '$');      // "$1500.00"
+formatDate('2024-01-15');       // "15 de enero de 2024"
+formatDateShort('2024-01-15');  // "15/01/2024"
+capitalizeFirst('hola');       // "Hola"
+getMonthName(0);                // "Enero"
+truncateText('Hola Mundo', 5);   // "Hola..."
+```
+
+### Utilidades de Exportación ([`src/utils/export.ts`](src/utils/export.ts:1))
+
+| Función | Parámetros | Descripción |
+|----------|-----------|-------------|
+| `exportToCSV` | `data: any[], filename: string` | Exporta array a archivo CSV |
+| `exportToJSON` | `data: any, filename: string` | Exporta objeto a archivo JSON |
+| `exportTransactionsReport` | `transactions: Transaction[], systemData: SystemData` | Genera reporte de texto |
+| `exportMembersWithFees` | `members: Member[], fees: Fee[]` | Exporta miembros con estado de cuotas |
+
+**Helper Interno:**
+```typescript
+function downloadFile(content: string, filename: string, mimeType: string): void
+```
+
+### Datos Iniciales ([`src/utils/initialData.ts`](src/utils/initialData.ts:1))
+
+Proporciona datos iniciales para nuevas instalaciones.
+
+**Retorna objeto `AppData` con:**
+- 2 usuarios por defecto (admin y usuario demo)
+- 3 miembros de ejemplo
+- 6 categorías (3 ingresos, 3 gastos)
+- 5 transacciones de ejemplo
+- 3 registros de cuotas
+- Configuración predeterminada del sistema
+
+---
+
+## Tipos e Interfaces
+
+### Tipos Principales ([`src/types/index.ts`](src/types/index.ts:1))
+
+#### UserRole
+```typescript
+type UserRole = 'user' | 'admin';
+```
+
+#### User
+```typescript
+interface User {
+  id: string;
+  username: string;
+  password: string;        // Texto plano - ADVERTENCIA
+  role: UserRole;
+  fullName: string;
+  email: string;
+  active: boolean;
+  createdAt: string;
+}
+```
+
+#### Member
+```typescript
+interface Member {
+  id: string;
+  name: string;
+  email: string;
+  phone: string;
+  joinDate: string;
+  active: boolean;
+  membershipType: string;  // 'Completa', 'Básica', 'Premium'
+}
+```
+
+#### TransactionType
+```typescript
+type TransactionType = 'income' | 'expense';
+```
+
+#### Transaction
+```typescript
+interface Transaction {
+  id: string;
+  type: TransactionType;
+  amount: number;
+  category: string;
+  description: string;
+  date: string;            // Formato ISO
+  createdBy: string;        // ID del usuario que creó
+  memberId?: string;        // Asociación opcional con miembro
+}
+```
+
+#### Category
+```typescript
+interface Category {
+  id: string;
+  name: string;
+  type: TransactionType;
+  description: string;
+  active: boolean;
+}
+```
+
+#### Fee
+```typescript
+interface Fee {
+  id: string;
+  memberId: string;
+  amount: number;
+  dueDate: string;
+  paidDate?: string;
+  status: 'pending' | 'paid' | 'overdue';
+  transactionId?: string;
+}
+```
+
+#### SystemData
+```typescript
+interface SystemData {
+  clubName: string;
+  taxId: string;
+  address: string;
+  phone: string;
+  email: string;
+  currency: string;       // Valor predeterminado: '$'
+  fiscalYear: string;
+}
+```
+
+#### AppData (Estado Completo)
+```typescript
+interface AppData {
+  users: User[];
+  members: Member[];
+  transactions: Transaction[];
+  categories: Category[];
+  fees: Fee[];
+  systemData: SystemData;
+}
+```
+
+---
+
+## Flujo de Datos
+
+### Flujo de Autenticación
+
+```
+Usuario ingresa credenciales
+        ↓
+LoginForm llama a useAuth().login()
+        ↓
+AuthContext valida contra localStorage
+        ↓
+Si es válido: actualiza authState → localStorage
+              → App redirige al panel
+        ↓
+Si es inválido: muestra mensaje de error
+```
+
+### Flujo de Gestión de Datos
+
+```
+Acción de usuario (agregar/actualizar/eliminar)
+        ↓
+Componente llama método de DataContext
+        ↓
+DataContext actualiza estado
+        ↓
+useEffect disparado → persistencia en localStorage
+        ↓
+Todos los componentes suscritos se re-renderizan
+```
+
+### Flujo de Cálculo de Estadísticas
+
+```
+DataContext proporciona transacciones, cuotas, miembros
+        ↓
+Componente pasa datos a useStats()
+        ↓
+useMemo calcula todas las estadísticas
+        ↓
+Retorna objeto Stats calculado
+        ↓
+Componente muestra StatCards
+```
+
+---
+
+## Características
+
+### Panel de Usuario ([`src/pages/UserDashboard.tsx`](src/pages/UserDashboard.tsx:1))
+
+**Pestañas:**
+1. **Transacciones** - Ver, filtrar y agregar transacciones
+2. **Miembros** - Ver lista de miembros
+3. **Reportes** - Resumen financiero
+
+**Características:**
+- CRUD de Transacciones (Crear, Leer)
+- Filtrado por tipo (ingreso/gasto)
+- Búsqueda por descripción o categoría
+- Tarjetas de estadísticas (balance, ingresos, gastos, miembros)
+- Resúmenes mensuales
+
+**Campos del Formulario de Transacción:**
+- Tipo (ingreso/gasto)
+- Monto
+- Categoría (filtrada por tipo)
+- Fecha
+- Descripción
+
+### Panel de Administrador ([`src/pages/AdminPanel.tsx`](src/pages/AdminPanel.tsx:1))
+
+**Pestañas:**
+1. **Resumen** - Estadísticas del sistema e información
+2. **Usuarios** - Gestión de usuarios (CRUD)
+3. **Categorías** - Gestión de categorías (CRUD)
+4. **Datos** - Exportación de datos del club
+5. **Sistema** - Configuración y reinicio del sistema
+
+**Gestión de Usuarios:**
+- Crear nuevos usuarios
+- Editar usuarios existentes
+- Cambiar roles (usuario/admin)
+- Activar/desactivar usuarios
+- Eliminar usuarios
+
+**Gestión de Categorías:**
+- Crear categorías (ingreso/gasto)
+- Editar categorías
 - Activar/desactivar categorías
+- Eliminar categorías
 
-### 4. Datos del Club
-- Nombre del club
-- Información fiscal (RUT/ID)
-- Datos de contacto (dirección, teléfono, email)
-- Configuración de moneda y año fiscal
+**Opciones de Exportación:**
+- Transacciones a CSV
+- Miembros con cuotas a CSV
+- Reporte financiero (texto)
+- Respaldo completo (JSON)
 
-### 5. Sistema
-- Exportar transacciones a CSV
-- Exportar socios con cuotas a CSV
-- Generar reporte financiero completo
-- Backup completo del sistema en JSON
-- Reiniciar sistema (restaurar datos iniciales)
+**Acciones del Sistema:**
+- Reiniciar todos los datos a estado inicial (con confirmación)
 
-## 💾 Almacenamiento
+---
 
-El sistema utiliza **localStorage** del navegador para persistir los datos:
-- Todos los datos se guardan automáticamente
-- La sesión persiste entre recargas
-- Los datos permanecen hasta que se reinicie el sistema o se limpie el caché
+## Consideraciones de Seguridad
 
-## 🎨 Personalización
+⚠️ **IMPORTANTE**: Esta aplicación tiene varias limitaciones de seguridad adecuadas solo para propósitos de prototipo/demo.
 
-### Logotipo del Club
-1. Coloca tu logotipo en `/images/logo/club-logo.png`
-2. Edita `/components/Logo.tsx` y cambia `hasLogo` a `true`
-3. El logotipo aparecerá en la esquina superior derecha
+### Limitaciones Actuales
 
-### Colores Institucionales
-Los colores principales están definidos en:
-- Verde: `#10b981` (green-500)
-- Negro: `#000000`
-- Blanco: `#ffffff`
+1. **Almacenamiento de Contraseñas**: Contraseñas almacenadas en texto plano en localStorage
+   - **Riesgo**: Cualquier persona con acceso al almacenamiento del navegador puede leer contraseñas
+   - **Solución**: Usar hashing bcrypt/argon2 en producción
 
-## 📱 Características Técnicas
+2. **Persistencia de localStorage**: Todos los datos almacenados del lado del cliente
+   - **Riesgo**: Los datos pueden ser borrados por el usuario, modificados en devtools
+   - **Solución**: Migrar a base de datos del servidor
 
-- **React** con TypeScript
-- **Context API** para gestión de estado
-- **Shadcn UI** para componentes
-- **Tailwind CSS** para estilos
-- **Lucide React** para iconos
-- **Responsive Design** adaptado a móviles y escritorio
+3. **Sin Validación del Servidor**: Toda validación es del lado del cliente
+   - **Riesgo**: Evitable mediante llamadas API o curl
+   - **Solución**: Implementar validación del lado del servidor
 
-## 🔧 Funcionalidades Principales
+4. **Sin HTTPS**: Transmisión de datos no encriptada
+   - **Riesgo**: Ataques man-in-the-middle
+   - **Solución**: Desplegar con HTTPS
 
-### Gestión de Transacciones
-- Crear ingresos y gastos
-- Categorización automática
-- Filtrado por tipo y búsqueda
-- Historial completo con fechas
+5. **Autenticación Débil**: Nombre de usuario/contraseña simple
+   - **Riesgo**: Ataques de fuerza bruta, credential stuffing
+   - **Solución**: Implementar JWT, rate limiting, CAPTCHA
 
-### Gestión de Socios
-- Registro de miembros
-- Seguimiento de cuotas
-- Estados de pago
-- Tipos de membresía
+### Credenciales de Demostración
 
-### Reportes y Exportación
-- Reporte financiero completo
-- Exportación de transacciones
-- Exportación de socios
-- Backup completo del sistema
+| Rol | Nombre de Usuario | Contraseña |
+|------|----------|----------|
+| Admin | admin | admin123 |
+| Usuario | usuario | usuario123 |
 
-## 🔐 Seguridad
+---
 
-**IMPORTANTE**: Este es un sistema de demostración que almacena datos en el navegador. Para uso en producción:
-- Implementar backend con base de datos real
-- Usar hash de contraseñas (bcrypt)
-- Implementar tokens JWT para autenticación
-- Agregar validación de entrada robusta
-- Implementar HTTPS obligatorio
+## Referencia de API
 
-## 📝 Notas
+### Hooks de Contexto
 
-- Los datos de ejemplo incluyen transacciones, socios y categorías predefinidas
-- El sistema está optimizado para uso local sin conexión a internet
-- Todas las funciones de exportación generan archivos descargables
-- El diseño es completamente responsive
+#### useAuth()
+```typescript
+const {
+  isAuthenticated: boolean;  // Si el usuario ha iniciado sesión
+  currentUser: User | null; // Objeto de usuario actual
+  login: (username, password) => boolean;
+  register: (data) => boolean;
+  logout: () => void;
+  isAdmin: () => boolean;
+} = useAuth();
+```
+
+#### useData()
+```typescript
+const {
+  users: User[];
+  members: Member[];
+  transactions: Transaction[];
+  categories: Category[];
+  fees: Fee[];
+  systemData: SystemData;
+  addUser: (user) => void;
+  updateUser: (id, user) => void;
+  deleteUser: (id) => void;
+  addMember: (member) => void;
+  updateMember: (id, member) => void;
+  deleteMember: (id) => void;
+  addTransaction: (transaction) => void;
+  updateTransaction: (id, transaction) => void;
+  deleteTransaction: (id) => void;
+  addCategory: (category) => void;
+  updateCategory: (id, category) => void;
+  deleteCategory: (id) => void;
+  addFee: (fee) => void;
+  updateFee: (id, fee) => void;
+  deleteFee: (id) => void;
+  updateSystemData: (data) => void;
+  resetAllData: () => void;
+} = useData();
+```
+
+### Hooks Personalizados
+
+#### useStats()
+```typescript
+const stats: Stats = useStats(
+  transactions: Transaction[],
+  fees: Fee[],
+  members: Member[]
+);
+```
+
+---
+
+## Estilos
+
+### Variables CSS Globales ([`src/styles/globals.css`](src/styles/globals.css:1))
+
+```css
+:root {
+  --color-green: #22c55e;
+  --color-black: #000000;
+  --color-white: #ffffff;
+  --color-gray-50: #f9fafb;
+  --color-gray-100: #f3f4f6;
+  --color-gray-200: #e5e7eb;
+  --color-gray-300: #d1d5db;
+  --color-gray-600: #4b5563;
+  /* ... más variables */
+}
+
+.positive { color: var(--color-green); }
+.negative { color: #ef4444; }
+.neutral { color: var(--color-gray-600); }
+```
+
+### Configuración Tailwind ([`tailwind.config.js`](tailwind.config.js:1))
+
+- Paleta de colores personalizada
+- Espaciado extendido
+- Radio de borde personalizado
+
+---
+
+## Cambios Recomendados para Producción
+
+1. **Integración de Backend**
+   - Reemplazar localStorage con API REST
+   - Implementar base de datos (PostgreSQL, MySQL)
+   - Agregar servidor de autenticación (JWT, OAuth)
+
+2. **Mejoras de Seguridad**
+   - Hashing de contraseñas (bcrypt)
+   - Aplicación de HTTPS
+   - Sanitización de entradas
+   - Rate limiting
+   - Protección CSRF
+
+3. **Rendimiento**
+   - Agregar React.lazy para división de código
+   - Implementar paginación para grandes conjuntos de datos
+   - Agregar capa de caché
+
+4. **Pruebas**
+   - Pruebas unitarias con Jest
+   - Pruebas de integración con React Testing Library
+   - Pruebas E2E con Playwright
+
+5. **Monitoreo**
+   - Seguimiento de errores (Sentry)
+   - Analítica
+   - Registro de logs
+
+---
+
+## Conclusión
+
+ClubFinance es una aplicación React bien estructurada que utiliza patrones modernos incluyendo arquitectura basada en características, React Context para gestión de estado, y hooks personalizados para reutilización de lógica. Aunque es adecuada para prototipos y demos, se necesitan cambios significativos antes del despliegue en producción, particularmente en seguridad e integración de backend.
+
+---
+
+**Última Actualización:** Febrero 2025
+**Versión:** 1.0.0
