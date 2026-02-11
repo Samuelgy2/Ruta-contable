@@ -2,7 +2,7 @@
 
 ## Descripción General
 
-ClubFinance es una aplicación web para gestión financiera diseñada específicamente para clubes y organizaciones. Construida con React 18, TypeScript y Tailwind CSS, utiliza una arquitectura basada en características con localStorage para persistencia de datos.
+Ruta contable es una aplicación web para gestión financiera diseñada específicamente para clubes y organizaciones. Construida con React 18, TypeScript y Tailwind CSS, utiliza una arquitectura basada en características con localStorage para persistencia de datos.
 
 ---
 
@@ -810,7 +810,7 @@ const stats: Stats = useStats(
 
 ## Conclusión
 
-ClubFinance es una aplicación React bien estructurada que utiliza patrones modernos incluyendo arquitectura basada en características, React Context para gestión de estado, y hooks personalizados para reutilización de lógica. Aunque es adecuada para prototipos y demos, se necesitan cambios significativos antes del despliegue en producción, particularmente en seguridad e integración de backend.
+Ruta contable es una aplicación React bien estructurada que utiliza patrones modernos incluyendo arquitectura basada en características, React Context para gestión de estado, y hooks personalizados para reutilización de lógica. Aunque es adecuada para prototipos y demos, se necesitan cambios significativos antes del despliegue en producción, particularmente en seguridad e integración de backend.
 
 ---
 
