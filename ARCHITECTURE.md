@@ -1,6 +1,6 @@
 # Arquitectura del Proyecto - ClubFinance
 
-Este proyecto utiliza una **arquitectura basada en features** (feature-based architecture) para mantener el código organizado, escalable y mantenible.
+Este proyecto utiliza una **arquitectura basada en features** (feature-based architecture) para mantener el código organizado, escalable y mantenible, combinada con una estructura de **componentes compartidos** y **páginas centralizadas**.
 
 ## Estructura de Carpetas
 
@@ -10,58 +10,89 @@ src/
 │   ├── auth/                   # Feature de Autenticación
 │   │   ├── components/         # Componentes específicos de auth
 │   │   │   ├── LoginForm.tsx   # Formulario de inicio de sesión
-│   │   │   └── RegisterForm.tsx # Formulario de registro
+│   │   │   ├── RegisterForm.tsx # Formulario de registro
+│   │   │   └── ForgotPasswordForm.tsx # Formulario de recuperación
 │   │   ├── contexts/           # Contextos de auth
 │   │   │   └── AuthContext.tsx # Contexto global de autenticación
-│   │   └── pages/              # Páginas de auth
-│   │       ├── Login.tsx       # Página de login
-│   │       └── Register.tsx    # Página de registro
-│   │
-│   ├── dashboard/              # Feature de Dashboard
-│   │   ├── components/         # Componentes del dashboard
-│   │   │   ├── Header.tsx      # Header con usuario y logout
-│   │   │   └── StatCard.tsx    # Tarjeta de estadísticas
-│   │   ├── pages/              # Páginas del dashboard
-│   │   │   ├── UserDashboard.tsx  # Dashboard de usuario
-│   │   │   └── AdminPanel.tsx     # Panel de administrador
-│   │   ├── contexts/           # Contextos del dashboard
-│   │   │   └── DataContext.tsx # Contexto global de datos
-│   │   ├── hooks/              # Custom hooks
-│   │   │   └── useStats.ts     # Hook para estadísticas
-│   │   └── utils/              # Utilidades del dashboard
-│   │       ├── export.ts       # Funciones de exportación
-│   │       ├── format.ts       # Funciones de formato
-│   │       └── validation.ts   # Validaciones
+│   │   ├── pages/              # Páginas de auth
+│   │   │   ├── Login.tsx       # Página de login
+│   │   │   └── Register.tsx    # Página de registro
+│   │   └── index.ts            # Export del feature
 │   │
 │   └── landing/                # Feature de Landing Page
 │       ├── components/         # Componentes de la landing
 │       │   ├── Navbar.tsx      # Barra de navegación
 │       │   ├── Footer.tsx      # Pie de página
-│       │   ├── Hero.tsx        # Sección hero principal
-│       │   ├── Features.tsx    # Sección de características
-│       │   ├── About.tsx       # Sección sobre nosotros
-│       │   └── CTA.tsx         # Call-to-action
+│       │   └── Hero.tsx        # Sección hero principal
 │       └── pages/              # Páginas de landing
-│           └── LandingPage.tsx # Página principal
 │
-├── shared/                      # Código compartido entre features
-│   ├── components/             # Componentes globales
-│   │   ├── Logo.tsx            # Componente de logo
-│   │   └── ImageWithFallback.tsx # Imagen con fallback
-│   ├── types/                  # Tipos TypeScript globales
-│   │   └── index.ts            # Definiciones de tipos
-│   └── utils/                  # Utilidades globales
-│       └── initialData.ts      # Datos iniciales del sistema
+├── pages/                       # Páginas de la aplicación (legacy + admin)
+│   ├── Login.tsx               # Página de login (wrapper)
+│   ├── Register.tsx            # Página de registro (wrapper)
+│   ├── UserDashboard.tsx       # Dashboard de usuario
+│   ├── AdminPanel.tsx          # Panel de administrador (legacy)
+│   └── admin/                  # Páginas del admin (nueva estructura)
+│       ├── index.ts            # Export de todas las páginas admin
+│       ├── AdminOverview.tsx   # Resumen del sistema
+│       ├── AdminTransactions.tsx # Gestión de transacciones
+│       ├── AdminUsers.tsx      # Gestión de usuarios/socios
+│       ├── AdminMembers.tsx    # Lista de miembros
+│       ├── AdminReports.tsx    # Reportes y estadísticas
+│       ├── AdminCategories.tsx # Gestión de categorías
+│       ├── AdminClubData.tsx   # Datos del club
+│       └── AdminSystem.tsx     # Configuración del sistema
 │
-├── components/                  # Componentes de terceros
+├── components/                  # Componentes globales y de terceros
+│   ├── auth/                   # Componentes de auth (legacy)
+│   │   ├── LoginForm.tsx
+│   │   ├── RegisterForm.tsx
+│   │   └── ForgotPasswordForm.tsx
+│   ├── common/                 # Componentes comunes
+│   │   ├── Header.tsx         # Header con usuario y logout
+│   │   ├── Footer.tsx         # Pie de página
+│   │   ├── Logo.tsx           # Componente de logo
+│   │   ├── Navbar.tsx         # Barra de navegación
+│   │   └── StatCard.tsx       # Tarjeta de estadísticas
+│   ├── landing/                # Componentes de landing (legacy)
+│   │   ├── About.tsx
+│   │   ├── CTA.tsx
+│   │   ├── Features.tsx
+│   │   └── Hero.tsx
+│   ├── figma/                  # Componentes de Figma
+│   │   └── ImageWithFallback.tsx
 │   └── ui/                     # Componentes de shadcn/ui
 │       ├── button.tsx
 │       ├── input.tsx
 │       ├── card.tsx
-│       └── ...
+│       └── ... (60+ componentes)
+│
+├── contexts/                    # Contextos globales (raíz)
+│   ├── AuthContext.tsx         # Contexto de autenticación
+│   └── DataContext.tsx         # Contexto global de datos
+│
+├── shared/                      # Código compartido entre features
+│   ├── components/             # Componentes globales
+│   │   ├── Logo.tsx           # Componente de logo
+│   │   └── ImageWithFallback.tsx
+│   ├── types/                  # Tipos TypeScript globales
+│   │   └── index.ts
+│   └── utils/                  # Utilidades globales
+│       └── initialData.ts
+│
+├── hooks/                       # Custom hooks globales
+│   └── useStats.ts             # Hook para estadísticas
+│
+├── types/                       # Tipos TypeScript globales
+│   └── index.ts
+│
+├── utils/                       # Utilidades globales
+│   ├── export.ts               # Funciones de exportación
+│   ├── format.ts               # Funciones de formato
+│   ├── initialData.ts          # Datos iniciales del sistema
+│   └── validation.ts           # Validaciones
 │
 ├── styles/                      # Estilos globales
-│   └── globals.css             # CSS global con variables
+│   └── globals.css             # CSS global con variables Tailwind
 │
 ├── App.tsx                      # Componente raíz
 └── main.tsx                     # Punto de entrada
@@ -77,20 +108,27 @@ Cada feature es una unidad independiente que contiene:
 - **Contexts**: Estado global del feature
 - **Hooks**: Lógica reutilizable del feature
 - **Utils**: Funciones utilitarias del feature
-- **Types**: Tipos TypeScript del feature (opcional)
 
-### 2. Shared (Compartido)
+### 2. Legacy + Nueva Estructura Conviven
+
+El proyecto tiene dos ubicaciones para componentes:
+- `src/components/` - Estructura anterior (legacy)
+- `src/features/` - Nueva estructura basada en features
+
+Ambas conviven actualmente. Se recomienda usar `src/features/` para nuevos desarrollos.
+
+### 3. Shared (Compartido)
 
 El código que se usa en múltiples features se coloca en `shared/`:
 - Componentes genéricos (Logo, ImageWithFallback)
 - Tipos compartidos
 - Utilidades comunes
 
-### 3. Components/UI
+### 4. Components/UI
 
-Librería de componentes de terceros (shadcn/ui) que no se modifican.
+Librería de componentes de terceros (shadcn/ui) que no se modifican directamente.
 
-### 4. Convenciones de Nomenclatura
+### 5. Convenciones de Nomenclatura
 
 - **PascalCase**: Componentes, contextos, páginas (ej: `LoginForm.tsx`)
 - **camelCase**: Funciones, variables, hooks (ej: `useStats.ts`)
@@ -103,22 +141,26 @@ Librería de componentes de terceros (shadcn/ui) que no se modifican.
 Maneja todo lo relacionado con autenticación:
 - Inicio de sesión
 - Registro de usuarios
+- Cambio de contraseña (recuperación directa)
 - Gestión de sesión (localStorage)
 - Roles (admin/usuario)
 
+**Ubicaciones:**
+- `src/features/auth/` - Nueva estructura
+- `src/components/auth/` - Legacy
+
 **Componentes principales:**
-- `LoginForm`: Formulario de login con props para personalizar fondo
-- `RegisterForm`: Formulario de registro con props para personalizar fondo
+- `LoginForm`: Formulario de login
+- `RegisterForm`: Formulario de registro
+- `ForgotPasswordForm`: Formulario de recuperación de contraseña
 - `AuthContext`: Proveedor de autenticación
 
-**Props de personalización:**
-```typescript
-<LoginForm 
-  onNavigate={(page) => ...}
-  backgroundColor="#f5f5f5"  // Color de fondo
-  backgroundImage="url(...)"  // O imagen de fondo
-/>
-```
+**Funcionalidades:**
+- `login()`: Autentica al usuario con username y password
+- `register()`: Registra un nuevo usuario
+- `changePassword()`: Cambia la contraseña directamente
+- `logout()`: Cierra la sesión del usuario
+- `isAdmin()`: Verifica si el usuario tiene rol de administrador
 
 ### Dashboard
 
@@ -131,10 +173,20 @@ Panel de control para usuarios y administradores:
 
 **Componentes principales:**
 - `UserDashboard`: Dashboard para usuarios regulares
-- `AdminPanel`: Panel completo para administradores
+- `AdminPanel`: Panel completo para administradores (legacy)
 - `Header`: Barra superior con usuario y logout
 - `StatCard`: Tarjeta de estadística
-- `DataContext`: Contexto de datos (transacciones, miembros, etc.)
+- `DataContext`: Contexto de datos
+
+**Estructura de páginas admin:**
+- `AdminOverview`: Resumen del sistema con estadísticas
+- `AdminTransactions`: Gestión de transacciones
+- `AdminUsers`: Gestión de usuarios y socios
+- `AdminMembers`: Lista de miembros del club
+- `AdminReports`: Reportes y exportación de datos
+- `AdminCategories`: Gestión de categorías de transacciones
+- `AdminClubData`: Datos de configuración del club
+- `AdminSystem`: Herramientas del sistema y mantenimiento
 
 ### Landing
 
@@ -144,8 +196,11 @@ Página de presentación y bienvenida:
 - Información del club
 - Call-to-action
 
+**Ubicaciones:**
+- `src/features/landing/` - Nueva estructura
+- `src/components/landing/` - Legacy
+
 **Componentes principales:**
-- `LandingPage`: Página principal
 - `Navbar`: Barra de navegación
 - `Footer`: Pie de página
 - `Hero`, `Features`, `About`, `CTA`: Secciones de la landing
@@ -237,7 +292,7 @@ Usa únicamente:
 
 ### Cambiar colores
 
-Editar `styles/globals.css`:
+Editar `src/styles/globals.css`:
 ```css
 :root {
   --color-green: #22c55e;
@@ -331,3 +386,5 @@ export function MyComponent({ title, onSubmit }: MyComponentProps) {
 - [ ] Agregar internacionalización (i18n)
 - [ ] Migrar a backend real
 - [ ] Implementar encriptación de datos
+- [ ] Consolidar componentes legacy en estructura features
+- [ ] Agregar migración de datos de componentes a features/
