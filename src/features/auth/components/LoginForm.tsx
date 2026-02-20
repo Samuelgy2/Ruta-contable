@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 
 interface LoginFormProps {
-  onNavigate: (page: 'home' | 'login' | 'register') => void;
+  onNavigate: (page: 'home' | 'login' | 'register' | 'forgot-password') => void;
   backgroundColor?: string;
   backgroundImage?: string;
 }
@@ -65,6 +65,15 @@ export function LoginForm({ onNavigate, backgroundColor, backgroundImage }: Logi
           />
         </div>
 
+        <div style={{ textAlign: 'right', marginBottom: '16px' }}>
+          <a 
+            onClick={() => onNavigate('forgot-password')} 
+            style={{ cursor: 'pointer', color: 'var(--color-green)', fontSize: '14px' }}
+          >
+            ¿Olvidaste tu contraseña?
+          </a>
+        </div>
+
         {error && (
           <div className="form-error-box">
             {error}
@@ -92,9 +101,6 @@ export function LoginForm({ onNavigate, backgroundColor, backgroundImage }: Logi
         <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', fontSize: '13px' }}>
           <div style={{ background: 'var(--color-gray-50)', padding: '12px', borderRadius: '8px' }}>
             <strong>Administrador:</strong> admin / admin123
-          </div>
-          <div style={{ background: 'var(--color-gray-50)', padding: '12px', borderRadius: '8px' }}>
-            <strong>Usuario:</strong> usuario / usuario123
           </div>
         </div>
       </div>
