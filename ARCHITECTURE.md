@@ -31,7 +31,10 @@ src/
 │   │   ├── Footer.tsx         # Pie de página
 │   │   ├── Logo.tsx           # Componente de logo
 │   │   ├── Navbar.tsx         # Barra de navegación
-│   │   └── StatCard.tsx       # Tarjeta de estadísticas
+│   │   ├── StatCard.tsx       # Tarjeta de estadísticas
+│   │   └── NavigationDropdown.tsx # Menú desplegable de navegación
+│   │
+│   ├── NavigationDropdown.css  # Estilos del dropdown de navegación
 │   ├── landing/                # Componentes de landing
 │   │   ├── About.tsx
 │   │   ├── CTA.tsx
@@ -53,7 +56,15 @@ src/
 │   └── useStats.ts             # Hook para estadísticas
 │
 ├── types/                       # Tipos TypeScript globales
-│   └── index.ts
+│   └── index.ts                # Interfaces: User, Member, Transaction, Category, Fee, SystemData
+│
+├── guidelines/                  # Guías del proyecto
+│   └── Guidelines.md           # Directrices de desarrollo
+│
+├── images/                      # Imágenes y recursos
+│   └── logo/                   # Logos del club
+│       ├── club-logo.png       # Logo principal del club
+│       └── example-logo-setup.md # Guía para configurar logos
 │
 ├── utils/                       # Utilidades globales
 │   ├── export.ts               # Funciones de exportación
@@ -64,11 +75,19 @@ src/
 ├── styles/                      # Estilos globales
 │   └── globals.css             # CSS global con variables Tailwind
 │
-├── images/                      # Imágenes y recursos
-│   └── logo/                   # Logos del club
-│
 ├── App.tsx                      # Componente raíz
-└── main.tsx                     # Punto de entrada
+├── main.tsx                     # Punto de entrada
+├── index.css                    # Estilos principales de la app
+├── vite-env.d.ts                # Tipos de Vite
+└── Attributions.md             # Atribuciones y créditos
+│
+├── express-db-example/          # Ejemplo de backend Express
+│   ├── package.json
+│   ├── README.md
+│   └── src/
+│       ├── index.js
+│       └── config/
+│           └── database.js
 ```
 
 ## Principios de la Arquitectura
@@ -129,6 +148,7 @@ Panel de control para usuarios y administradores:
 **Componentes principales:**
 - `AdminPanel`: Panel completo para administradores
 - `Header`: Barra superior con usuario y logout
+- `NavigationDropdown`: Menú desplegable de navegación
 - `StatCard`: Tarjeta de estadística
 - `DataContext`: Contexto de datos
 
@@ -156,6 +176,29 @@ Página de presentación y bienvenida:
 - `Navbar`: Barra de navegación
 - `Footer`: Pie de página
 - `Hero`, `Features`, `About`, `CTA`: Secciones de la landing
+
+### NavigationDropdown
+
+Menú desplegable de navegación animado con acceso rápido a todas las secciones del panel:
+- Diseño adaptativo (responsive)
+- Animaciones suaves
+- Filtro por rol de usuario (admin/usuario)
+- Cierra al hacer click fuera o presionar Escape
+
+**Ubicación:** `src/components/common/NavigationDropdown.tsx`
+
+**Estilos:** `src/components/NavigationDropdown.css`
+
+**Categorías de navegación (Admin):**
+- Principal: Resumen
+- Gestión: Transacciones, Categorías, Reportes
+- Socios: Usuarios, Miembros
+- Configuración: Datos del Club, Sistema
+
+**Categorías de navegación (Usuario):**
+- Gestión: Transacciones
+- Socios: Miembros
+- Reportes: Reportes
 
 ## Flujo de Datos
 
