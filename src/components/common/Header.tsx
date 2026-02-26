@@ -2,7 +2,12 @@ import React from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import { Logo } from './Logo';
 
-export function Header() {
+interface HeaderProps {
+  onNavigate?: (tab: string) => void;
+  showDropdown?: boolean;
+}
+
+export function Header({ onNavigate, showDropdown }: HeaderProps) {
   const { currentUser, logout } = useAuth();
 
   return (
