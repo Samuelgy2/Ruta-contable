@@ -3,6 +3,7 @@ import { AuthProvider, useAuth } from './features/auth/contexts/AuthContext';
 import { DataProvider } from './contexts/DataContext';
 import { Login } from './features/auth/pages/Login';
 import { Register } from './features/auth/pages/Register';
+import { ForgotPassword } from './features/auth/pages/ForgotPassword';
 import { AdminPanel } from './pages/AdminPanel';
 import { AdminOverview, AdminTransactions, AdminUsers, AdminMembers, AdminReports, AdminCategories, AdminClubData, AdminSystem } from './pages/admin';
 import { AdminLayout, AdminPage as AdminPageType } from './features/admin/components/AdminLayout';
@@ -80,6 +81,8 @@ function AppContent() {
   switch (currentPage) {
     case 'register':
       return <Register onNavigate={handleNavigate} onRegister={register} />;
+    case 'forgot-password':
+      return <ForgotPassword onNavigate={handleNavigate} />;
     case 'home':
     default:
       return <Login onNavigate={handleNavigate} />;

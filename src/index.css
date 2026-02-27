@@ -2530,6 +2530,56 @@ body {
   box-shadow: 0 20px 25px -5px #0000001a, 0 10px 10px -5px #0000000a;
 }
 
+.forgot-password-card {
+  background: var(--color-white);
+  border-radius: 16px;
+  width: 100%;
+  max-width: 440px;
+  padding: 48px;
+  box-shadow: 0 20px 25px -5px #0000001a, 0 10px 10px -5px #0000000a;
+}
+
+.forgot-password-title {
+  text-align: center;
+  margin-bottom: 32px;
+}
+
+.forgot-password-title h1 {
+  color: var(--color-black);
+  margin-bottom: 8px;
+  font-size: 28px;
+  font-weight: 700;
+}
+
+.forgot-password-title p {
+  color: var(--color-gray-600);
+  font-size: 14px;
+}
+
+.forgot-password-footer {
+  text-align: center;
+  margin-top: 24px;
+  padding-top: 24px;
+  border-top: 1px solid var(--color-gray-200);
+}
+
+.forgot-password-footer p {
+  color: var(--color-gray-600);
+  font-size: 14px;
+}
+
+.success-icon {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 24px;
+}
+
+.note {
+  font-size: 14px;
+  color: var(--color-gray-600);
+  margin-top: 16px;
+}
+
 .login-title {
   text-align: center;
   margin-bottom: 32px;
@@ -3480,7 +3530,7 @@ body {
   font-size: 14px;
 }
 
-.login-page, .register-page {
+.login-page, .register-page, .forgot-password-page {
   background: var(--color-gray-50);
   flex: 1;
   justify-content: center;
