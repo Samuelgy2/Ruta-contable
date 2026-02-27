@@ -21,8 +21,16 @@ function AppContent() {
     setCurrentPage(page);
   };
 
-  // Navigation handler for admin pages - acepta string para compatibilidad con páginas existentes
+  // Navigation handler for admin pages - accepts both tab names and page IDs
   const handleAdminNavigate = (pageOrTab: string) => {
+    // First check if it's already a valid page ID
+    const validPages: AdminPage[] = ['overview', 'transactions', 'users', 'members', 'reports', 'categories', 'club-data', 'system'];
+    if (validPages.includes(pageOrTab as AdminPage)) {
+      setCurrentAdminPage(pageOrTab as AdminPage);
+      return;
+    }
+    
+    // Otherwise, map tab names to page IDs
     const tabToPage: Record<string, AdminPage> = {
       overview: 'overview',
       transactions: 'transactions',
