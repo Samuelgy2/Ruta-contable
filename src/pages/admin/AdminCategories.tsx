@@ -1,5 +1,4 @@
 import React, { useState } from 'react';
-import { Header } from '../../components/common/Header';
 import { useData } from '../../contexts/DataContext';
 
 interface AdminCategoriesProps {
@@ -75,8 +74,6 @@ export function AdminCategories({ onNavigate }: AdminCategoriesProps) {
 
   return (
     <div className="app">
-      <Header onNavigate={handleNavigate} showDropdown={true} />
-      
       <div className="container">
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
           <h3 style={{ margin: 0 }}>Gestión de Categorías</h3>

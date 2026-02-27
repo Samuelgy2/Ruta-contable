@@ -1,5 +1,4 @@
 import React, { useState } from 'react';
-import { Header } from '../../components/common/Header';
 import { useData } from '../../contexts/DataContext';
 import { formatCurrency, formatDateShort } from '../../utils/format';
 
@@ -68,8 +67,6 @@ export function AdminTransactions({ onNavigate }: AdminTransactionsProps) {
 
   return (
     <div className="app">
-      <Header onNavigate={handleNavigate} showDropdown={true} />
-      
       <div className="container">
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
           <h3 style={{ margin: 0 }}>Gestión de Transacciones</h3>

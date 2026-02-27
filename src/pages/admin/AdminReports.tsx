@@ -1,5 +1,4 @@
 import React from 'react';
-import { Header } from '../../components/common/Header';
 import { useData } from '../../contexts/DataContext';
 import { useStats } from '../../hooks/useStats';
 import { formatCurrency } from '../../utils/format';
@@ -52,8 +51,6 @@ export function AdminReports({ onNavigate }: AdminReportsProps) {
 
   return (
     <div className="app">
-      <Header onNavigate={handleNavigate} showDropdown={true} />
-      
       <div className="container">
         <div style={{ marginBottom: '32px' }}>
           <h3 style={{ margin: 0, marginBottom: '8px' }}>Reportes y Estadísticas</h3>

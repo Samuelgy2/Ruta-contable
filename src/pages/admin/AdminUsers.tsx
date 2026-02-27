@@ -1,5 +1,4 @@
 import React, { useState } from 'react';
-import { Header } from '../../components/common/Header';
 import { useData } from '../../contexts/DataContext';
 
 interface AdminUsersProps {
@@ -78,8 +77,6 @@ export function AdminUsers({ onNavigate }: AdminUsersProps) {
 
   return (
     <div className="app">
-      <Header onNavigate={handleNavigate} showDropdown={true} />
-      
       <div className="container">
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
           <h3 style={{ margin: 0 }}>Gestión de Socios</h3>

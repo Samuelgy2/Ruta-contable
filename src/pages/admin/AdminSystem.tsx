@@ -1,5 +1,4 @@
 import React from 'react';
-import { Header } from '../../components/common/Header';
 import { useData } from '../../contexts/DataContext';
 import { exportToJSON } from '../../utils/export';
 
@@ -40,8 +39,6 @@ export function AdminSystem({ onNavigate }: AdminSystemProps) {
 
   return (
     <div className="app">
-      <Header onNavigate={handleNavigate} showDropdown={true} />
-      
       <div className="container">
         <div style={{ marginBottom: '32px' }}>
           <h3 style={{ margin: 0, marginBottom: '8px' }}>Configuración del Sistema</h3>

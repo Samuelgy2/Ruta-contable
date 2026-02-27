@@ -1,5 +1,4 @@
 import React, { useState } from 'react';
-import { Header } from '../../components/common/Header';
 import { useData } from '../../contexts/DataContext';
 
 interface AdminClubDataProps {
@@ -27,8 +26,6 @@ export function AdminClubData({ onNavigate }: AdminClubDataProps) {
 
   return (
     <div className="app">
-      <Header onNavigate={handleNavigate} showDropdown={true} />
-      
       <div className="container">
         <div style={{ marginBottom: '32px' }}>
           <h3 style={{ margin: 0, marginBottom: '8px' }}>Datos del Club</h3>
