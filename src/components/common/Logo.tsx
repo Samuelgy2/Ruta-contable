@@ -1,4 +1,4 @@
-import { ImageWithFallback } from '../figma/ImageWithFallback'
+import { ImageWithFallback } from '../../shared/components/ImageWithFallback'
 import clubLogo from '@/images/logo/club-logo.png'
 
 interface LogoProps {

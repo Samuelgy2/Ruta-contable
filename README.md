@@ -36,47 +36,39 @@ src/
 │   │   └── ImageWithFallback.tsx # Imagen con manejo de errores
 │   └── types/
 │       └── index.ts             # Tipos compartidos
-├── components/                  # Componentes de UI
-│   ├── auth/
-│   │   ├── LoginForm.tsx        # Formulario de inicio de sesión
-│   │   └── RegisterForm.tsx     # Formulario de registro
+├── components/                  # Componentes de UI (legacy)
 │   ├── common/
 │   │   ├── Header.tsx           # Encabezado con información del usuario
-│   │   ├── Footer.tsx           # Pie de página
-│   │   ├── Navbar.tsx           # Barra de navegación
 │   │   ├── Logo.tsx             # Componente de logo
 │   │   └── StatCard.tsx         # Tarjeta para mostrar estadísticas
-│   ├── figma/
-│   │   └── ImageWithFallback.tsx
-│   ├── landing/
-│   │   ├── Hero.tsx             # Sección hero
-│   │   ├── Features.tsx         # Sección de características
-│   │   ├── About.tsx            # Sección sobre nosotros
-│   │   └── CTA.tsx              # Llamada a la acción
 │   └── ui/                      # Componentes shadcn/ui
 ├── contexts/                     # Contextos de React
-│   ├── AuthContext.tsx          # Estado de autenticación
 │   └── DataContext.tsx          # Estado de datos de la aplicación
 ├── hooks/                        # Hooks personalizados de React
 │   └── useStats.ts              # Cálculos de estadísticas
 ├── features/                     # Módulos basados en características
-│   ├── auth/
-│   ├── landing/
-│   └── dashboard/
-├── pages/                        # Componentes de página
-│   ├── Login.tsx               # Página de inicio de sesión
-│   ├── Register.tsx            # Página de registro
-│   ├── UserDashboard.tsx       # Panel de usuario
-│   └── AdminPanel.tsx          # Panel de administrador
-├── utils/                        # Funciones utilitarias
-│   ├── format.ts               # Funciones de formato
-│   ├── export.ts               # Funciones de exportación
-│   ├── initialData.ts          # Datos iniciales
-│   └── validation.ts           # Utilidades de validación
-├── images/                       # Recursos de imagen
+│   ├── auth/                    # Autenticación
+│   │   ├── components/          # LoginForm, RegisterForm
+│   │   ├── contexts/            # AuthContext
+│   │   └── pages/               # Login, Register
+│   ├── landing/                 # Página pública
+│   │   └── components/           # Navbar, Footer, Hero
+│   ├── admin/                   # Panel de administración
+│   │   └── components/          # AdminLayout
+│   └── dashboard/               # Panel de usuario
+├── pages/                       # Componentes de página
+│   ├── UserDashboard.tsx        # Panel de usuario
+│   ├── AdminPanel.tsx           # Panel de administrador
+│   └── admin/                   # Páginas del admin
+├── utils/                       # Funciones utilitarias
+│   ├── format.ts                # Funciones de formato
+│   ├── export.ts                # Funciones de exportación
+│   ├── initialData.ts           # Datos iniciales
+│   └── validation.ts            # Utilidades de validación
+├── images/                      # Recursos de imagen
 │   └── logo/
 └── styles/
-    └── globals.css             # CSS global con variables
+    └── globals.css               # CSS global con variables
 ```
 
 ---

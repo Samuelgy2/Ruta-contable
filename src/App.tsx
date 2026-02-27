@@ -1,11 +1,11 @@
 import React, { useState } from 'react';
-import { AuthProvider, useAuth } from './contexts/AuthContext';
+import { AuthProvider, useAuth } from './features/auth/contexts/AuthContext';
 import { DataProvider } from './contexts/DataContext';
-import { Login } from './pages/Login';
-import { Register } from './pages/Register';
+import { Login } from './features/auth/pages/Login';
+import { Register } from './features/auth/pages/Register';
 import { AdminPanel } from './pages/AdminPanel';
 import { AdminOverview, AdminTransactions, AdminUsers, AdminMembers, AdminReports, AdminCategories, AdminClubData, AdminSystem } from './pages/admin';
-import { AdminLayout, AdminPage as AdminPageType } from './components/layout/AdminLayout';
+import { AdminLayout, AdminPage as AdminPageType } from './features/admin/components/AdminLayout';
 
 type Page = 'home' | 'login' | 'register' | 'forgot-password';
 type AdminPage = AdminPageType;

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useAuth } from '../../contexts/AuthContext';
+import { useAuth } from '../../auth/contexts/AuthContext';
 import { 
   Home, 
   DollarSign, 
@@ -14,16 +14,9 @@ import {
   ChevronRight,
   LogOut,
   ChevronDown,
-  TrendingUp,
-  TrendingDown,
-  BarChart3,
-  Building2,
-  UsersRound,
-  Receipt,
-  Tags,
-  FileBarChart
+  Building2
 } from 'lucide-react';
-import clubLogo from '../../images/logo/club-logo.png';
+import clubLogo from '../../../images/logo/club-logo.png';
 
 // Color verde del club
 const CLUB_GREEN = '#10b981';

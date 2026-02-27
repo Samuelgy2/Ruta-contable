@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Header } from '../components/common/Header';
 import { StatCard } from '../components/common/StatCard';
 import { useData } from '../contexts/DataContext';
-import { useAuth } from '../contexts/AuthContext';
+import { useAuth } from '../features/auth/contexts/AuthContext';
 import { useStats } from '../hooks/useStats';
 import { formatCurrency, formatDateShort } from '../utils/format';
 

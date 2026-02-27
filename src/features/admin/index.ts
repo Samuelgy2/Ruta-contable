@@ -1,0 +1,10 @@
+// Exportaciones del feature de administración
+export { AdminLayout, type AdminPage } from './components/AdminLayout';
+export { AdminOverview } from '../../pages/admin/AdminOverview';
+export { AdminTransactions } from '../../pages/admin/AdminTransactions';
+export { AdminUsers } from '../../pages/admin/AdminUsers';
+export { AdminMembers } from '../../pages/admin/AdminMembers';
+export { AdminReports } from '../../pages/admin/AdminReports';
+export { AdminCategories } from '../../pages/admin/AdminCategories';
+export { AdminClubData } from '../../pages/admin/AdminClubData';
+export { AdminSystem } from '../../pages/admin/AdminSystem';
