@@ -179,7 +179,7 @@ export function getInitialData(): AppData {
       address: 'Calle Principal #123, Ciudad',
       phone: '+1234567890',
       email: 'info@miclub.com',
-      currency: '$',
+      currency: 'COP',
       fiscalYear: '2025',
     },
   };

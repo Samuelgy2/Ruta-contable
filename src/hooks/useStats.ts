@@ -22,6 +22,7 @@ export function useStats(
 
     const monthlyTransactions = transactions.filter(t => {
       const date = new Date(t.date);
+      if (isNaN(date.getTime())) return false;
       return date.getMonth() === thisMonth && date.getFullYear() === thisYear;
     });
 

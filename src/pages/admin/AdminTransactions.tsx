@@ -31,7 +31,11 @@ export function AdminTransactions({ onNavigate }: AdminTransactionsProps) {
       t.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
       t.category.toLowerCase().includes(searchTerm.toLowerCase())
     )
-    .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+    .sort((a, b) => {
+      const dateA = new Date(a.date).getTime();
+      const dateB = new Date(b.date).getTime();
+      return isNaN(dateB) || isNaN(dateA) ? 0 : dateB - dateA;
+    });
 
   const availableCategories = categories
     .filter(c => c.active && c.type === transactionForm.type)

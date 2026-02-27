@@ -16,6 +16,11 @@ function AppContent() {
   const [currentPage, setCurrentPage] = useState<Page>('home');
   const [currentAdminPage, setCurrentAdminPage] = useState<AdminPage>('overview');
 
+  // Navigation handler for non-admin pages
+  const handleNavigate = (page: Page) => {
+    setCurrentPage(page);
+  };
+
   // Navigation handler for admin pages - acepta string para compatibilidad con páginas existentes
   const handleAdminNavigate = (pageOrTab: string) => {
     const tabToPage: Record<string, AdminPage> = {
@@ -36,7 +41,12 @@ function AppContent() {
 
   // Si está autenticado, mostrar el panel correspondiente
   if (isAuthenticated) {
-    if (currentUser?.role === 'admin') {
+    // Si está autenticado pero no tiene usuario válido, mostrar login
+    if (!currentUser) {
+      return <Login onNavigate={handleNavigate} />;
+    }
+    
+    if (currentUser.role === 'admin') {
       // Render admin pages with AdminLayout
       const renderAdminContent = () => {
         switch (currentAdminPage) {
@@ -74,10 +84,6 @@ function AppContent() {
   }
 
   // Si no está autenticado, mostrar páginas públicas
-  const handleNavigate = (page: Page) => {
-    setCurrentPage(page);
-  };
-
   switch (currentPage) {
     case 'register':
       return <Register onNavigate={handleNavigate} onRegister={register} />;

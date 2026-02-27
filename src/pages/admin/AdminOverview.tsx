@@ -9,7 +9,61 @@ interface AdminOverviewProps {
 const CLUB_GREEN = '#10b981';
 
 export function AdminOverview({ onNavigate }: AdminOverviewProps) {
-  const { systemData } = useData();
+  const { systemData, transactions, members, fees } = useData();
+
+  // Calculate statistics
+  const currentMonth = new Date().getMonth();
+  const currentYear = new Date().getFullYear();
+
+  // Calculate total balance from transactions
+  const totalBalance = transactions.reduce((acc, t) => {
+    return t.type === 'income' ? acc + t.amount : acc - t.amount;
+  }, 0);
+
+  // Current club balance (same as total balance)
+  const clubBalance = totalBalance;
+
+  // Calculate income and expenses for current month
+  const monthlyTransactions = transactions.filter(t => {
+    const transactionDate = new Date(t.date);
+    if (isNaN(transactionDate.getTime())) return false;
+    return transactionDate.getMonth() === currentMonth && 
+           transactionDate.getFullYear() === currentYear;
+  });
+
+  const monthlyIncome = monthlyTransactions
+    .filter(t => t.type === 'income')
+    .reduce((acc, t) => acc + t.amount, 0);
+
+  const monthlyExpenses = monthlyTransactions
+    .filter(t => t.type === 'expense')
+    .reduce((acc, t) => acc + t.amount, 0);
+
+  // Calculate paid and pending fees
+  const paidFees = fees.filter(f => f.status === 'paid').length;
+  const pendingFees = fees.filter(f => f.status === 'pending').length;
+
+  // Format currency
+  const formatCurrency = (amount: number) => {
+    // Map common currency symbols to valid ISO codes
+    const currencyMap: Record<string, string> = {
+      '$': 'USD',
+      '€': 'EUR',
+      '£': 'GBP',
+      '¥': 'JPY',
+      'COP': 'COP',
+      'USD': 'USD',
+      'EUR': 'EUR',
+      'GBP': 'GBP',
+    };
+    const currencyCode = currencyMap[systemData.currency || ''] || 'USD';
+    return new Intl.NumberFormat('es-CO', {
+      style: 'currency',
+      currency: currencyCode,
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0,
+    }).format(amount);
+  };
 
   // Handle navigation from dropdown
   const handleNavigate = (tab: string) => {
@@ -50,7 +104,7 @@ export function AdminOverview({ onNavigate }: AdminOverviewProps) {
               Saldo actual del club
             </p>
             <p style={{ fontSize: '28px', fontWeight: 'bold', margin: 0, color: '#1f2937' }}>
-              $0.00
+              {formatCurrency(clubBalance)}
             </p>
           </div>
 
@@ -66,7 +120,7 @@ export function AdminOverview({ onNavigate }: AdminOverviewProps) {
               Balance total
             </p>
             <p style={{ fontSize: '28px', fontWeight: 'bold', margin: 0, color: '#1f2937' }}>
-              $0.00
+              {formatCurrency(totalBalance)}
             </p>
           </div>
 
@@ -82,7 +136,7 @@ export function AdminOverview({ onNavigate }: AdminOverviewProps) {
               Ingresos del mes
             </p>
             <p style={{ fontSize: '28px', fontWeight: 'bold', margin: 0, color: '#1f2937' }}>
-              $0.00
+              {formatCurrency(monthlyIncome)}
             </p>
           </div>
 
@@ -98,7 +152,7 @@ export function AdminOverview({ onNavigate }: AdminOverviewProps) {
               Gastos del mes
             </p>
             <p style={{ fontSize: '28px', fontWeight: 'bold', margin: 0, color: '#1f2937' }}>
-              $0.00
+              {formatCurrency(monthlyExpenses)}
             </p>
           </div>
         </div>
@@ -128,7 +182,7 @@ export function AdminOverview({ onNavigate }: AdminOverviewProps) {
                 borderRadius: '8px' 
               }}>
                 <span style={{ color: '#6b7280' }}>Total Transacciones</span>
-                <strong style={{ color: '#1f2937' }}>0</strong>
+                <strong style={{ color: '#1f2937' }}>{transactions.length}</strong>
               </div>
               <div style={{ 
                 display: 'flex', 
@@ -138,7 +192,7 @@ export function AdminOverview({ onNavigate }: AdminOverviewProps) {
                 borderRadius: '8px' 
               }}>
                 <span style={{ color: '#6b7280' }}>Total Socios</span>
-                <strong style={{ color: '#1f2937' }}>0</strong>
+                <strong style={{ color: '#1f2937' }}>{members.length}</strong>
               </div>
               <div style={{ 
                 display: 'flex', 
@@ -148,7 +202,7 @@ export function AdminOverview({ onNavigate }: AdminOverviewProps) {
                 borderRadius: '8px' 
               }}>
                 <span style={{ color: '#6b7280' }}>Cuotas Pagadas</span>
-                <strong style={{ color: CLUB_GREEN }}>0</strong>
+                <strong style={{ color: CLUB_GREEN }}>{paidFees}</strong>
               </div>
               <div style={{ 
                 display: 'flex', 
@@ -158,7 +212,7 @@ export function AdminOverview({ onNavigate }: AdminOverviewProps) {
                 borderRadius: '8px' 
               }}>
                 <span style={{ color: '#6b7280' }}>Cuotas Pendientes</span>
-                <strong style={{ color: '#ef4444' }}>0</strong>
+                <strong style={{ color: '#ef4444' }}>{pendingFees}</strong>
               </div>
             </div>
           </div>
@@ -180,7 +234,7 @@ export function AdminOverview({ onNavigate }: AdminOverviewProps) {
                 borderRadius: '8px' 
               }}>
                 <p style={{ fontSize: '12px', color: '#6b7280', marginBottom: '4px' }}>Club</p>
-                <p style={{ margin: 0, fontWeight: '500', color: '#1f2937' }}>Corporación bmx riders</p>
+                <p style={{ margin: 0, fontWeight: '500', color: '#1f2937' }}>{systemData.clubName || 'Sin nombre'}</p>
               </div>
               <div style={{ 
                 padding: '12px', 
@@ -204,7 +258,7 @@ export function AdminOverview({ onNavigate }: AdminOverviewProps) {
                 borderRadius: '8px' 
               }}>
                 <p style={{ fontSize: '12px', color: '#6b7280', marginBottom: '4px' }}>Usuarios Activos</p>
-                <p style={{ margin: 0, fontWeight: '500', color: '#1f2937' }}>0 de 0</p>
+                <p style={{ margin: 0, fontWeight: '500', color: '#1f2937' }}>{members.filter(m => m.active).length} de {members.length}</p>
               </div>
             </div>
           </div>
