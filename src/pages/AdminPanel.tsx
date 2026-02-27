@@ -5,6 +5,7 @@ import { useData } from '../contexts/DataContext';
 import { useStats } from '../hooks/useStats';
 import { formatCurrency, formatDateShort } from '../utils/format';
 import { exportToCSV, exportToJSON, exportTransactionsReport, exportMembersWithFees } from '../utils/export';
+import { PasswordInput } from '../components/ui/password-input';
 
 export function AdminPanel() {
   const {
@@ -352,8 +353,7 @@ export function AdminPanel() {
                         </div>
                         <div className="form-group">
                           <label>Contraseña</label>
-                          <input
-                            type="password"
+                          <PasswordInput
                             value={userForm.password}
                             onChange={(e) => setUserForm({ ...userForm, password: e.target.value })}
                             placeholder="••••••"

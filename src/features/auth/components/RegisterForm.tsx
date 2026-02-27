@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { PasswordInput } from '../../../components/ui/password-input';
 
 interface RegisterFormProps {
   onNavigate: (page: 'home' | 'login' | 'register') => void;
@@ -147,9 +148,8 @@ export function RegisterForm({ onNavigate, onRegister, backgroundColor, backgrou
 
         <div className="form-group">
           <label htmlFor="password">Contraseña *</label>
-          <input
+          <PasswordInput
             id="password"
-            type="password"
             className={`form-input ${errors.password ? 'error' : ''}`}
             value={formData.password}
             onChange={(e) => handleChange('password', e.target.value)}
@@ -162,9 +162,8 @@ export function RegisterForm({ onNavigate, onRegister, backgroundColor, backgrou
 
         <div className="form-group">
           <label htmlFor="confirmPassword">Confirmar Contraseña *</label>
-          <input
+          <PasswordInput
             id="confirmPassword"
-            type="password"
             className={`form-input ${errors.confirmPassword ? 'error' : ''}`}
             value={formData.confirmPassword}
             onChange={(e) => handleChange('confirmPassword', e.target.value)}

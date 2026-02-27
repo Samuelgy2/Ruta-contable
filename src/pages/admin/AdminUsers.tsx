@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useData } from '../../contexts/DataContext';
+import { PasswordInput } from '../../components/ui/password-input';
 
 interface AdminUsersProps {
   onNavigate?: (tab: string) => void;
@@ -106,8 +107,7 @@ export function AdminUsers({ onNavigate }: AdminUsersProps) {
                 </div>
                 <div>
                   <label style={{ display: 'block', marginBottom: '4px', fontWeight: '500' }}>Contraseña</label>
-                  <input 
-                    type="password" 
+                  <PasswordInput 
                     value={userForm.password}
                     onChange={(e) => setUserForm({...userForm, password: e.target.value})}
                     className="input"

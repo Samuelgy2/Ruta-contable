@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
+import { PasswordInput } from '../ui/password-input';
 
 interface LoginFormProps {
   onNavigate: (page: 'home' | 'login' | 'register') => void;
@@ -48,9 +49,8 @@ export function LoginForm({ onNavigate }: LoginFormProps) {
 
         <div className="form-group">
           <label htmlFor="password">Contraseña</label>
-          <input
+          <PasswordInput
             id="password"
-            type="password"
             className="form-input"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
