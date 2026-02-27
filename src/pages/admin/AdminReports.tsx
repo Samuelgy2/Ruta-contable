@@ -2,7 +2,7 @@ import React from 'react';
 import { useData } from '../../contexts/DataContext';
 import { useStats } from '../../hooks/useStats';
 import { formatCurrency } from '../../utils/format';
-import { exportToCSV, exportToJSON, exportTransactionsReport, exportMembersWithFees } from '../../utils/export';
+import { exportToCSV, exportToJSON, exportTransactionsReport, exportMembersWithFees, exportTransactionsReportPDF, exportMembersReportPDF } from '../../utils/export';
 
 interface AdminReportsProps {
   onNavigate?: (tab: string) => void;
@@ -30,12 +30,12 @@ export function AdminReports({ onNavigate }: AdminReportsProps) {
     exportToCSV(data, `transacciones-${new Date().toISOString().split('T')[0]}.csv`);
   };
 
-  const handleExportMembers = () => {
-    exportMembersWithFees(members, fees);
+  const handleExportMembers = async () => {
+    await exportMembersReportPDF(members, fees, systemData);
   };
 
-  const handleExportReport = () => {
-    exportTransactionsReport(transactions, systemData);
+  const handleExportReport = async () => {
+    await exportTransactionsReportPDF(transactions, systemData);
   };
 
   const handleExportAllData = () => {
@@ -117,7 +117,7 @@ export function AdminReports({ onNavigate }: AdminReportsProps) {
             <button onClick={handleExportMembers} className="btn btn-secondary" style={{ padding: '16px' }}>
               <span style={{ display: 'block', fontSize: '24px', marginBottom: '8px' }}>👥</span>
               Exportar Socios y Cuotas
-              <span style={{ display: 'block', fontSize: '12px', opacity: 0.7, marginTop: '4px' }}>Formato CSV</span>
+              <span style={{ display: 'block', fontSize: '12px', opacity: 0.7, marginTop: '4px' }}>Formato PDF</span>
             </button>
             <button onClick={handleExportReport} className="btn btn-secondary" style={{ padding: '16px' }}>
               <span style={{ display: 'block', fontSize: '24px', marginBottom: '8px' }}>📈</span>
