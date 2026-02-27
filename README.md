@@ -28,47 +28,60 @@ src/
 ├── App.tsx                      # Componente raíz de la aplicación
 ├── main.tsx                     # Punto de entrada de la aplicación
 ├── index.css                    # Estilos globales
+├── vite-env.d.ts                # Tipos de Vite
 ├── types/                       # Definiciones de tipos TypeScript
 │   └── index.ts                 # Tipos centralizados
-├── shared/                      # Código compartido/reutilizable
-│   ├── components/
-│   │   ├── Logo.tsx             # Componente de logo
-│   │   └── ImageWithFallback.tsx # Imagen con manejo de errores
-│   └── types/
-│       └── index.ts             # Tipos compartidos
-├── components/                  # Componentes de UI (legacy)
-│   ├── common/
-│   │   ├── Header.tsx           # Encabezado con información del usuario
-│   │   ├── Logo.tsx             # Componente de logo
-│   │   └── StatCard.tsx         # Tarjeta para mostrar estadísticas
-│   └── ui/                      # Componentes shadcn/ui
-├── contexts/                     # Contextos de React
+├── contexts/                    # Contextos de React (solo DataContext)
 │   └── DataContext.tsx          # Estado de datos de la aplicación
-├── hooks/                        # Hooks personalizados de React
-│   └── useStats.ts              # Cálculos de estadísticas
 ├── features/                     # Módulos basados en características
 │   ├── auth/                    # Autenticación
+│   │   ├── index.ts             # Exportaciones del módulo
 │   │   ├── components/          # LoginForm, RegisterForm
 │   │   ├── contexts/            # AuthContext
-│   │   └── pages/               # Login, Register
+│   │   └── pages/               # Login, Register, ForgotPassword
 │   ├── landing/                 # Página pública
-│   │   └── components/           # Navbar, Footer, Hero
-│   ├── admin/                   # Panel de administración
-│   │   └── components/          # AdminLayout
-│   └── dashboard/               # Panel de usuario
+│   │   └── components/          # Navbar, Footer, Hero
+│   └── admin/                   # Panel de administración
+│       ├── index.ts             # Exportaciones del módulo
+│       └── components/          # AdminLayout
 ├── pages/                       # Componentes de página
 │   ├── UserDashboard.tsx        # Panel de usuario
 │   ├── AdminPanel.tsx           # Panel de administrador
 │   └── admin/                   # Páginas del admin
+│       ├── AdminCategories.tsx  # Gestión de categorías
+│       ├── AdminClubData.tsx    # Datos del club
+│       ├── AdminMembers.tsx     # Gestión de miembros
+│       ├── AdminOverview.tsx   # Resumen del sistema
+│       ├── AdminReports.tsx     # Reportes
+│       ├── AdminSystem.tsx      # Configuración del sistema
+│       ├── AdminTransactions.tsx # Transacciones
+│       ├── AdminUsers.tsx       # Gestión de usuarios
+│       └── index.ts             # Exportaciones
+├── hooks/                        # Hooks personalizados de React
+│   └── useStats.ts              # Cálculos de estadísticas
+├── components/                  # Componentes de UI
+│   ├── common/                  # Componentes comunes
+│   │   ├── Header.tsx           # Encabezado con información del usuario
+│   │   ├── Logo.tsx            # Componente de logo
+│   │   └── StatCard.tsx         # Tarjeta para mostrar estadísticas
+│   └── ui/                      # Componentes shadcn/ui (45+ componentes)
+├── shared/                      # Código compartido/reutilizable
+│   ├── components/
+│   │   ├── Logo.tsx            # Componente de logo
+│   │   └── ImageWithFallback.tsx # Imagen con manejo de errores
+│   └── types/
+│       └── index.ts             # Tipos compartidos
 ├── utils/                       # Funciones utilitarias
 │   ├── format.ts                # Funciones de formato
 │   ├── export.ts                # Funciones de exportación
 │   ├── initialData.ts           # Datos iniciales
 │   └── validation.ts            # Utilidades de validación
+├── styles/
+│   └── globals.css               # CSS global con variables
 ├── images/                      # Recursos de imagen
 │   └── logo/
-└── styles/
-    └── globals.css               # CSS global con variables
+└── guidelines/
+    └── Guidelines.md            # Guías de desarrollo
 ```
 
 ---
@@ -118,7 +131,7 @@ function AppContent() {
 
 ### Componentes de Autenticación
 
-#### LoginForm ([`src/components/auth/LoginForm.tsx`](src/components/auth/LoginForm.tsx:1))
+#### LoginForm ([`src/features/auth/components/LoginForm.tsx`](src/features/auth/components/LoginForm.tsx:1))
 
 Componente de formulario para autenticación de usuarios.
 
@@ -140,7 +153,7 @@ const [password, setPassword] = useState('');
 const [error, setError] = useState('');
 ```
 
-#### RegisterForm ([`src/components/auth/RegisterForm.tsx`](src/components/auth/RegisterForm.tsx:1))
+#### RegisterForm ([`src/features/auth/components/RegisterForm.tsx`](src/features/auth/components/RegisterForm.tsx:1))
 
 Componente de formulario para registro de usuarios con validación.
 
@@ -212,7 +225,7 @@ Componente de tarjeta reutilizable para mostrar estadísticas.
 | `description?` | `string` | Descripción opcional |
 | `className?` | `'positive' \| 'negative' \| 'neutral'` | Tema de color |
 
-#### Navbar ([`src/components/common/Navbar.tsx`](src/components/common/Navbar.tsx:1))
+#### Navbar ([`src/features/landing/components/Navbar.tsx`](src/features/landing/components/Navbar.tsx:1))
 
 Barra de navegación para páginas públicas.
 
@@ -221,7 +234,7 @@ Barra de navegación para páginas públicas.
 |------|------|-------------|
 | `onNavigate` | `(page: 'home' \| 'login' \| 'register') => void` | Callback de navegación |
 
-#### Footer ([`src/components/common/Footer.tsx`](src/components/common/Footer.tsx:1))
+#### Footer ([`src/features/landing/components/Footer.tsx`](src/features/landing/components/Footer.tsx:1))
 
 Pie de página con información de contacto y enlaces rápidos.
 
@@ -260,7 +273,7 @@ Componente de imagen con fallback para imágenes rotas.
 
 ## Contextos y Gestión de Estado
 
-### AuthContext ([`src/contexts/AuthContext.tsx`](src/contexts/AuthContext.tsx:1))
+### AuthContext ([`src/features/auth/contexts/AuthContext.tsx`](src/features/auth/contexts/AuthContext.tsx:1))
 
 Gestiona el estado de autenticación y sesiones de usuarios.
 
@@ -806,5 +819,5 @@ Ruta contable es una aplicación React bien estructurada que utiliza patrones mo
 
 ---
 
-**Última Actualización:** Febrero 2025
+**Última Actualización:** Febrero 2026
 **Versión:** 1.0.0
