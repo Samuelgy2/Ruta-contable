@@ -14,7 +14,14 @@ import {
   ChevronRight,
   LogOut,
   ChevronDown,
-  Building2
+  Building2,
+  ClipboardList,
+  CreditCard,
+  Wallet,
+  Shirt,
+  Lock,
+  ShoppingCart,
+  Heart
 } from 'lucide-react';
 import clubLogo from '../../../images/logo/club-logo.png';
 
@@ -22,7 +29,7 @@ import clubLogo from '../../../images/logo/club-logo.png';
 const CLUB_GREEN = '#10b981';
 
 // Tipos de páginas del admin
-export type AdminPage = 'overview' | 'transactions' | 'users' | 'members' | 'reports' | 'categories' | 'club-data' | 'system';
+export type AdminPage = 'overview' | 'transactions' | 'users' | 'members' | 'reports' | 'categories' | 'club-data' | 'system' | 'attendance' | 'monthly-payments' | 'cartera' | 'jersey' | 'lockers' | 'purchases' | 'health-policies';
 
 // Configuración del menú de navegación
 const adminMenuItems = [
@@ -68,6 +75,49 @@ const adminMenuItems = [
     icon: Settings,
     section: 'datos'
   },
+  // New modules
+  { 
+    id: 'attendance', 
+    label: 'Asistencia', 
+    icon: ClipboardList,
+    section: 'gestión'
+  },
+  { 
+    id: 'monthly-payments', 
+    label: 'Mensualidades', 
+    icon: CreditCard,
+    section: 'gestión'
+  },
+  { 
+    id: 'cartera', 
+    label: 'Cartera', 
+    icon: Wallet,
+    section: 'gestión'
+  },
+  { 
+    id: 'jersey', 
+    label: 'Uniformes', 
+    icon: Shirt,
+    section: 'gestión'
+  },
+  { 
+    id: 'lockers', 
+    label: 'Camerinos', 
+    icon: Lock,
+    section: 'gestión'
+  },
+  { 
+    id: 'purchases', 
+    label: 'Compras', 
+    icon: ShoppingCart,
+    section: 'gestión'
+  },
+  { 
+    id: 'health-policies', 
+    label: 'Polizas de Salud', 
+    icon: Heart,
+    section: 'gestión'
+  },
 ] as const;
 
 // Agrupar items por sección
@@ -75,6 +125,7 @@ const menuSections = {
   resumen: { title: 'RESUMEN', items: adminMenuItems.filter(item => item.section === 'resumen') },
   socios: { title: 'SOCIOS', items: adminMenuItems.filter(item => item.section === 'socios') },
   datos: { title: 'DATOS DEL CLUB', items: adminMenuItems.filter(item => item.section === 'datos') },
+  gestión: { title: 'GESTIÓN', items: adminMenuItems.filter(item => item.section === 'gestión') },
 };
 
 interface AdminLayoutProps {
@@ -188,15 +239,14 @@ export function AdminLayout({ children, currentPage, onNavigate }: AdminLayoutPr
             <p className="text-[11px] m-0 uppercase tracking-wider" style={{ color: '#6b7280' }}>
               Administrador
             </p>
-            <p className="text-sm font-semibold m-0 flex items-center gap-2" style={{ color: '#1f2937' }}>
+            <p className="text-sm font-semibold m-0" style={{ color: '#1f2937' }}>
               {adminName}
-              <ChevronDown size={14} style={{ opacity: 0.5 }} />
             </p>
           </div>
         )}
 
         {/* Navigation Menu */}
-        <nav className="flex-1 p-3 overflow-y-auto">
+        <nav className="flex-1 p-3 overflow-y-auto custom-scrollbar">
           {Object.entries(menuSections).map(([sectionKey, section]) => (
             <div key={sectionKey} className="mb-4">
               {sidebarOpen && (

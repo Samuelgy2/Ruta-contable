@@ -5,7 +5,7 @@ import { Login } from './features/auth/pages/Login';
 import { Register } from './features/auth/pages/Register';
 import { ForgotPassword } from './features/auth/pages/ForgotPassword';
 import { AdminPanel } from './pages/AdminPanel';
-import { AdminOverview, AdminTransactions, AdminUsers, AdminMembers, AdminReports, AdminCategories, AdminClubData, AdminSystem } from './pages/admin';
+import { AdminOverview, AdminTransactions, AdminUsers, AdminMembers, AdminReports, AdminCategories, AdminClubData, AdminSystem, AdminAttendance, AdminMonthlyPayments, AdminCartera, AdminJersey, AdminLockers, AdminPurchases, AdminHealthPolicies } from './pages/admin';
 import { AdminLayout, AdminPage as AdminPageType } from './features/admin/components/AdminLayout';
 
 type Page = 'home' | 'login' | 'register' | 'forgot-password';
@@ -24,7 +24,7 @@ function AppContent() {
   // Navigation handler for admin pages - accepts both tab names and page IDs
   const handleAdminNavigate = (pageOrTab: string) => {
     // First check if it's already a valid page ID
-    const validPages: AdminPage[] = ['overview', 'transactions', 'users', 'members', 'reports', 'categories', 'club-data', 'system'];
+    const validPages: AdminPage[] = ['overview', 'transactions', 'users', 'members', 'reports', 'categories', 'club-data', 'system', 'attendance', 'monthly-payments', 'cartera', 'jersey', 'lockers', 'purchases', 'health-policies'];
     if (validPages.includes(pageOrTab as AdminPage)) {
       setCurrentAdminPage(pageOrTab as AdminPage);
       return;
@@ -40,6 +40,13 @@ function AppContent() {
       categories: 'categories',
       data: 'club-data',
       system: 'system',
+      attendance: 'attendance',
+      'monthly-payments': 'monthly-payments',
+      cartera: 'cartera',
+      jersey: 'jersey',
+      lockers: 'lockers',
+      purchases: 'purchases',
+      'health-policies': 'health-policies',
     };
     const page = tabToPage[pageOrTab];
     if (page) {
@@ -74,6 +81,21 @@ function AppContent() {
             return <AdminClubData onNavigate={handleAdminNavigate} />;
           case 'system':
             return <AdminSystem onNavigate={handleAdminNavigate} />;
+          // New modules
+          case 'attendance':
+            return <AdminAttendance onNavigate={handleAdminNavigate} />;
+          case 'monthly-payments':
+            return <AdminMonthlyPayments onNavigate={handleAdminNavigate} />;
+          case 'cartera':
+            return <AdminCartera onNavigate={handleAdminNavigate} />;
+          case 'jersey':
+            return <AdminJersey onNavigate={handleAdminNavigate} />;
+          case 'lockers':
+            return <AdminLockers onNavigate={handleAdminNavigate} />;
+          case 'purchases':
+            return <AdminPurchases onNavigate={handleAdminNavigate} />;
+          case 'health-policies':
+            return <AdminHealthPolicies onNavigate={handleAdminNavigate} />;
           default:
             return <AdminOverview onNavigate={handleAdminNavigate} />;
         }
