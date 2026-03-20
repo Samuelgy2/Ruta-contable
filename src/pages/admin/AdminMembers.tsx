@@ -1,7 +1,7 @@
   import React, { useState } from 'react';
   import { useData } from '../../contexts/DataContext';
   import { formatDateShort } from '../../utils/format';
-  import { Member, User } from '../../types';
+  import { Member, User, UserRole } from '../../types';
   import { PasswordInput } from '../../components/ui/password-input';
 
   interface AdminMembersProps {
@@ -19,11 +19,14 @@
     const [editingMember, setEditingMember] = useState<string | null>(null);
     const [memberForm, setMemberForm] = useState({
       name: '',
+      documento: '',
+      tipoDocumento: 'CC' as 'CC' | 'TI' | 'CE' | 'PAS',
       email: '',
       phone: '',
       joinDate: new Date().toISOString().split('T')[0],
       active: true,
       membershipType: '',
+      estado: 'activo' as 'activo' | 'inactivo' | 'suspendido',
     });
 
     // Estado para gestión de usuarios (igual que en AdminUsers)
@@ -34,7 +37,7 @@
       password: '',
       fullName: '',
       email: '',
-      role: 'user' as 'user' | 'admin',
+      role: 'user' as UserRole,
       active: true,
     });
 
@@ -63,7 +66,7 @@
     const handleMemberSubmit = (e: React.FormEvent) => {
       e.preventDefault();
       
-      if (!memberForm.name || !memberForm.email || !memberForm.phone) {
+      if (!memberForm.name || !memberForm.documento || !memberForm.email || !memberForm.phone) {
         alert('Por favor completa todos los campos obligatorios');
         return;
       }
@@ -79,11 +82,14 @@
 
       setMemberForm({
         name: '',
+        documento: '',
+        tipoDocumento: 'CC',
         email: '',
         phone: '',
         joinDate: new Date().toISOString().split('T')[0],
         active: true,
         membershipType: '',
+        estado: 'activo',
       });
       setShowMemberForm(false);
     };
@@ -93,11 +99,14 @@
       if (member) {
         setMemberForm({
           name: member.name,
+          documento: member.documento || '',
+          tipoDocumento: member.tipoDocumento || 'CC',
           email: member.email,
           phone: member.phone,
           joinDate: member.joinDate,
           active: member.active,
           membershipType: member.membershipType,
+          estado: member.estado || 'activo',
         });
         setEditingMember(memberId);
         setShowMemberForm(true);
@@ -254,11 +263,14 @@
                     setEditingMember(null);
                     setMemberForm({
                       name: '',
+                      documento: '',
+                      tipoDocumento: 'CC',
                       email: '',
                       phone: '',
                       joinDate: new Date().toISOString().split('T')[0],
                       active: true,
                       membershipType: '',
+                      estado: 'activo',
                     });
                     setShowMemberForm(!showMemberForm);
                   }}
@@ -312,11 +324,34 @@
                       </div>
                       <div>
                         <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500', color: '#374151' }}>
-                          Cédula/Número de Identificación *
+                          Tipo de Documento *
+                        </label>
+                        <select
+                          value={memberForm.tipoDocumento}
+                          onChange={(e) => setMemberForm({ ...memberForm, tipoDocumento: e.target.value as 'CC' | 'TI' | 'CE' | 'PAS' })}
+                          style={{
+                            width: '100%',
+                            padding: '10px 14px',
+                            border: '1px solid #d1d5db',
+                            borderRadius: '8px',
+                            fontSize: '14px',
+                            backgroundColor: 'white'
+                          }}
+                          required
+                        >
+                          <option value="CC">Cédula de Ciudadanía</option>
+                          <option value="TI">Tarjeta de Identidad</option>
+                          <option value="CE">Cédula de Extranjería</option>
+                          <option value="PAS">Pasaporte</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500', color: '#374151' }}>
+                          Número de Identificación *
                         </label>
                         <input
-                          value={memberForm.membershipType}
-                          onChange={(e) => setMemberForm({ ...memberForm, membershipType: e.target.value })}
+                          value={memberForm.documento}
+                          onChange={(e) => setMemberForm({ ...memberForm, documento: e.target.value })}
                           placeholder="123456789"
                           style={{
                             width: '100%',
