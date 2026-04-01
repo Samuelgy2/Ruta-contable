@@ -2,13 +2,17 @@
 
 ## Descripción General
 
-Ruta contable es una aplicación web para gestión financiera diseñada específicamente para clubes y organizaciones. Construida con React 18, TypeScript y Tailwind CSS, utiliza una arquitectura basada en características con localStorage para persistencia de datos.
+Ruta contable es una aplicación web full-stack para gestión financiera diseñada específicamente para clubes y organizaciones. Construida con una arquitectura moderna de tres capas:
+
+- **Frontend**: React 18, TypeScript y Tailwind CSS con arquitectura basada en características
+- **Backend**: Node.js con Express para API REST
+- **Base de Datos**: PostgreSQL para persistencia de datos
 
 ---
 
 ## Tabla de Contenidos
 
-1. [Estructura del Proyecto](#estructura-del-proyecto)
+1. [Arquitectura del Proyecto](#arquitectura-del-proyecto)
 2. [Módulos Principales](#módulos-principales)
 3. [Componentes](#componentes)
 4. [Contextos y Gestión de Estado](#contextos-y-gestión-de-estado)
@@ -21,74 +25,129 @@ Ruta contable es una aplicación web para gestión financiera diseñada específ
 
 ---
 
-## Estructura del Proyecto
+## Arquitectura del Proyecto
+
+El proyecto sigue una arquitectura full-stack de tres capas:
 
 ```
-src/
-├── App.tsx                      # Componente raíz de la aplicación
-├── main.tsx                     # Punto de entrada de la aplicación
-├── index.css                    # Estilos globales
-├── vite-env.d.ts                # Tipos de Vite
-├── types/                       # Definiciones de tipos TypeScript
-│   └── index.ts                 # Tipos centralizados
-├── contexts/                    # Contextos de React (solo DataContext)
-│   └── DataContext.tsx          # Estado de datos de la aplicación
-├── features/                     # Módulos basados en características
-│   ├── auth/                    # Autenticación
-│   │   ├── index.ts             # Exportaciones del módulo
-│   │   ├── components/          # LoginForm, RegisterForm
-│   │   ├── contexts/            # AuthContext
-│   │   └── pages/               # Login, Register, ForgotPassword
-│   ├── landing/                 # Página pública
-│   │   └── components/          # Navbar, Footer, Hero
-│   └── admin/                   # Panel de administración
-│       ├── index.ts             # Exportaciones del módulo
-│       └── components/          # AdminLayout
-├── pages/                       # Componentes de página
-│   ├── UserDashboard.tsx        # Panel de usuario
-│   ├── AdminPanel.tsx           # Panel de administrador
-│   └── admin/                   # Páginas del admin
-│       ├── AdminCategories.tsx  # Gestión de categorías
-│       ├── AdminClubData.tsx    # Datos del club
-│       ├── AdminMembers.tsx     # Gestión de miembros
-│       ├── AdminOverview.tsx   # Resumen del sistema
-│       ├── AdminReports.tsx     # Reportes
-│       ├── AdminSystem.tsx      # Configuración del sistema
-│       ├── AdminTransactions.tsx # Transacciones
-│       ├── AdminUsers.tsx       # Gestión de usuarios
-│       └── index.ts             # Exportaciones
-├── hooks/                        # Hooks personalizados de React
-│   └── useStats.ts              # Cálculos de estadísticas
-├── components/                  # Componentes de UI
-│   ├── common/                  # Componentes comunes
-│   │   ├── Header.tsx           # Encabezado con información del usuario
-│   │   ├── Logo.tsx            # Componente de logo
-│   │   └── StatCard.tsx         # Tarjeta para mostrar estadísticas
-│   └── ui/                      # Componentes shadcn/ui (45+ componentes)
-├── shared/                      # Código compartido/reutilizable
-│   ├── components/
-│   │   ├── Logo.tsx            # Componente de logo
-│   │   └── ImageWithFallback.tsx # Imagen con manejo de errores
-│   └── types/
-│       └── index.ts             # Tipos compartidos
-├── utils/                       # Funciones utilitarias
-│   ├── format.ts                # Funciones de formato
-│   ├── export.ts                # Funciones de exportación
-│   ├── initialData.ts           # Datos iniciales
-│   └── validation.ts            # Utilidades de validación
-├── styles/
-│   └── globals.css               # CSS global con variables
-├── images/                      # Recursos de imagen
-│   └── logo/
-└── guidelines/
-    └── Guidelines.md            # Guías de desarrollo
+Ruta contable/
+├── frontend/                    # Aplicación React (Cliente)
+│   ├── src/
+│   │   ├── App.tsx              # Componente raíz de la aplicación
+│   │   ├── main.tsx             # Punto de entrada de la aplicación
+│   │   ├── index.css            # Estilos globales
+│   │   ├── vite-env.d.ts        # Tipos de Vite
+│   │   ├── types/               # Definiciones de tipos TypeScript
+│   │   │   └── index.ts         # Tipos centralizados
+│   │   ├── contexts/            # Contextos de React
+│   │   │   └── DataContext.tsx  # Estado de datos de la aplicación
+│   │   ├── features/            # Módulos basados en características
+│   │   │   ├── auth/            # Autenticación
+│   │   │   │   ├── index.ts     # Exportaciones del módulo
+│   │   │   │   ├── components/  # LoginForm, RegisterForm
+│   │   │   │   ├── contexts/    # AuthContext
+│   │   │   │   └── pages/       # Login, Register, ForgotPassword
+│   │   │   ├── landing/         # Página pública
+│   │   │   │   └── components/  # Navbar, Footer, Hero
+│   │   │   └── admin/           # Panel de administración
+│   │   │       ├── index.ts     # Exportaciones del módulo
+│   │   │       └── components/  # AdminLayout
+│   │   ├── pages/               # Componentes de página
+│   │   │   ├── admin/           # Páginas del admin
+│   │   │   │   ├── AdminCategories.tsx
+│   │   │   │   ├── AdminClubData.tsx
+│   │   │   │   ├── AdminMembers.tsx
+│   │   │   │   ├── AdminOverview.tsx
+│   │   │   │   ├── AdminReports.tsx
+│   │   │   │   ├── AdminSystem.tsx
+│   │   │   │   ├── AdminTransactions.tsx
+│   │   │   │   ├── AdminUsers.tsx
+│   │   │   │   └── index.ts
+│   │   │   └── index.ts
+│   │   ├── hooks/               # Hooks personalizados de React
+│   │   │   ├── useStats.ts      # Cálculos de estadísticas
+│   │   │   └── useCrudState.ts  # Estado CRUD
+│   │   ├── components/          # Componentes de UI
+│   │   │   ├── common/          # Componentes comunes
+│   │   │   │   ├── Header.tsx
+│   │   │   │   ├── Logo.tsx
+│   │   │   │   └── StatCard.tsx
+│   │   │   ├── crud/            # Componentes CRUD
+│   │   │   │   ├── CrudManager.tsx
+│   │   │   │   ├── EntityForm.tsx
+│   │   │   │   ├── EntityTable.tsx
+│   │   │   │   └── index.ts
+│   │   │   └── ui/              # Componentes shadcn/ui (45+ componentes)
+│   │   ├── shared/              # Código compartido/reutilizable
+│   │   │   ├── components/
+│   │   │   │   ├── Logo.tsx
+│   │   │   │   └── ImageWithFallback.tsx
+│   │   │   └── types/
+│   │   │       └── index.ts
+│   │   ├── config/              # Configuración de entidades
+│   │   │   └── entities/
+│   │   │       ├── categories.config.ts
+│   │   │       ├── members.config.ts
+│   │   │       ├── transactions.config.ts
+│   │   │       ├── users.config.ts
+│   │   │       └── index.ts
+│   │   ├── utils/               # Funciones utilitarias
+│   │   │   ├── format.ts
+│   │   │   ├── export.tsx
+│   │   │   ├── initialData.ts
+│   │   │   ├── pdfDocuments.tsx
+│   │   │   └── validation.ts
+│   │   ├── styles/
+│   │   │   └── globals.css
+│   │   ├── images/
+│   │   │   └── logo/
+│   │   └── guidelines/
+│   │       └── Guidelines.md
+│   ├── package.json
+│   ├── vite.config.ts
+│   ├── tsconfig.json
+│   ├── tailwind.config.js
+│   └── postcss.config.js
+│
+├── backend/                     # API REST (Servidor)
+│   ├── src/
+│   │   ├── index.js             # Punto de entrada del servidor
+│   │   ├── config/
+│   │   │   └── database.js      # Configuración de base de datos
+│   │   ├── controllers/         # Controladores de rutas
+│   │   ├── middlewares/         # Middlewares de Express
+│   │   ├── models/              # Modelos de datos
+│   │   ├── routes/              # Definición de rutas API
+│   │   ├── services/            # Lógica de negocio
+│   │   ├── database/            # Scripts de base de datos
+│   │   └── utils/               # Utilidades del backend
+│   ├── BD/                      # Configuración de PostgreSQL
+│   │   ├── src/
+│   │   │   ├── config/
+│   │   │   │   ├── database.js  # Configuración de conexión
+│   │   │   │   └── server.js    # Configuración del servidor
+│   │   │   └── models/
+│   │   │       └── user.js      # Modelo de usuario
+│   │   ├── POSTGRESQL_CONFIG.md # Documentación de PostgreSQL
+│   │   └── README.md            # Documentación del backend
+│   ├── package.json
+│   └── .env                     # Variables de entorno
+│
+├── build/                       # Build de producción del frontend
+│   ├── index.html
+│   └── assets/
+│
+├── README.md                    # Documentación principal
+└── .npmrc                       # Configuración de npm
 ```
 
 ---
 
 ## Módulos Principales
 
-### Punto de Entrada ([`src/main.tsx`](src/main.tsx:1))
+### Frontend (React + TypeScript)
+
+#### Punto de Entrada ([`frontend/src/main.tsx`](frontend/src/main.tsx:1))
 
 Punto de entrada de la aplicación que renderiza React en el DOM.
 
@@ -100,7 +159,7 @@ import "./index.css";
 createRoot(document.getElementById("root")!).render(<App />);
 ```
 
-### App Raíz ([`src/App.tsx`](src/App.tsx:1))
+#### App Raíz ([`frontend/src/App.tsx`](frontend/src/App.tsx:1))
 
 Componente raíz que configura los proveedores y maneja la lógica de enrutamiento.
 
@@ -108,6 +167,7 @@ Componente raíz que configura los proveedores y maneja la lógica de enrutamien
 - Envuelve la aplicación con `AuthProvider` y `DataProvider`
 - Maneja el estado de autenticación
 - Dirige a las páginas según el rol del usuario
+- Se comunica con el backend a través de servicios API
 
 ```typescript
 function AppContent() {
@@ -125,13 +185,120 @@ function AppContent() {
 }
 ```
 
+### Backend (Node.js + Express)
+
+#### Punto de Entrada del Servidor ([`backend/src/index.js`](backend/src/index.js:1))
+
+Servidor Express que maneja las peticiones HTTP y la lógica de negocio.
+
+**Características Clave:**
+- Configuración de middleware (CORS, JSON parsing, etc.)
+- Definición de rutas REST API
+- Conexión a base de datos PostgreSQL
+- Manejo de errores y validaciones
+
+```javascript
+const express = require('express');
+const cors = require('cors');
+const app = express();
+
+app.use(cors());
+app.use(express.json());
+
+// Rutas de la API
+app.use('/api/users', require('./routes/users'));
+app.use('/api/members', require('./routes/members'));
+app.use('/api/transactions', require('./routes/transactions'));
+app.use('/api/categories', require('./routes/categories'));
+
+app.listen(3000, () => {
+  console.log('Servidor corriendo en puerto 3000');
+});
+```
+
+#### Configuración de Base de Datos ([`backend/src/config/database.js`](backend/src/config/database.js:1))
+
+Configuración de la conexión a PostgreSQL usando pg-pool.
+
+```javascript
+const { Pool } = require('pg');
+
+const pool = new Pool({
+  host: process.env.DB_HOST,
+  port: process.env.DB_PORT,
+  database: process.env.DB_NAME,
+  user: process.env.DB_USER,
+  password: process.env.DB_PASSWORD,
+});
+
+module.exports = pool;
+```
+
+### Base de Datos (PostgreSQL)
+
+#### Configuración de PostgreSQL ([`backend/BD/src/config/database.js`](backend/BD/src/config/database.js:1))
+
+Script de configuración y creación de tablas en PostgreSQL.
+
+**Tablas Principales:**
+- `users` - Usuarios del sistema
+- `members` - Miembros del club
+- `transactions` - Transacciones financieras
+- `categories` - Categorías de transacciones
+- `fees` - Cuotas de membresía
+- `system_data` - Configuración del sistema
+
+#### Modelo de Usuario ([`backend/BD/src/models/user.js`](backend/BD/src/models/user.js:1))
+
+Modelo de datos para la tabla de usuarios con operaciones CRUD.
+
+```javascript
+const pool = require('../config/database');
+
+const User = {
+  async findAll() {
+    const result = await pool.query('SELECT * FROM users');
+    return result.rows;
+  },
+  
+  async findById(id) {
+    const result = await pool.query('SELECT * FROM users WHERE id = $1', [id]);
+    return result.rows[0];
+  },
+  
+  async create(userData) {
+    const { username, password, role, fullName, email } = userData;
+    const result = await pool.query(
+      'INSERT INTO users (username, password, role, full_name, email) VALUES ($1, $2, $3, $4, $5) RETURNING *',
+      [username, password, role, fullName, email]
+    );
+    return result.rows[0];
+  },
+  
+  async update(id, userData) {
+    const { username, password, role, fullName, email, active } = userData;
+    const result = await pool.query(
+      'UPDATE users SET username=$1, password=$2, role=$3, full_name=$4, email=$5, active=$6 WHERE id=$7 RETURNING *',
+      [username, password, role, fullName, email, active, id]
+    );
+    return result.rows[0];
+  },
+  
+  async delete(id) {
+    await pool.query('DELETE FROM users WHERE id = $1', [id]);
+  }
+};
+
+module.exports = User;
+```
+
 ---
 
 ## Componentes
 
 ### Componentes de Autenticación
 
-#### LoginForm ([`src/features/auth/components/LoginForm.tsx`](src/features/auth/components/LoginForm.tsx:1))
+#### LoginForm ([`frontend/src/features/auth/components/LoginForm.tsx`](frontend/src/features/auth/components/LoginForm.tsx:1))
 
 Componente de formulario para autenticación de usuarios.
 
@@ -145,6 +312,7 @@ Componente de formulario para autenticación de usuarios.
 - Manejo y visualización de errores
 - Credenciales de demostración mostradas debajo del formulario
 - Usa el hook `useAuth` para autenticación
+- Envía petición al backend para validación
 
 **Estado:**
 ```typescript
@@ -153,7 +321,7 @@ const [password, setPassword] = useState('');
 const [error, setError] = useState('');
 ```
 
-#### RegisterForm ([`src/features/auth/components/RegisterForm.tsx`](src/features/auth/components/RegisterForm.tsx:1))
+#### RegisterForm ([`frontend/src/features/auth/components/RegisterForm.tsx`](frontend/src/features/auth/components/RegisterForm.tsx:1))
 
 Componente de formulario para registro de usuarios con validación.
 
@@ -182,7 +350,7 @@ interface FormData {
 
 ### Componentes Comunes
 
-#### Header ([`src/components/common/Header.tsx`](src/components/common/Header.tsx:1))
+#### Header ([`frontend/src/components/common/Header.tsx`](frontend/src/components/common/Header.tsx:1))
 
 Muestra información del usuario y proporciona funcionalidad de cierre de sesión.
 
@@ -213,7 +381,7 @@ export function Header() {
 }
 ```
 
-#### StatCard ([`src/components/common/StatCard.tsx`](src/components/common/StatCard.tsx:1))
+#### StatCard ([`frontend/src/components/common/StatCard.tsx`](frontend/src/components/common/StatCard.tsx:1))
 
 Componente de tarjeta reutilizable para mostrar estadísticas.
 
@@ -225,7 +393,7 @@ Componente de tarjeta reutilizable para mostrar estadísticas.
 | `description?` | `string` | Descripción opcional |
 | `className?` | `'positive' \| 'negative' \| 'neutral'` | Tema de color |
 
-#### Navbar ([`src/features/landing/components/Navbar.tsx`](src/features/landing/components/Navbar.tsx:1))
+#### Navbar ([`frontend/src/features/landing/components/Navbar.tsx`](frontend/src/features/landing/components/Navbar.tsx:1))
 
 Barra de navegación para páginas públicas.
 
@@ -234,7 +402,7 @@ Barra de navegación para páginas públicas.
 |------|------|-------------|
 | `onNavigate` | `(page: 'home' \| 'login' \| 'register') => void` | Callback de navegación |
 
-#### Footer ([`src/features/landing/components/Footer.tsx`](src/features/landing/components/Footer.tsx:1))
+#### Footer ([`frontend/src/features/landing/components/Footer.tsx`](frontend/src/features/landing/components/Footer.tsx:1))
 
 Pie de página con información de contacto y enlaces rápidos.
 
@@ -244,7 +412,7 @@ Pie de página con información de contacto y enlaces rápidos.
 - Enlaces Rápidos
 - Derechos de Autor
 
-#### Logo ([`src/shared/components/Logo.tsx`](src/shared/components/Logo.tsx:1))
+#### Logo ([`frontend/src/shared/components/Logo.tsx`](frontend/src/shared/components/Logo.tsx:1))
 
 Muestra el logo del club con soporte de fallback.
 
@@ -260,7 +428,7 @@ Muestra el logo del club con soporte de fallback.
 - Clases de tamaño Tailwind CSS
 - Visualización de placeholder cuando la imagen no está disponible
 
-#### ImageWithFallback ([`src/shared/components/ImageWithFallback.tsx`](src/shared/components/ImageWithFallback.tsx:1))
+#### ImageWithFallback ([`frontend/src/shared/components/ImageWithFallback.tsx`](frontend/src/shared/components/ImageWithFallback.tsx:1))
 
 Componente de imagen con fallback para imágenes rotas.
 
@@ -273,19 +441,19 @@ Componente de imagen con fallback para imágenes rotas.
 
 ## Contextos y Gestión de Estado
 
-### AuthContext ([`src/features/auth/contexts/AuthContext.tsx`](src/features/auth/contexts/AuthContext.tsx:1))
+### AuthContext ([`frontend/src/features/auth/contexts/AuthContext.tsx`](frontend/src/features/auth/contexts/AuthContext.tsx:1))
 
 Gestiona el estado de autenticación y sesiones de usuarios.
 
 **Claves de Almacenamiento:**
-- `clubfinance_auth` - Estado de auth actual
-- `clubfinance_users` - Usuarios registrados
+- `clubfinance_auth` - Estado de auth actual (localStorage)
+- `clubfinance_users` - Usuarios registrados (sincronizado con backend)
 
 **Tipo de Contexto:**
 ```typescript
 interface AuthContextType extends AuthState {
-  login: (username: string, password: string) => boolean;
-  register: (data: RegistrationData) => boolean;
+  login: (username: string, password: string) => Promise<boolean>;
+  register: (data: RegistrationData) => Promise<boolean>;
   logout: () => void;
   isAdmin: () => boolean;
 }
@@ -295,8 +463,8 @@ interface AuthContextType extends AuthState {
 
 | Método | Parámetros | Retorna | Descripción |
 |--------|-----------|---------|-------------|
-| `login` | `username: string, password: string` | `boolean` | Autentica al usuario |
-| `register` | `RegistrationData` | `boolean` | Crea nuevo usuario |
+| `login` | `username: string, password: string` | `Promise<boolean>` | Autentica al usuario vía backend |
+| `register` | `RegistrationData` | `Promise<boolean>` | Crea nuevo usuario vía backend |
 | `logout` | Ninguno | `void` | Limpia la sesión |
 | `isAdmin` | Ninguno | `boolean` | Verifica rol de administrador |
 
@@ -315,7 +483,7 @@ interface RegistrationData {
 interface User {
   id: string;
   username: string;
-  password: string;        // Texto plano - ADVERTENCIA
+  password: string;        // Hasheado en backend
   role: 'user' | 'admin';
   fullName: string;
   email: string;
@@ -324,7 +492,7 @@ interface User {
 }
 ```
 
-### DataContext ([`src/contexts/DataContext.tsx`](src/contexts/DataContext.tsx:1))
+### DataContext ([`frontend/src/contexts/DataContext.tsx`](frontend/src/contexts/DataContext.tsx:1))
 
 Gestiona todos los datos de la aplicación incluyendo usuarios, miembros, transacciones, categorías, cuotas y configuración del sistema.
 
@@ -343,34 +511,34 @@ const STORAGE_KEYS = {
 **Tipo de Contexto:**
 ```typescript
 interface DataContextType extends AppData {
-  addUser: (user: Omit<User, 'id' | 'createdAt'>) => void;
-  updateUser: (id: string, user: Partial<User>) => void;
-  deleteUser: (id: string) => void;
-  addMember: (member: Omit<Member, 'id'>) => void;
-  updateMember: (id: string, member: Partial<Member>) => void;
-  deleteMember: (id: string) => void;
-  addTransaction: (transaction: Omit<Transaction, 'id'>) => void;
-  updateTransaction: (id: string, transaction: Partial<Transaction>) => void;
-  deleteTransaction: (id: string) => void;
-  addCategory: (category: Omit<Category, 'id'>) => void;
-  updateCategory: (id: string, category: Partial<Category>) => void;
-  deleteCategory: (id: string) => void;
-  addFee: (fee: Omit<Fee, 'id'>) => void;
-  updateFee: (id: string, fee: Partial<Fee>) => void;
-  deleteFee: (id: string) => void;
-  updateSystemData: (data: Partial<SystemData>) => void;
-  resetAllData: () => void;
+  addUser: (user: Omit<User, 'id' | 'createdAt'>) => Promise<void>;
+  updateUser: (id: string, user: Partial<User>) => Promise<void>;
+  deleteUser: (id: string) => Promise<void>;
+  addMember: (member: Omit<Member, 'id'>) => Promise<void>;
+  updateMember: (id: string, member: Partial<Member>) => Promise<void>;
+  deleteMember: (id: string) => Promise<void>;
+  addTransaction: (transaction: Omit<Transaction, 'id'>) => Promise<void>;
+  updateTransaction: (id: string, transaction: Partial<Transaction>) => Promise<void>;
+  deleteTransaction: (id: string) => Promise<void>;
+  addCategory: (category: Omit<Category, 'id'>) => Promise<void>;
+  updateCategory: (id: string, category: Partial<Category>) => Promise<void>;
+  deleteCategory: (id: string) => Promise<void>;
+  addFee: (fee: Omit<Fee, 'id'>) => Promise<void>;
+  updateFee: (id: string, fee: Partial<Fee>) => Promise<void>;
+  deleteFee: (id: string) => Promise<void>;
+  updateSystemData: (data: Partial<SystemData>) => Promise<void>;
+  resetAllData: () => Promise<void>;
 }
 ```
 
 **Operaciones CRUD:**
-Todos los métodos siguen el patrón de actualizar el estado local y persistir en localStorage.
+Todos los métodos siguen el patrón de enviar petición HTTP al backend, actualizar el estado local y sincronizar con la base de datos PostgreSQL.
 
 ---
 
 ## Utilidades
 
-### Hook useStats ([`src/hooks/useStats.ts`](src/hooks/useStats.ts:1))
+### Hook useStats ([`frontend/src/hooks/useStats.ts`](frontend/src/hooks/useStats.ts:1))
 
 Hook personalizado para calcular estadísticas de transacciones, cuotas y miembros.
 
@@ -400,7 +568,29 @@ interface Stats {
 }
 ```
 
-### Utilidades de Formato ([`src/utils/format.ts`](src/utils/format.ts:1))
+### Hook useCrudState ([`frontend/src/hooks/useCrudState.ts`](frontend/src/hooks/useCrudState.ts:1))
+
+Hook personalizado para manejar estado CRUD con sincronización backend.
+
+**Uso:**
+```typescript
+const { data, loading, error, create, update, remove } = useCrudState('/api/users');
+```
+
+**Retorna:**
+```typescript
+interface CrudState<T> {
+  data: T[];
+  loading: boolean;
+  error: string | null;
+  create: (item: Omit<T, 'id'>) => Promise<void>;
+  update: (id: string, item: Partial<T>) => Promise<void>;
+  remove: (id: string) => Promise<void>;
+  refresh: () => Promise<void>;
+}
+```
+
+### Utilidades de Formato ([`frontend/src/utils/format.ts`](frontend/src/utils/format.ts:1))
 
 | Función | Parámetros | Retorna | Descripción |
 |----------|-----------|---------|-------------|
@@ -422,7 +612,7 @@ getMonthName(0);                // "Enero"
 truncateText('Hola Mundo', 5);   // "Hola..."
 ```
 
-### Utilidades de Exportación ([`src/utils/export.ts`](src/utils/export.ts:1))
+### Utilidades de Exportación ([`frontend/src/utils/export.tsx`](frontend/src/utils/export.tsx:1))
 
 | Función | Parámetros | Descripción |
 |----------|-----------|-------------|
@@ -436,7 +626,16 @@ truncateText('Hola Mundo', 5);   // "Hola..."
 function downloadFile(content: string, filename: string, mimeType: string): void
 ```
 
-### Datos Iniciales ([`src/utils/initialData.ts`](src/utils/initialData.ts:1))
+### Utilidades de PDF ([`frontend/src/utils/pdfDocuments.tsx`](frontend/src/utils/pdfDocuments.tsx:1))
+
+Genera documentos PDF para reportes y exportaciones.
+
+| Función | Parámetros | Descripción |
+|----------|-----------|-------------|
+| `generateTransactionsPDF` | `transactions: Transaction[], systemData: SystemData` | Genera PDF de transacciones |
+| `generateMembersPDF` | `members: Member[], fees: Fee[]` | Genera PDF de miembros |
+
+### Datos Iniciales ([`frontend/src/utils/initialData.ts`](frontend/src/utils/initialData.ts:1))
 
 Proporciona datos iniciales para nuevas instalaciones.
 
@@ -452,7 +651,7 @@ Proporciona datos iniciales para nuevas instalaciones.
 
 ## Tipos e Interfaces
 
-### Tipos Principales ([`src/types/index.ts`](src/types/index.ts:1))
+### Tipos Principales ([`frontend/src/types/index.ts`](frontend/src/types/index.ts:1))
 
 #### UserRole
 ```typescript
@@ -464,7 +663,7 @@ type UserRole = 'user' | 'admin';
 interface User {
   id: string;
   username: string;
-  password: string;        // Texto plano - ADVERTENCIA
+  password: string;        // Hasheado en backend
   role: UserRole;
   fullName: string;
   email: string;
@@ -558,31 +757,44 @@ interface AppData {
 
 ## Flujo de Datos
 
-### Flujo de Autenticación
+### Flujo de Autenticación (Frontend → Backend → Base de Datos)
 
 ```
-Usuario ingresa credenciales
+Usuario ingresa credenciales en LoginForm
         ↓
 LoginForm llama a useAuth().login()
         ↓
-AuthContext valida contra localStorage
+AuthContext envía petición POST a /api/auth/login
         ↓
-Si es válido: actualiza authState → localStorage
+Backend valida credenciales contra PostgreSQL
+        ↓
+Si es válido: Backend retorna JWT token
+              → Frontend guarda token en localStorage
               → App redirige al panel
         ↓
-Si es inválido: muestra mensaje de error
+Si es inválido: Backend retorna error 401
+              → Frontend muestra mensaje de error
 ```
 
-### Flujo de Gestión de Datos
+### Flujo de Gestión de Datos (Frontend → Backend → Base de Datos)
 
 ```
 Acción de usuario (agregar/actualizar/eliminar)
         ↓
 Componente llama método de DataContext
         ↓
-DataContext actualiza estado
+DataContext envía petición HTTP al backend
+  - POST /api/{resource} para crear
+  - PUT /api/{resource}/:id para actualizar
+  - DELETE /api/{resource}/:id para eliminar
         ↓
-useEffect disparado → persistencia en localStorage
+Backend recibe petición y valida datos
+        ↓
+Backend ejecuta query SQL en PostgreSQL
+        ↓
+Backend retorna respuesta al frontend
+        ↓
+DataContext actualiza estado local
         ↓
 Todos los componentes suscritos se re-renderizan
 ```
@@ -590,9 +802,13 @@ Todos los componentes suscritos se re-renderizan
 ### Flujo de Cálculo de Estadísticas
 
 ```
-DataContext proporciona transacciones, cuotas, miembros
+Componente solicita datos a DataContext
         ↓
-Componente pasa datos a useStats()
+DataContext obtiene datos del backend (GET /api/{resource})
+        ↓
+Backend consulta PostgreSQL y retorna datos
+        ↓
+DataContext pasa datos a useStats()
         ↓
 useMemo calcula todas las estadísticas
         ↓
@@ -601,11 +817,29 @@ Retorna objeto Stats calculado
 Componente muestra StatCards
 ```
 
+### Flujo de Persistencia de Datos
+
+```
+Frontend realiza operación CRUD
+        ↓
+Petición HTTP al backend (Express)
+        ↓
+Backend valida y procesa datos
+        ↓
+Query SQL ejecutada en PostgreSQL
+        ↓
+Base de datos almacena datos de forma persistente
+        ↓
+Respuesta enviada al frontend
+        ↓
+Frontend actualiza estado local
+```
+
 ---
 
 ## Características
 
-### Panel de Usuario ([`src/pages/UserDashboard.tsx`](src/pages/UserDashboard.tsx:1))
+### Panel de Usuario ([`frontend/src/pages/admin/AdminOverview.tsx`](frontend/src/pages/admin/AdminOverview.tsx:1))
 
 **Pestañas:**
 1. **Transacciones** - Ver, filtrar y agregar transacciones
@@ -626,7 +860,7 @@ Componente muestra StatCards
 - Fecha
 - Descripción
 
-### Panel de Administrador ([`src/pages/AdminPanel.tsx`](src/pages/AdminPanel.tsx:1))
+### Panel de Administrador ([`frontend/src/pages/admin/AdminOverview.tsx`](frontend/src/pages/admin/AdminOverview.tsx:1))
 
 **Pestañas:**
 1. **Resumen** - Estadísticas del sistema e información
@@ -661,29 +895,37 @@ Componente muestra StatCards
 
 ## Consideraciones de Seguridad
 
-⚠️ **IMPORTANTE**: Esta aplicación tiene varias limitaciones de seguridad adecuadas solo para propósitos de prototipo/demo.
+⚠️ **IMPORTANTE**: Esta aplicación tiene varias limitaciones de seguridad que deben ser addressadas antes de producción.
 
-### Limitaciones Actuales
+### Estado Actual de Seguridad
 
-1. **Almacenamiento de Contraseñas**: Contraseñas almacenadas en texto plano en localStorage
-   - **Riesgo**: Cualquier persona con acceso al almacenamiento del navegador puede leer contraseñas
-   - **Solución**: Usar hashing bcrypt/argon2 en producción
+**✅ Implementado:**
+- Backend con Express para validación del servidor
+- Base de datos PostgreSQL para persistencia segura
+- Separación de frontend y backend
+- API REST con rutas protegidas
 
-2. **Persistencia de localStorage**: Todos los datos almacenados del lado del cliente
-   - **Riesgo**: Los datos pueden ser borrados por el usuario, modificados en devtools
-   - **Solución**: Migrar a base de datos del servidor
+**⚠️ Limitaciones Actuales:**
 
-3. **Sin Validación del Servidor**: Toda validación es del lado del cliente
-   - **Riesgo**: Evitable mediante llamadas API o curl
-   - **Solución**: Implementar validación del lado del servidor
+1. **Almacenamiento de Contraseñas**: Contraseñas pueden estar en texto plano
+   - **Riesgo**: Acceso no autorizado a cuentas de usuario
+   - **Solución**: Implementar hashing bcrypt/argon2 en el backend
 
-4. **Sin HTTPS**: Transmisión de datos no encriptada
-   - **Riesgo**: Ataques man-in-the-middle
-   - **Solución**: Desplegar con HTTPS
+2. **Sin HTTPS en Desarrollo**: Transmisión de datos no encriptada en local
+   - **Riesgo**: Ataques man-in-the-middle en producción
+   - **Solución**: Desplegar con HTTPS y certificados SSL
 
-5. **Autenticación Débil**: Nombre de usuario/contraseña simple
+3. **Autenticación Básica**: Sistema de autenticación simple
    - **Riesgo**: Ataques de fuerza bruta, credential stuffing
-   - **Solución**: Implementar JWT, rate limiting, CAPTCHA
+   - **Solución**: Implementar JWT con refresh tokens, rate limiting, CAPTCHA
+
+4. **Sin Protección CSRF**: Falta protección contra ataques CSRF
+   - **Riesgo**: Solicitudes maliciosas desde otros sitios
+   - **Solución**: Implementar tokens CSRF
+
+5. **Sin Sanitización de Entradas**: Validación limitada de datos
+   - **Riesgo**: Inyección SQL, XSS
+   - **Solución**: Sanitizar todas las entradas en el backend
 
 ### Credenciales de Demostración
 
@@ -691,6 +933,20 @@ Componente muestra StatCards
 |------|----------|----------|
 | Admin | admin | admin123 |
 | Usuario | usuario | usuario123 |
+
+### Arquitectura de Seguridad
+
+```
+Frontend (React)
+    ↓
+HTTPS (en producción)
+    ↓
+Backend (Express)
+    ↓
+Validación y Sanitización
+    ↓
+PostgreSQL (con parámetros preparados)
+```
 
 ---
 
@@ -703,8 +959,8 @@ Componente muestra StatCards
 const {
   isAuthenticated: boolean;  // Si el usuario ha iniciado sesión
   currentUser: User | null; // Objeto de usuario actual
-  login: (username, password) => boolean;
-  register: (data) => boolean;
+  login: (username, password) => Promise<boolean>;  // Autentica vía backend
+  register: (data) => Promise<boolean>;  // Registra vía backend
   logout: () => void;
   isAdmin: () => boolean;
 } = useAuth();
@@ -719,23 +975,23 @@ const {
   categories: Category[];
   fees: Fee[];
   systemData: SystemData;
-  addUser: (user) => void;
-  updateUser: (id, user) => void;
-  deleteUser: (id) => void;
-  addMember: (member) => void;
-  updateMember: (id, member) => void;
-  deleteMember: (id) => void;
-  addTransaction: (transaction) => void;
-  updateTransaction: (id, transaction) => void;
-  deleteTransaction: (id) => void;
-  addCategory: (category) => void;
-  updateCategory: (id, category) => void;
-  deleteCategory: (id) => void;
-  addFee: (fee) => void;
-  updateFee: (id, fee) => void;
-  deleteFee: (id) => void;
-  updateSystemData: (data) => void;
-  resetAllData: () => void;
+  addUser: (user) => Promise<void>;  // Crea vía backend
+  updateUser: (id, user) => Promise<void>;  // Actualiza vía backend
+  deleteUser: (id) => Promise<void>;  // Elimina vía backend
+  addMember: (member) => Promise<void>;
+  updateMember: (id, member) => Promise<void>;
+  deleteMember: (id) => Promise<void>;
+  addTransaction: (transaction) => Promise<void>;
+  updateTransaction: (id, transaction) => Promise<void>;
+  deleteTransaction: (id) => Promise<void>;
+  addCategory: (category) => Promise<void>;
+  updateCategory: (id, category) => Promise<void>;
+  deleteCategory: (id) => Promise<void>;
+  addFee: (fee) => Promise<void>;
+  updateFee: (id, fee) => Promise<void>;
+  deleteFee: (id) => Promise<void>;
+  updateSystemData: (data) => Promise<void>;
+  resetAllData: () => Promise<void>;
 } = useData();
 ```
 
@@ -750,11 +1006,69 @@ const stats: Stats = useStats(
 );
 ```
 
+#### useCrudState()
+```typescript
+const {
+  data: T[],
+  loading: boolean,
+  error: string | null,
+  create: (item: Omit<T, 'id'>) => Promise<void>,
+  update: (id: string, item: Partial<T>) => Promise<void>,
+  remove: (id: string) => Promise<void>,
+  refresh: () => Promise<void>
+} = useCrudState<T>(endpoint: string);
+```
+
+### API REST Endpoints
+
+#### Autenticación
+| Método | Endpoint | Descripción |
+|--------|----------|-------------|
+| POST | `/api/auth/login` | Iniciar sesión |
+| POST | `/api/auth/register` | Registrar usuario |
+| POST | `/api/auth/logout` | Cerrar sesión |
+
+#### Usuarios
+| Método | Endpoint | Descripción |
+|--------|----------|-------------|
+| GET | `/api/users` | Obtener todos los usuarios |
+| GET | `/api/users/:id` | Obtener usuario por ID |
+| POST | `/api/users` | Crear usuario |
+| PUT | `/api/users/:id` | Actualizar usuario |
+| DELETE | `/api/users/:id` | Eliminar usuario |
+
+#### Miembros
+| Método | Endpoint | Descripción |
+|--------|----------|-------------|
+| GET | `/api/members` | Obtener todos los miembros |
+| GET | `/api/members/:id` | Obtener miembro por ID |
+| POST | `/api/members` | Crear miembro |
+| PUT | `/api/members/:id` | Actualizar miembro |
+| DELETE | `/api/members/:id` | Eliminar miembro |
+
+#### Transacciones
+| Método | Endpoint | Descripción |
+|--------|----------|-------------|
+| GET | `/api/transactions` | Obtener todas las transacciones |
+| GET | `/api/transactions/:id` | Obtener transacción por ID |
+| POST | `/api/transactions` | Crear transacción |
+| PUT | `/api/transactions/:id` | Actualizar transacción |
+| DELETE | `/api/transactions/:id` | Eliminar transacción |
+
+#### Categorías
+| Método | Endpoint | Descripción |
+|--------|----------|-------------|
+| GET | `/api/categories` | Obtener todas las categorías |
+| GET | `/api/categories/:id` | Obtener categoría por ID |
+| POST | `/api/categories` | Crear categoría |
+| PUT | `/api/categories/:id` | Actualizar categoría |
+| DELETE | `/api/categories/:id` | Eliminar categoría |
+
 ---
 
 ## Estilos
 
-### Variables CSS Globales ([`src/styles/globals.css`](src/styles/globals.css:1))
+### Variables CSS Globales ([`frontend/src/styles/globals.css`](frontend/src/styles/globals.css:1))
 
 ```css
 :root {
@@ -774,7 +1088,7 @@ const stats: Stats = useStats(
 .neutral { color: var(--color-gray-600); }
 ```
 
-### Configuración Tailwind ([`tailwind.config.js`](tailwind.config.js:1))
+### Configuración Tailwind ([`frontend/tailwind.config.js`](frontend/tailwind.config.js:1))
 
 - Paleta de colores personalizada
 - Espaciado extendido
@@ -784,40 +1098,79 @@ const stats: Stats = useStats(
 
 ## Cambios Recomendados para Producción
 
+### ✅ Ya Implementado
+
 1. **Integración de Backend**
-   - Reemplazar localStorage con API REST
-   - Implementar base de datos (PostgreSQL, MySQL)
-   - Agregar servidor de autenticación (JWT, OAuth)
+   - ✅ Backend con Express implementado
+   - ✅ Base de datos PostgreSQL configurada
+   - ✅ API REST funcional
 
-2. **Mejoras de Seguridad**
-   - Hashing de contraseñas (bcrypt)
-   - Aplicación de HTTPS
-   - Sanitización de entradas
-   - Rate limiting
-   - Protección CSRF
+2. **Arquitectura Full-Stack**
+   - ✅ Separación frontend/backend
+   - ✅ Persistencia en base de datos
+   - ✅ Validación del servidor
 
-3. **Rendimiento**
+### 🔧 Pendiente para Producción
+
+1. **Mejoras de Seguridad**
+   - Implementar hashing de contraseñas (bcrypt/argon2)
+   - Configurar HTTPS con certificados SSL
+   - Implementar sanitización de entradas
+   - Agregar rate limiting
+   - Implementar protección CSRF
+   - Agregar autenticación JWT con refresh tokens
+
+2. **Rendimiento**
    - Agregar React.lazy para división de código
    - Implementar paginación para grandes conjuntos de datos
-   - Agregar capa de caché
+   - Agregar capa de caché (Redis)
+   - Optimizar queries de base de datos
+   - Implementar compresión gzip
 
-4. **Pruebas**
+3. **Pruebas**
    - Pruebas unitarias con Jest
    - Pruebas de integración con React Testing Library
    - Pruebas E2E con Playwright
+   - Pruebas de API con Supertest
 
-5. **Monitoreo**
+4. **Monitoreo y Logging**
    - Seguimiento de errores (Sentry)
-   - Analítica
-   - Registro de logs
+   - Analítica de uso
+   - Registro de logs estructurado
+   - Monitoreo de rendimiento (APM)
+
+5. **DevOps y Despliegue**
+   - Configurar CI/CD pipeline
+   - Dockerizar aplicación
+   - Configurar variables de entorno
+   - Implementar backup de base de datos
+   - Configurar dominio y DNS
+
+6. **Documentación**
+   - Documentación de API (Swagger/OpenAPI)
+   - Guía de despliegue
+   - Manual de usuario
 
 ---
 
 ## Conclusión
 
-Ruta contable es una aplicación React bien estructurada que utiliza patrones modernos incluyendo arquitectura basada en características, React Context para gestión de estado, y hooks personalizados para reutilización de lógica. Aunque es adecuada para prototipos y demos, se necesitan cambios significativos antes del despliegue en producción, particularmente en seguridad e integración de backend.
+Ruta contable es una aplicación full-stack bien estructurada que implementa una arquitectura moderna de tres capas:
+
+- **Frontend**: React 18 con TypeScript, Tailwind CSS y arquitectura basada en características
+- **Backend**: Node.js con Express para API REST
+- **Base de Datos**: PostgreSQL para persistencia de datos
+
+La aplicación utiliza patrones modernos incluyendo:
+- Arquitectura basada en características para organización modular
+- React Context para gestión de estado global
+- Hooks personalizados para reutilización de lógica
+- API REST para comunicación frontend-backend
+- PostgreSQL para almacenamiento persistente y seguro
+
+Aunque la arquitectura base está completa y funcional, se necesitan mejoras en seguridad (hashing de contraseñas, HTTPS, JWT) y pruebas antes del despliegue en producción.
 
 ---
 
-**Última Actualización:** Febrero 2026
-**Versión:** 1.0.0
+**Última Actualización:** Abril 2026
+**Versión:** 2.0.0 (Full-Stack)
