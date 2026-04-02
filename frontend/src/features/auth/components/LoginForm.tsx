@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState, FormEvent, ChangeEvent, CSSProperties } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { PasswordInput } from '../../../components/ui/password-input';
 
@@ -12,9 +12,10 @@ export function LoginForm({ onNavigate, backgroundColor, backgroundImage }: Logi
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
   const { login } = useAuth();
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setError('');
 
@@ -23,18 +24,28 @@ export function LoginForm({ onNavigate, backgroundColor, backgroundImage }: Logi
       return;
     }
 
-    const success = login(username, password);
-    if (!success) {
-      setError('Usuario o contraseña incorrectos');
+    setLoading(true);
+    try {
+      const success = await login(username, password);
+      if (!success) {
+        setError('Usuario o contraseña incorrectos');
+      }
+    } catch (err) {
+      setError('Error al iniciar sesión. Por favor, intenta de nuevo.');
+    } finally {
+      setLoading(false);
     }
   };
 
-  const containerStyle: React.CSSProperties = {
+  const containerStyle: CSSProperties = {
     ...(backgroundImage && { backgroundImage }),
     ...(backgroundColor && !backgroundImage && { backgroundColor }),
   };
 
   return (
+    
+    
+
     <div className="login-card" style={containerStyle}>
       <div className="login-title">
         <h1>Iniciar Sesión</h1>
@@ -49,8 +60,9 @@ export function LoginForm({ onNavigate, backgroundColor, backgroundImage }: Logi
             type="text"
             className="form-input"
             value={username}
-            onChange={(e) => setUsername(e.target.value)}
-            placeholder="Ingresa tu usuario"
+            onChange={(e: ChangeEvent<HTMLInputElement>) => setUsername(e.target.value)}
+            placeholder="admin@rutacontable.com"
+            disabled={loading}
           />
         </div>
 
@@ -60,8 +72,9 @@ export function LoginForm({ onNavigate, backgroundColor, backgroundImage }: Logi
             id="password"
             className="form-input"
             value={password}
-            onChange={(e) => setPassword(e.target.value)}
+            onChange={(e: ChangeEvent<HTMLInputElement>) => setPassword(e.target.value)}
             placeholder="Ingresa tu contraseña"
+            disabled={loading}
           />
         </div>
 
@@ -80,8 +93,13 @@ export function LoginForm({ onNavigate, backgroundColor, backgroundImage }: Logi
           </div>
         )}
 
-        <button type="submit" className="btn btn-primary btn-large" style={{ width: '100%' }}>
-          Iniciar Sesión
+        <button 
+          type="submit" 
+          className="btn btn-primary btn-large" 
+          style={{ width: '100%' }}
+          disabled={loading}
+        >
+          {loading ? 'Iniciando sesión...' : 'Iniciar Sesión'}
         </button>
 
         <div className="login-footer">
@@ -100,7 +118,7 @@ export function LoginForm({ onNavigate, backgroundColor, backgroundImage }: Logi
         </p>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', fontSize: '13px' }}>
           <div style={{ background: 'var(--color-gray-50)', padding: '12px', borderRadius: '8px' }}>
-            <strong>Administrador:</strong> admin / admin123
+            <strong>Administrador:</strong> admin@rutacontable.com / admin123
           </div>
         </div>
       </div>

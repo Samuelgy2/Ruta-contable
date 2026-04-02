@@ -1,8 +1,19 @@
 // Tipos y interfaces centralizados del sistema
 
-export type UserRole = 'user' | 'admin';
+export type UserRole = 'gestor' | 'admin' | 'user';
 
+// Usuario para el backend (coincide con la respuesta de la API)
 export interface User {
+  id: number;
+  name: string;
+  email: string;
+  role: UserRole;
+  active: boolean;
+  created_at?: string;
+}
+
+// Usuario legacy (para compatibilidad con código existente)
+export interface gestor {
   id: string;
   username: string;
   password: string;
@@ -66,14 +77,28 @@ export interface SystemData {
 
 export interface AuthState {
   isAuthenticated: boolean;
-  currentUser: User | null;
+  currentUser: User | null;  // Ahora usa el tipo User del backend
 }
 
 export interface AppData {
-  users: User[];
+  users: gestor[];  // Para compatibilidad con datos existentes
   members: Member[];
   transactions: Transaction[];
   categories: Category[];
   fees: Fee[];
   systemData: SystemData;
+}
+
+// Función helper para convertir User de backend a gestor (si es necesario)
+export function mapBackendUserToGestor(backendUser: User): gestor {
+  return {
+    id: backendUser.id.toString(),
+    username: backendUser.email.split('@')[0],
+    password: '', // No se guarda la contraseña
+    role: backendUser.role,
+    fullName: backendUser.name,
+    email: backendUser.email,
+    active: backendUser.active,
+    createdAt: backendUser.created_at || new Date().toISOString(),
+  };
 }
