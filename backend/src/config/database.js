@@ -7,9 +7,6 @@ const pool = new Pool({
   user: process.env.DB_USER,
   password: process.env.DB_PASSWORD,
   database: process.env.DB_NAME,
-  max: 20,
-  idleTimeoutMillis: 30000,
-  connectionTimeoutMillis: 2000,
 });
 
 pool.connect((err, client, release) => {
@@ -22,13 +19,8 @@ pool.connect((err, client, release) => {
 });
 
 async function query(text, params) {
-  try {
-    const result = await pool.query(text, params);
-    return result;
-  } catch (error) {
-    console.error('Error en query:', error);
-    throw error;
-  }
+  const result = await pool.query(text, params);
+  return result;
 }
 
 async function get(text, params) {
