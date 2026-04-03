@@ -1,19 +1,15 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../auth/contexts/AuthContext';
 import { 
   Home, 
   DollarSign, 
-  Users, 
   FileText, 
   PieChart, 
   Folder, 
   Settings, 
-  Menu, 
+  Menu,
   X,
-  ChevronLeft,
-  ChevronRight,
   LogOut,
-  ChevronDown,
   Building2,
   ClipboardList,
   CreditCard,
@@ -25,107 +21,32 @@ import {
 } from 'lucide-react';
 import clubLogo from '../../../images/logo/club-logo.png';
 
-// Color verde del club
 const CLUB_GREEN = '#10b981';
 
-// Tipos de páginas del admin
 export type AdminPage = 'overview' | 'transactions' | 'users' | 'members' | 'reports' | 'categories' | 'club-data' | 'system' | 'attendance' | 'monthly-payments' | 'cartera' | 'jersey' | 'lockers' | 'purchases' | 'health-policies';
 
-// Configuración del menú de navegación
 const adminMenuItems = [
-  { 
-    id: 'overview', 
-    label: 'Resumen', 
-    icon: Home,
-    section: 'resumen'
-  },
-  { 
-    id: 'transactions', 
-    label: 'Transacciones', 
-    icon: DollarSign,
-    section: 'resumen'
-  },
-  { 
-    id: 'members', 
-    label: 'Socios', 
-    icon: Folder,
-    section: 'socios'
-  },
-  { 
-    id: 'reports', 
-    label: 'Reportes', 
-    icon: FileText,
-    section: 'socios'
-  },
-  { 
-    id: 'categories', 
-    label: 'Categorías', 
-    icon: PieChart,
-    section: 'socios'
-  },
-  { 
-    id: 'club-data', 
-    label: 'Datos del Club', 
-    icon: Building2,
-    section: 'datos'
-  },
-  { 
-    id: 'system', 
-    label: 'Sistema', 
-    icon: Settings,
-    section: 'datos'
-  },
-  // New modules
-  { 
-    id: 'attendance', 
-    label: 'Asistencia', 
-    icon: ClipboardList,
-    section: 'gestión'
-  },
-  { 
-    id: 'monthly-payments', 
-    label: 'Mensualidades', 
-    icon: CreditCard,
-    section: 'gestión'
-  },
-  { 
-    id: 'cartera', 
-    label: 'Cartera', 
-    icon: Wallet,
-    section: 'gestión'
-  },
-  { 
-    id: 'jersey', 
-    label: 'Uniformes', 
-    icon: Shirt,
-    section: 'gestión'
-  },
-  { 
-    id: 'lockers', 
-    label: 'Camerinos', 
-    icon: Lock,
-    section: 'gestión'
-  },
-  { 
-    id: 'purchases', 
-    label: 'Compras', 
-    icon: ShoppingCart,
-    section: 'gestión'
-  },
-  { 
-    id: 'health-policies', 
-    label: 'Polizas de Salud', 
-    icon: Heart,
-    section: 'gestión'
-  },
+  { id: 'overview',         label: 'Resumen',          icon: Home,          section: 'resumen' },
+  { id: 'transactions',     label: 'Transacciones',    icon: DollarSign,    section: 'resumen' },
+  { id: 'members',          label: 'Socios',           icon: Folder,        section: 'socios'  },
+  { id: 'reports',          label: 'Reportes',         icon: FileText,      section: 'socios'  },
+  { id: 'categories',       label: 'Categorías',       icon: PieChart,      section: 'socios'  },
+  { id: 'club-data',        label: 'Datos del Club',   icon: Building2,     section: 'datos'   },
+  { id: 'system',           label: 'Sistema',          icon: Settings,      section: 'datos'   },
+  { id: 'attendance',       label: 'Asistencia',       icon: ClipboardList, section: 'gestión' },
+  { id: 'monthly-payments', label: 'Mensualidades',    icon: CreditCard,    section: 'gestión' },
+  { id: 'cartera',          label: 'Cartera',          icon: Wallet,        section: 'gestión' },
+  { id: 'jersey',           label: 'Uniformes',        icon: Shirt,         section: 'gestión' },
+  { id: 'lockers',          label: 'Camerinos',        icon: Lock,          section: 'gestión' },
+  { id: 'purchases',        label: 'Compras',          icon: ShoppingCart,  section: 'gestión' },
+  { id: 'health-policies',  label: 'Polizas de Salud', icon: Heart,         section: 'gestión' },
 ] as const;
 
-// Agrupar items por sección
 const menuSections = {
-  resumen: { title: 'RESUMEN', items: adminMenuItems.filter(item => item.section === 'resumen') },
-  socios: { title: 'SOCIOS', items: adminMenuItems.filter(item => item.section === 'socios') },
-  datos: { title: 'DATOS DEL CLUB', items: adminMenuItems.filter(item => item.section === 'datos') },
-  gestión: { title: 'GESTIÓN', items: adminMenuItems.filter(item => item.section === 'gestión') },
+  resumen: { title: 'RESUMEN',        items: adminMenuItems.filter(i => i.section === 'resumen') },
+  socios:  { title: 'SOCIOS',         items: adminMenuItems.filter(i => i.section === 'socios')  },
+  datos:   { title: 'DATOS DEL CLUB', items: adminMenuItems.filter(i => i.section === 'datos')   },
+  gestión: { title: 'GESTIÓN',        items: adminMenuItems.filter(i => i.section === 'gestión') },
 };
 
 interface AdminLayoutProps {
@@ -135,152 +56,177 @@ interface AdminLayoutProps {
 }
 
 export function AdminLayout({ children, currentPage, onNavigate }: AdminLayoutProps) {
-  const { currentUser, logout } = useAuth();
+  const { logout } = useAuth();
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [windowWidth, setWindowWidth] = useState(
+    typeof window !== 'undefined' ? window.innerWidth : 1024
+  );
 
-  // Determinar si mostrar el nombre del admin (solo en overview/dashboard)
-  const showAdminName = currentPage === 'overview';
+  useEffect(() => {
+    const handleResize = () => {
+      setWindowWidth(window.innerWidth);
+      if (window.innerWidth >= 1024) setIsMobileMenuOpen(false);
+    };
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
-  // Nombre del administrador hardcodeado como "Samuel Gutierrez"
-  const adminName = 'Samuel Gutierrez';
+  const isDesktop  = windowWidth >= 1024;
+  const isExpanded = isMobileMenuOpen || (isDesktop && sidebarOpen);
+  const sidebarW   = isExpanded ? '280px' : '64px';
+  const adminName  = 'Samuel Gutierrez';
 
-  // Función para cerrar sesión
-  const handleLogout = () => {
-    logout();
-  };
-
-  // Función para toggle de sidebar
-  const toggleSidebar = () => {
-    setSidebarOpen(!sidebarOpen);
-  };
-
-  // Función para cerrar menú móvil
-  const closeMobileMenu = () => {
-    setIsMobileMenuOpen(false);
-  };
+  const closeMobileMenu = () => setIsMobileMenuOpen(false);
+  const toggleSidebar   = () =>
+    isDesktop ? setSidebarOpen(p => !p) : setIsMobileMenuOpen(p => !p);
 
   return (
     <div className="admin-layout">
-      {/* Botón de menú móvil */}
+      {/* Botón menú móvil */}
       <button
         className="lg:hidden fixed top-4 left-4 z-50 p-2 rounded-lg text-white"
         style={{ backgroundColor: CLUB_GREEN }}
-        onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+        onClick={() => setIsMobileMenuOpen(p => !p)}
         aria-label="Toggle menu"
       >
         {isMobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
       </button>
 
-      {/* Overlay para móvil */}
+      {/* Overlay móvil */}
       {isMobileMenuOpen && (
-        <div 
+        <div
           className="fixed inset-0 bg-black/50 z-40 lg:hidden"
           onClick={closeMobileMenu}
         />
       )}
 
-      {/* Sidebar */}
-      <aside 
-        className={`
-          fixed top-0 left-0 h-screen flex flex-col z-50
-          transition-all duration-300 ease-in-out
-          ${sidebarOpen ? 'w-[280px]' : 'w-[72px]'}
-          ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
-        `}
-        style={{ 
+      {/* ── SIDEBAR ── */}
+      <aside
+        style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          height: '100vh',
+          width: sidebarW,
           backgroundColor: 'white',
-          boxShadow: '2px 0 10px rgba(0,0,0,0.1)'
+          boxShadow: '2px 0 10px rgba(0,0,0,0.1)',
+          display: 'flex',
+          flexDirection: 'column',
+          overflow: 'hidden',
+          transition: 'width 300ms ease, transform 300ms ease',
+          transform: !isDesktop && !isMobileMenuOpen ? 'translateX(-100%)' : 'translateX(0)',
+          zIndex: 50,
         }}
       >
-        {/* Logo y toggle */}
-        <div 
-          className="flex items-center justify-between border-b"
-          style={{ 
-            padding: sidebarOpen ? '20px' : '20px 16px',
-            minHeight: '80px',
-            borderColor: '#e5e7eb'
+        {/* ── Cabecera: solo logo, sin botones de toggle adicionales ── */}
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: isExpanded ? 'flex-start' : 'center',
+            padding: isExpanded ? '20px' : '12px',
+            minHeight: '72px',
+            borderBottom: '1px solid #e5e7eb',
+            flexShrink: 0,
           }}
         >
-          {sidebarOpen && (
-            <div className="flex items-center gap-3">
-              <img 
-                src={clubLogo} 
-                alt="Ruta Contable" 
-                className="w-10 h-10 rounded-xl object-cover"
-              />
-              <div>
-                <h1 className="text-base font-bold m-0 whitespace-nowrap" style={{ color: '#1f2937' }}>
-                  Ruta Contable
-                </h1>
-              </div>
-            </div>
-          )}
-          
-          {/* Botón de colapsar sidebar */}
-          <button
+          {/* El logo abre/cierra el sidebar al hacer click */}
+          <div
+            style={{ display: 'flex', alignItems: 'center', cursor: 'pointer', gap: '12px' }}
             onClick={toggleSidebar}
-            className="hidden lg:flex items-center justify-center p-2 rounded-lg transition-colors"
-            style={{ 
-              backgroundColor: sidebarOpen ? '#f3f4f6' : 'transparent',
-              color: '#6b7280'
-            }}
           >
-            {sidebarOpen ? <ChevronLeft size={18} /> : <ChevronRight size={18} />}
-          </button>
+            <img
+              src={clubLogo}
+              alt="Ruta Contable"
+              style={{ width: 48, height: 48, objectFit: 'contain', borderRadius: 8, flexShrink: 0 }}
+            />
+            {isExpanded && (
+              <span style={{ fontSize: 15, fontWeight: 700, color: '#1f2937', whiteSpace: 'nowrap' }}>
+                Ruta Contable
+              </span>
+            )}
+          </div>
         </div>
 
-        {/* Nombre del admin (solo en dashboard) */}
-        {showAdminName && sidebarOpen && (
-          <div 
-            className="mx-3 mt-3 p-4 rounded-xl"
-            style={{ backgroundColor: '#f0fdf4', border: '1px solid #d1fae5' }}
+        {/* ── Card gestor (solo expandido + overview) ── */}
+        {currentPage === 'overview' && isExpanded && (
+          <div
+            style={{
+              margin: '12px',
+              padding: '12px 16px',
+              borderRadius: 12,
+              backgroundColor: '#f0fdf4',
+              border: '1px solid #d1fae5',
+              flexShrink: 0,
+            }}
           >
-            <p className="text-[11px] m-0 uppercase tracking-wider" style={{ color: '#6b7280' }}>
-              Administrador
+            <p style={{ margin: 0, fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.05em', color: '#6b7280' }}>
+              Gestor
             </p>
-            <p className="text-sm font-semibold m-0" style={{ color: '#1f2937' }}>
+            <p style={{ margin: 0, fontSize: 14, fontWeight: 600, color: '#1f2937' }}>
               {adminName}
             </p>
           </div>
         )}
 
-        {/* Navigation Menu */}
-        <nav className="flex-1 p-3 overflow-y-auto custom-scrollbar">
-          {Object.entries(menuSections).map(([sectionKey, section]) => (
-            <div key={sectionKey} className="mb-4">
-              {sidebarOpen && (
-                <p 
-                  className="text-[11px] font-semibold px-3 mb-2 uppercase tracking-wider"
-                  style={{ color: '#9ca3af' }}
-                >
+        {/* ── ÁREA DE NAVEGACIÓN CON SCROLL ── */}
+        <nav
+          style={{
+            flex: 1,
+            overflowY: 'auto',
+            overflowX: 'hidden',
+            padding: '8px',
+            scrollbarWidth: 'thin',
+            scrollbarColor: '#d1d5db transparent',
+          }}
+        >
+          {Object.entries(menuSections).map(([key, section]) => (
+            <div key={key} style={{ marginBottom: 16 }}>
+              {isExpanded && (
+                <p style={{
+                  margin: '0 0 6px 12px',
+                  fontSize: 11,
+                  fontWeight: 600,
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.06em',
+                  color: '#9ca3af',
+                }}>
                   {section.title}
                 </p>
               )}
-              <ul className="list-none p-0 m-0 flex flex-col gap-1">
-                {section.items.map((item) => {
+
+              {!isExpanded && (
+                <div style={{ height: 1, backgroundColor: '#f3f4f6', margin: '4px 8px 8px' }} />
+              )}
+
+              <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: 2 }}>
+                {section.items.map(item => {
                   const isActive = currentPage === item.id;
                   const Icon = item.icon;
-                  
                   return (
                     <li key={item.id}>
                       <button
-                        onClick={() => {
-                          onNavigate(item.id as AdminPage);
-                          closeMobileMenu();
-                        }}
-                        className={`
-                          w-full p-3 rounded-xl border-none cursor-pointer flex items-center gap-3 transition-all
-                          ${sidebarOpen ? 'justify-start' : 'justify-center'}
-                        `}
+                        onClick={() => { onNavigate(item.id as AdminPage); closeMobileMenu(); }}
+                        title={!isExpanded ? item.label : undefined}
                         style={{
+                          width: '100%',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: isExpanded ? 'flex-start' : 'center',
+                          gap: isExpanded ? 10 : 0,
+                          padding: isExpanded ? '8px 12px' : '7px',
+                          borderRadius: 10,
+                          border: 'none',
+                          cursor: 'pointer',
                           backgroundColor: isActive ? CLUB_GREEN : 'transparent',
                           color: isActive ? 'white' : '#4b5563',
+                          transition: 'background-color 150ms',
                         }}
                       >
-                        <Icon size={20} className="flex-shrink-0" />
-                        {sidebarOpen && (
-                          <span className={`text-sm ${isActive ? 'font-semibold' : 'font-normal'}`}>
+                        <Icon size={isExpanded ? 20 : 17} style={{ flexShrink: 0 }} />
+                        {isExpanded && (
+                          <span style={{ fontSize: 13, fontWeight: isActive ? 600 : 400, whiteSpace: 'nowrap' }}>
                             {item.label}
                           </span>
                         )}
@@ -293,31 +239,46 @@ export function AdminLayout({ children, currentPage, onNavigate }: AdminLayoutPr
           ))}
         </nav>
 
-        {/* Footer con logout */}
-        <div className="p-4 border-t" style={{ borderColor: '#e5e7eb' }}>
+        {/* ── Footer logout ── */}
+        <div
+          style={{
+            padding: '12px',
+            borderTop: '1px solid #e5e7eb',
+            flexShrink: 0,
+          }}
+        >
           <button
-            onClick={handleLogout}
-            className={`
-              w-full p-3 rounded-xl border-none cursor-pointer flex items-center gap-3 transition-colors
-              ${sidebarOpen ? 'justify-start' : 'justify-center'}
-            `}
-            style={{ 
+            onClick={logout}
+            title={!isExpanded ? 'Cerrar Sesión' : undefined}
+            style={{
+              width: '100%',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: isExpanded ? 'flex-start' : 'center',
+              gap: isExpanded ? 10 : 0,
+              padding: isExpanded ? '8px 12px' : '7px',
+              borderRadius: 10,
+              border: 'none',
+              cursor: 'pointer',
               backgroundColor: '#fef2f2',
-              color: '#dc2626'
+              color: '#dc2626',
             }}
           >
-            <LogOut size={20} />
-            {sidebarOpen && <span className="text-sm font-medium">Cerrar Sesión</span>}
+            <LogOut size={isExpanded ? 20 : 17} />
+            {isExpanded && <span style={{ fontSize: 13, fontWeight: 500 }}>Cerrar Sesión</span>}
           </button>
         </div>
       </aside>
 
-      {/* Main Content */}
-      <main 
-        className="min-h-screen p-6 transition-all duration-300"
+      {/* ── MAIN CONTENT ── */}
+      <main
         style={{
-          marginLeft: sidebarOpen ? '280px' : '72px',
-          backgroundColor: '#f9fafb'
+          minHeight: '100vh',
+          marginLeft: isDesktop ? sidebarW : '64px',
+          marginTop: isDesktop ? 0 : '60px',
+          padding: '24px',
+          backgroundColor: '#f9fafb',
+          transition: 'margin-left 300ms ease',
         }}
       >
         {children}
