@@ -23,12 +23,12 @@ import clubLogo from '../../../images/logo/club-logo.png';
 
 const CLUB_GREEN = '#10b981';
 
-export type AdminPage = 'overview' | 'transactions' | 'users' | 'members' | 'reports' | 'categories' | 'club-data' | 'system' | 'attendance' | 'monthly-payments' | 'cartera' | 'jersey' | 'lockers' | 'purchases' | 'health-policies';
+export type AdminPage = 'overview' | 'transactions' | 'members' | 'reports' | 'categories' | 'club-data' | 'system' | 'attendance' | 'monthly-payments' | 'cartera' | 'jersey' | 'lockers' | 'purchases' | 'health-policies';
 
 const adminMenuItems = [
   { id: 'overview',         label: 'Resumen',          icon: Home,          section: 'resumen' },
   { id: 'transactions',     label: 'Transacciones',    icon: DollarSign,    section: 'resumen' },
-  { id: 'members',          label: 'Socios',           icon: Folder,        section: 'socios'  },
+  { id: 'members',          label: 'Socios',         icon: Folder,        section: 'socios'  },
   { id: 'reports',          label: 'Reportes',         icon: FileText,      section: 'socios'  },
   { id: 'categories',       label: 'Categorías',       icon: PieChart,      section: 'socios'  },
   { id: 'club-data',        label: 'Datos del Club',   icon: Building2,     section: 'datos'   },
@@ -39,7 +39,7 @@ const adminMenuItems = [
   { id: 'jersey',           label: 'Uniformes',        icon: Shirt,         section: 'gestión' },
   { id: 'lockers',          label: 'Camerinos',        icon: Lock,          section: 'gestión' },
   { id: 'purchases',        label: 'Compras',          icon: ShoppingCart,  section: 'gestión' },
-  { id: 'health-policies',  label: 'Polizas de Salud', icon: Heart,         section: 'gestión' },
+  { id: 'health-policies',  label: 'Polizas de Salud',  icon: Heart,         section: 'gestión' },
 ] as const;
 
 const menuSections = {
