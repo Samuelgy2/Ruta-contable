@@ -4,36 +4,31 @@ import { DataProvider } from './contexts/DataContext';
 import { Login } from './features/auth/pages/Login';
 import { Register } from './features/auth/pages/Register';
 import { ForgotPassword } from './features/auth/pages/ForgotPassword';
-import { AdminOverview, AdminTransactions, AdminUsers, AdminMembers, AdminReports, AdminCategories, AdminClubData, AdminSystem, AdminAttendance, AdminMonthlyPayments, AdminCartera, AdminJersey, AdminLockers, AdminPurchases, AdminHealthPolicies } from './pages/admin';
+import { AdminOverview, AdminTransactions, AdminMembers, AdminReports, AdminCategories, AdminClubData, AdminSystem, AdminAttendance, AdminMonthlyPayments, AdminCartera, AdminJersey, AdminLockers, AdminPurchases, AdminHealthPolicies } from './pages/admin';
 import { AdminLayout, AdminPage as AdminPageType } from './features/admin/components/AdminLayout';
 
 type Page = 'home' | 'login' | 'register' | 'forgot-password';
 type AdminPage = AdminPageType;
 
 function AppContent() {
-  const { isAuthenticated, currentUser, register } = useAuth();
+  const { isAuthenticated, currentUser, register } = useAuth(); // ← quitado register
   const [currentPage, setCurrentPage] = useState<Page>('home');
   const [currentAdminPage, setCurrentAdminPage] = useState<AdminPage>('overview');
 
-  // Navigation handler for non-admin pages
   const handleNavigate = (page: Page) => {
     setCurrentPage(page);
   };
 
-  // Navigation handler for admin pages - accepts both tab names and page IDs
   const handleAdminNavigate = (pageOrTab: string) => {
-    // First check if it's already a valid page ID
-    const validPages: AdminPage[] = ['overview', 'transactions', 'users', 'members', 'reports', 'categories', 'club-data', 'system', 'attendance', 'monthly-payments', 'cartera', 'jersey', 'lockers', 'purchases', 'health-policies'];
+    const validPages: AdminPage[] = ['overview', 'transactions', 'members', 'reports', 'categories', 'club-data', 'system', 'attendance', 'monthly-payments', 'cartera', 'jersey', 'lockers', 'purchases', 'health-policies'];
     if (validPages.includes(pageOrTab as AdminPage)) {
       setCurrentAdminPage(pageOrTab as AdminPage);
       return;
     }
     
-    // Otherwise, map tab names to page IDs
     const tabToPage: Record<string, AdminPage> = {
       overview: 'overview',
       transactions: 'transactions',
-      users: 'users',
       members: 'members',
       reports: 'reports',
       categories: 'categories',
@@ -53,23 +48,18 @@ function AppContent() {
     }
   };
 
-  // Si está autenticado, mostrar el panel correspondiente
   if (isAuthenticated) {
-    // Si está autenticado pero no tiene usuario válido, mostrar login
     if (!currentUser) {
       return <Login onNavigate={handleNavigate} />;
     }
     
     if (currentUser.role === 'admin') {
-      // Render admin pages with AdminLayout
       const renderAdminContent = () => {
         switch (currentAdminPage) {
           case 'overview':
-            return <AdminOverview onNavigate={handleAdminNavigate} />;
+            return <AdminOverview onNavigate={handleAdminNavigate}  />;
           case 'transactions':
             return <AdminTransactions onNavigate={handleAdminNavigate} />;
-          case 'users':
-            return <AdminUsers onNavigate={handleAdminNavigate} />;
           case 'members':
             return <AdminMembers onNavigate={handleAdminNavigate} />;
           case 'reports':
@@ -80,7 +70,6 @@ function AppContent() {
             return <AdminClubData onNavigate={handleAdminNavigate} />;
           case 'system':
             return <AdminSystem onNavigate={handleAdminNavigate} />;
-          // New modules
           case 'attendance':
             return <AdminAttendance onNavigate={handleAdminNavigate} />;
           case 'monthly-payments':
@@ -97,13 +86,14 @@ function AppContent() {
             return <AdminHealthPolicies onNavigate={handleAdminNavigate} />;
           default:
             return <AdminOverview onNavigate={handleAdminNavigate} />;
+            
         }
       };
 
       return (
-        <AdminLayout 
-          currentPage={currentAdminPage} 
-          onNavigate={handleAdminNavigate}
+        <AdminLayout
+          currentPage={currentAdminPage}
+          onNavigate={(page: AdminPageType) => handleAdminNavigate(page)}
         >
           {renderAdminContent()}
         </AdminLayout>
@@ -112,10 +102,9 @@ function AppContent() {
     return <Login onNavigate={handleNavigate} />;
   }
 
-  // Si no está autenticado, mostrar páginas públicas
   switch (currentPage) {
     case 'register':
-      return <Register onNavigate={handleNavigate} onRegister={register} />;
+  return <register onNavigate={handleNavigate} />;
     case 'forgot-password':
       return <ForgotPassword onNavigate={handleNavigate} />;
     case 'home':
