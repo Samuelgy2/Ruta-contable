@@ -1,145 +1,139 @@
 const express = require('express');
 const cors = require('cors');
-const morgan = require('morgan');
-const helmet = require('helmet');
+const { Pool } = require('pg');
+const bcrypt = require('bcryptjs');
+const jwt = require('jsonwebtoken');
 require('dotenv').config();
-const { pool } = require('./config/database');
-
-// Importar rutas
-const authRoutes = require('./routes/authRoutes');
 
 const app = express();
-const PORT = process.env.PORT || 3000;
+const port = process.env.PORT || 3001;
 
-// Middlewares
-app.use(helmet());
-app.use(cors({
-  origin: process.env.CORS_ORIGIN || 'http://localhost:5173',
-  credentials: true
-}));
-app.use(morgan('dev'));
+// Middleware
+app.use(cors());
 app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
 
-// ============================================
-// RUTAS DE LA API
-// ============================================
-
-// Health Check
-app.get('/health', async (req, res) => {
-  try {
-    const result = await pool.query('SELECT NOW() as time, version() as pg_version');
-    res.json({
-      status: 'OK',
-      timestamp: result.rows[0].time,
-      database: 'PostgreSQL',
-      version: result.rows[0].pg_version,
-      uptime: process.uptime()
-    });
-  } catch (error) {
-    res.status(500).json({ status: 'ERROR', message: error.message });
-  }
+// Conexión a PostgreSQL
+const pool = new Pool({
+  host: process.env.DB_HOST,
+  port: process.env.DB_PORT,
+  user: process.env.DB_USER,
+  password: process.env.DB_PASSWORD,
+  database: process.env.DB_NAME,
 });
 
-// Ruta principal
-app.get('/', (req, res) => {
-  res.json({
-    name: 'Ruta Contable API',
-    version: '1.0.0',
-    description: 'API Backend para Sistema Contable',
-    endpoints: {
-      health: 'GET /health',
-      auth: {
-        login: 'POST /api/auth/login',
-        register: 'POST /api/auth/register',
-        verify: 'GET /api/auth/verify'
-      }
-    }
-  });
-});
-
-// Rutas de autenticación
-app.use('/api/auth', authRoutes);
-
 // ============================================
-// INICIALIZAR BASE DE DATOS
+// CREAR TABLA Y USUARIO ADMIN AUTOMÁTICAMENTE
 // ============================================
-
-async function initializeDatabase() {
+async function setupDatabase() {
   try {
-    // Tabla de usuarios
+    // Crear tabla si no existe
     await pool.query(`
       CREATE TABLE IF NOT EXISTS users (
         id SERIAL PRIMARY KEY,
-        name VARCHAR(100) NOT NULL,
-        email VARCHAR(100) UNIQUE NOT NULL,
+        username VARCHAR(50) UNIQUE NOT NULL,
         password VARCHAR(255) NOT NULL,
-        role VARCHAR(50) DEFAULT 'user',
+        email VARCHAR(100) UNIQUE NOT NULL,
+        full_name VARCHAR(100) NOT NULL,
+        role VARCHAR(20) DEFAULT 'user',
         active BOOLEAN DEFAULT true,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       )
     `);
-    console.log('✅ Tabla users creada/verificada');
+    console.log('✅ Tabla users lista');
 
-    // Insertar usuario admin por defecto
-    const adminExists = await pool.query('SELECT id FROM users WHERE email = $1', ['admin@rutacontable.com']);
+    // Verificar si existe el admin
+    const adminExists = await pool.query('SELECT id FROM users WHERE username = $1', ['admin']);
     
     if (adminExists.rows.length === 0) {
-      const bcrypt = require('bcryptjs');
+      // Crear admin con contraseña admin123
       const hashedPassword = await bcrypt.hash('admin123', 10);
-      
       await pool.query(
-        `INSERT INTO users (name, email, password, role) 
-         VALUES ($1, $2, $3, $4)`,
-        ['Administrador', 'admin@rutacontable.com', hashedPassword, 'admin']
+        `INSERT INTO users (username, password, email, full_name, role, active) 
+         VALUES ($1, $2, $3, $4, $5, $6)`,
+        ['admin', hashedPassword, 'admin@rutacontable.com', 'Administrador', 'admin', true]
       );
-      console.log('✅ Usuario admin creado (email: admin@rutacontable.com, password: admin123)');
+      console.log('✅ Usuario admin creado (admin / admin123)');
+    } else {
+      // Actualizar la contraseña del admin existente
+      const hashedPassword = await bcrypt.hash('admin123', 10);
+      await pool.query('UPDATE users SET password = $1 WHERE username = $2', [hashedPassword, 'admin']);
+      console.log('✅ Contraseña de admin actualizada');
     }
 
-    // Tabla de productos (opcional)
-    await pool.query(`
-      CREATE TABLE IF NOT EXISTS products (
-        id SERIAL PRIMARY KEY,
-        name VARCHAR(100) NOT NULL,
-        price DECIMAL(10,2) NOT NULL,
-        description TEXT,
-        category VARCHAR(50),
-        stock INTEGER DEFAULT 0,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-      )
-    `);
-    console.log('✅ Tabla products creada/verificada');
-
   } catch (error) {
-    console.error('Error inicializando base de datos:', error.message);
+    console.error('Error en setup:', error.message);
   }
 }
 
 // ============================================
-// INICIAR SERVIDOR
+// RUTA DE LOGIN
 // ============================================
-
-async function startServer() {
+app.post('/api/auth/login', async (req, res) => {
   try {
-    await initializeDatabase();
+    const { username, password } = req.body;
+    console.log('📝 Login:', { username, password });
+
+    // Buscar usuario
+    const result = await pool.query(
+      'SELECT * FROM users WHERE username = $1 OR email = $1',
+      [username]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(401).json({ success: false, message: 'Usuario no encontrado' });
+    }
+
+    const user = result.rows[0];
     
-    app.listen(PORT, () => {
-      console.log('\n' + '='.repeat(50));
-      console.log('🚀 RUTA CONTABLE - BACKEND');
-      console.log('='.repeat(50));
-      console.log(`📡 Servidor: http://localhost:${PORT}`);
-      console.log(`🏥 Health: http://localhost:${PORT}/health`);
-      console.log(`🔐 Login: POST http://localhost:${PORT}/api/auth/login`);
-      console.log(`📝 Register: POST http://localhost:${PORT}/api/auth/register`);
-      console.log('='.repeat(50) + '\n');
+    // Verificar contraseña
+    const isValid = await bcrypt.compare(password, user.password);
+    console.log('🔑 Contraseña válida:', isValid);
+
+    if (!isValid) {
+      return res.status(401).json({ success: false, message: 'Contraseña incorrecta' });
+    }
+
+    // Generar token
+    const token = jwt.sign(
+      { id: user.id, username: user.username, role: user.role },
+      process.env.JWT_SECRET,
+      { expiresIn: '7d' }
+    );
+
+    res.json({
+      success: true,
+      message: 'Login exitoso',
+      data: {
+        user: {
+          id: user.id,
+          username: user.username,
+          name: user.full_name,
+          email: user.email,
+          role: user.role
+        },
+        token
+      }
     });
+
   } catch (error) {
-    console.error('Error al iniciar el servidor:', error);
-    process.exit(1);
+    console.error('Error:', error);
+    res.status(500).json({ success: false, message: 'Error interno' });
   }
+});
+
+// Ruta de prueba
+app.get('/health', (req, res) => {
+  res.json({ status: 'OK', message: 'Servidor funcionando' });
+});
+
+// Iniciar servidor
+async function start() {
+  await setupDatabase();
+  app.listen(port, () => {
+    console.log(`\n🚀 Servidor en http://localhost:${port}`);
+    console.log(`🔐 Login: POST http://localhost:${port}/api/auth/login`);
+    console.log(`🏥 Health: http://localhost:${port}/health\n`);
+  });
 }
 
-startServer();
-
+start();
