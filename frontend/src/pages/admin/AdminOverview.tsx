@@ -78,7 +78,7 @@ export function AdminOverview({ onNavigate }: AdminOverviewProps) {
         {/* Cabecera */}
         <div style={{ marginBottom: '32px' }}>
           <h1 style={{ fontSize: '28px', fontWeight: 'bold', marginBottom: '8px', color: '#1f2937' }}>
-            Panel Admin
+            Panel Gestor 
           </h1>
           <p style={{ color: '#6b7280' }}>
             Bienvenido, <strong>Samuel gutierrez</strong>

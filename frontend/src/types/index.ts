@@ -363,3 +363,5 @@ export interface AuthState {
   isAuthenticated: boolean;
   currentUser: User | null;
 }
+
+export type AppPage = '' | 'home' | 'login' | 'register' | 'forgot-password';

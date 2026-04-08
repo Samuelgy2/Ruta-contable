@@ -2,9 +2,14 @@ import React from 'react';
 import { Navbar } from '../../landing/components/Navbar';
 import { Footer } from '../../landing/components/Footer';
 import { LoginForm } from '../components/LoginForm';
+import { AppPage } from '../../../types/index.ts';
 
 interface LoginProps {
-  onNavigate: (page: 'home' | 'login' | 'register') => void;
+  onNavigate: (page: AppPage) => void;
+}
+
+interface LoginProps {
+  onNavigate: (page: AppPage) => void;
 }
 
 export function Login({ onNavigate }: LoginProps) {

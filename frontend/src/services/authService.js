@@ -5,6 +5,7 @@ export const authService = {
   login: async (username, password) => {
     try {
       const response = await api.post('/auth/login', { username, password });
+      console.log('Login response:', response);
       if (response.data.success) {
         // Guardar token y usuario en localStorage
         localStorage.setItem('clubfinance_token', response.data.data.token);

@@ -1,9 +1,14 @@
 import { useState, FormEvent, ChangeEvent, CSSProperties } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { PasswordInput } from '../../../components/ui/password-input';
+import { AppPage } from '../../../types/index';
+
+interface LoginProps {
+  onNavigate: (page: AppPage) => void;
+}
 
 interface LoginFormProps {
-  onNavigate: (page: 'home' | 'login' | 'register' | 'forgot-password') => void;
+  onNavigate: (page: AppPage) => void;
   backgroundColor?: string;
   backgroundImage?: string;
 }
@@ -41,6 +46,7 @@ export function LoginForm({ onNavigate, backgroundColor, backgroundImage }: Logi
     ...(backgroundImage && { backgroundImage }),
     ...(backgroundColor && !backgroundImage && { backgroundColor }),
   };
+  
 
   return (
     

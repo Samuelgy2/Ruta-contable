@@ -1,16 +1,26 @@
-import React, { useState } from 'react';
-import { useData } from '../../contexts/DataContext';
+import React, { useState, useEffect } from 'react';
 import { PasswordInput } from '../../components/ui/password-input';
+import { userService } from '../../services/userService';
 import { UserRole } from '../../types';
+
+interface User {
+  id: number;
+  username: string;
+  email: string;
+  fullName: string;
+  role: UserRole;
+  active: boolean;
+}
 
 interface AdminSystemProps {
   onNavigate?: (tab: string) => void;
 }
 
 export function AdminSystem({ onNavigate }: AdminSystemProps) {
-  const { users, addUser, updateUser, deleteUser } = useData();
+  const [users, setUsers] = useState<User[]>([]);
+  const [loading, setLoading] = useState(true);
   const [showUserForm, setShowUserForm] = useState(false);
-  const [editingUser, setEditingUser] = useState<string | null>(null);
+  const [editingUser, setEditingUser] = useState<number | null>(null);
   const [userForm, setUserForm] = useState({
     username: '',
     password: '',
@@ -20,13 +30,26 @@ export function AdminSystem({ onNavigate }: AdminSystemProps) {
     active: true,
   });
 
-  const handleNavigate = (tab: string) => {
-    if (onNavigate) {
-      onNavigate(tab);
+  useEffect(() => {
+    loadUsers();
+  }, []);
+
+  const loadUsers = async () => {
+    try {
+      setLoading(true);
+      const response = await userService.getAll();
+      if (response.success) {
+        setUsers(response.data);
+      }
+    } catch (error) {
+      console.error('Error al cargar usuarios:', error);
+      alert('Error al cargar usuarios');
+    } finally {
+      setLoading(false);
     }
   };
 
-  const handleUserSubmit = (e: React.FormEvent) => {
+  const handleUserSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
     if (!userForm.username || !userForm.password || !userForm.fullName || !userForm.email) {
@@ -34,32 +57,37 @@ export function AdminSystem({ onNavigate }: AdminSystemProps) {
       return;
     }
 
-    if (editingUser) {
-      updateUser(editingUser, userForm);
-      setEditingUser(null);
-      alert('Usuario actualizado correctamente');
-    } else {
-      addUser(userForm);
-      alert('Usuario creado correctamente');
-    }
+    try {
+      if (editingUser) {
+        await userService.update(editingUser.toString(), userForm);
+        alert('Usuario actualizado correctamente');
+      } else {
+        await userService.create(userForm);
+        alert('Usuario creado correctamente');
+      }
 
-    setUserForm({
-      username: '',
-      password: '',
-      fullName: '',
-      email: '',
-      role: 'user',
-      active: true,
-    });
-    setShowUserForm(false);
+      setUserForm({
+        username: '',
+        password: '',
+        fullName: '',
+        email: '',
+        role: 'user',
+        active: true,
+      });
+      setEditingUser(null);
+      setShowUserForm(false);
+      loadUsers();
+    } catch (error: any) {
+      alert(error.response?.data?.message || 'Error al guardar usuario');
+    }
   };
 
-  const handleEditUser = (userId: string) => {
+  const handleEditUser = (userId: number) => {
     const user = users.find(u => u.id === userId);
     if (user) {
       setUserForm({
         username: user.username,
-        password: user.password,
+        password: '',
         fullName: user.fullName,
         email: user.email,
         role: user.role,
@@ -70,10 +98,15 @@ export function AdminSystem({ onNavigate }: AdminSystemProps) {
     }
   };
 
-  const handleDeleteUser = (userId: string) => {
+  const handleDeleteUser = async (userId: number) => {
     if (confirm('¿Estás seguro de eliminar este usuario?')) {
-      deleteUser(userId);
-      alert('Usuario eliminado correctamente');
+      try {
+        await userService.delete(userId.toString());
+        alert('Usuario eliminado correctamente');
+        loadUsers();
+      } catch (error: any) {
+        alert(error.response?.data?.message || 'Error al eliminar usuario');
+      }
     }
   };
 
@@ -179,8 +212,11 @@ export function AdminSystem({ onNavigate }: AdminSystemProps) {
           </div>
         )}
 
-        {/* Tabla de Usuarios */}
-        <div className="table-container">
+          {/* Tabla de Usuarios */}
+        {loading ? (
+          <div style={{ textAlign: 'center', padding: '32px' }}>Cargando usuarios...</div>
+        ) : (
+          <div className="table-container">
           <table className="table">
             <thead>
               <tr>
@@ -200,7 +236,9 @@ export function AdminSystem({ onNavigate }: AdminSystemProps) {
                   </td>
                 </tr>
               ) : (
-                users.map((user) => (
+                users
+                .filter (user => user.username !== 'admin') // Ocultar usuario admin de la lista
+                .map((user) => (
                   <tr key={user.id}>
                     <td>{user.username}</td>
                     <td>{user.fullName}</td>
@@ -236,7 +274,8 @@ export function AdminSystem({ onNavigate }: AdminSystemProps) {
               )}
             </tbody>
           </table>
-        </div>
+          </div>
+        )}
       </div>
     </div>
   );

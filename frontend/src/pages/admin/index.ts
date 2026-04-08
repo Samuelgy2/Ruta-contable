@@ -3,7 +3,6 @@
 
 export { AdminOverview } from './AdminOverview';
 export { AdminTransactions } from './AdminTransactions';
-export { AdminUsers } from './AdminUsers';
 export { AdminMembers } from './AdminMembers';
 export { AdminReports } from './AdminReports';
 export { AdminCategories } from './AdminCategories';

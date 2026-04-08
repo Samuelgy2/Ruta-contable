@@ -29,7 +29,6 @@ api.interceptors.response.use(
       // Token expirado o inválido
       localStorage.removeItem('clubfinance_token');
       localStorage.removeItem('clubfinance_user');
-      window.location.href = '/login';
     }
     return Promise.reject(error);
   }

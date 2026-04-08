@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { AuthProvider, useAuth } from './features/auth/contexts/AuthContext';
 import { DataProvider } from './contexts/DataContext';
 import { Login } from './features/auth/pages/Login';
-import { Register } from './features/auth/pages/Register';
+
 import { ForgotPassword } from './features/auth/pages/ForgotPassword';
 import { AdminOverview, AdminTransactions, AdminMembers, AdminReports, AdminCategories, AdminClubData, AdminSystem, AdminAttendance, AdminMonthlyPayments, AdminCartera, AdminJersey, AdminLockers, AdminPurchases, AdminHealthPolicies } from './pages/admin';
 import { AdminLayout, AdminPage as AdminPageType } from './features/admin/components/AdminLayout';
@@ -11,7 +11,7 @@ type Page = 'home' | 'login' | 'register' | 'forgot-password';
 type AdminPage = AdminPageType;
 
 function AppContent() {
-  const { isAuthenticated, currentUser, register } = useAuth(); // ← quitado register
+  const { isAuthenticated, currentUser, } = useAuth(); 
   const [currentPage, setCurrentPage] = useState<Page>('home');
   const [currentAdminPage, setCurrentAdminPage] = useState<AdminPage>('overview');
 
@@ -103,8 +103,6 @@ function AppContent() {
   }
 
   switch (currentPage) {
-    case 'register':
-  return <register onNavigate={handleNavigate} />;
     case 'forgot-password':
       return <ForgotPassword onNavigate={handleNavigate} />;
     case 'home':
