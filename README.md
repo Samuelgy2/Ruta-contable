@@ -34,26 +34,74 @@ Ruta contable/
 ├── frontend/                    # Aplicación React (Cliente)
 │   ├── src/
 │   │   ├── App.tsx              # Componente raíz de la aplicación
-│   │   ├── main.tsx             # Punto de entrada de la aplicación
-│   │   ├── index.css            # Estilos globales
-│   │   ├── vite-env.d.ts        # Tipos de Vite
-│   │   ├── types/               # Definiciones de tipos TypeScript
-│   │   │   └── index.ts         # Tipos centralizados
-│   │   ├── contexts/            # Contextos de React
-│   │   │   └── DataContext.tsx  # Estado de datos de la aplicación
-│   │   ├── features/            # Módulos basados en características
-│   │   │   ├── auth/            # Autenticación
-│   │   │   │   ├── index.ts     # Exportaciones del módulo
-│   │   │   │   ├── components/  # LoginForm, RegisterForm
-│   │   │   │   ├── contexts/    # AuthContext
-│   │   │   │   └── pages/       # Login, Register, ForgotPassword
-│   │   │   ├── landing/         # Página pública
-│   │   │   │   └── components/  # Navbar, Footer, Hero
-│   │   │   └── admin/           # Panel de administración
-│   │   │       ├── index.ts     # Exportaciones del módulo
-│   │   │       └── components/  # AdminLayout
-│   │   ├── pages/               # Componentes de página
-│   │   │   ├── admin/           # Páginas del admin
+│   │   ├── main.tsx            # Punto de entrada de la aplicación
+│   │   ├── index.css           # Estilos globales
+│   │   ├── types/              # Definiciones de tipos TypeScript
+│   │   ├── contexts/           # Contextos de React
+│   │   │   ├── DataContext.tsx # Estado de datos de la aplicación
+│   │   │   └── AuthContext.tsx # Estado de autenticación
+│   │   ├── features/          # Módulos basados en características
+│   │   ├── pages/             # Componentes de página
+│   │   ├── hooks/             # Hooks personalizados
+│   │   ├── components/        # Componentes de UI
+│   │   ├── shared/            # Código compartido
+│   │   ├── config/           # Configuración de entidades
+│   │   ├── utils/            # Funciones utilitarias
+│   │   ├── styles/           # Estilos globales
+│   │   ├── images/           # Imágenes y logos
+│   │   └── guidelines/       # Guías de estilo
+│   ├── package.json
+│   ├── vite.config.ts
+│   ├── tsconfig.json
+│   └── tailwind.config.js
+│
+├── backend/                     # API REST (Servidor)
+│   ├── db.js                   # Pool de conexiones PostgreSQL
+│   ├── server.js               # Servidor Express (entrada principal)
+│   ├── src/
+│   │   ├── index.js            # Servidor principal con rutas inline
+│   │   └── pages/
+│   │       └── Admin_system.js  # Páginas admin
+│   ├── middleware/
+│   │   └── auth.js             # Middleware JWT requireAdmin
+│   ├── routes/
+│   │   ├── auth.js             # Rutas de autenticación
+│   │   └── users.js           # CRUD completo de usuarios
+│   ├── utils/
+│   │   └── helpers.js         # Validación y logging
+│   ├── logs/
+│   │   └── security.log       # Registro de intentos fallidos
+│   ├── package.json
+│   └── .env                   # Variables de entorno
+│
+├── build/                      # Build de producción
+├── README.md                   # Documentación principal
+└── .npmrc                      # Configuración de npm
+```
+Ruta contable/
+├── frontend/                                    # Aplicación React (Cliente)
+│   ├── src/
+│   │   ├── App.tsx                              # Componente raíz de la aplicación
+│   │   ├── main.tsx                             # Punto de entrada de la aplicación
+│   │   ├── index.css                            # Estilos globales
+│   │   ├── vite-env.d.ts                        # Tipos de Vite
+│   │   ├── types/                               # Definiciones de tipos TypeScript
+│   │   │   └── index.ts                         # Tipos centralizados
+│   │   ├── contexts/                            # Contextos de React
+│   │   │   └── DataContext.tsx                  # Estado de datos de la aplicación
+│   │   ├── features/                            # Módulos basados en características
+│   │   │   ├── auth/                            # Autenticación
+│   │   │   │   ├── index.ts                     # Exportaciones del módulo
+│   │   │   │   ├── components/                  # LoginForm, RegisterForm
+│   │   │   │   ├── contexts/                    # AuthContext
+│   │   │   │   └── pages/                       # Login, Register, ForgotPassword
+│   │   │   ├── landing/                         # Página pública
+│   │   │   │   └── components/                  # Navbar, Footer, Hero
+│   │   │   └── admin/                           # Panel de administración
+│   │   │       ├── index.ts                     # Exportaciones del módulo
+│   │   │       └── components/                  # AdminLayout
+│   │   ├── pages/                               # Componentes de página
+│   │   │   ├── admin/                           # Páginas del admin
 │   │   │   │   ├── AdminCategories.tsx
 │   │   │   │   ├── AdminClubData.tsx
 │   │   │   │   ├── AdminMembers.tsx
@@ -61,7 +109,6 @@ Ruta contable/
 │   │   │   │   ├── AdminReports.tsx
 │   │   │   │   ├── AdminSystem.tsx
 │   │   │   │   ├── AdminTransactions.tsx
-│   │   │   │   ├── AdminUsers.tsx
 │   │   │   │   └── index.ts
 │   │   │   └── index.ts
 │   │   ├── hooks/               # Hooks personalizados de React
@@ -111,35 +158,255 @@ Ruta contable/
 │
 ├── backend/                     # API REST (Servidor)
 │   ├── src/
-│   │   ├── index.js             # Punto de entrada del servidor
+│   │   ├── index.js             # Punto de entrada con seguridad completa
+│   │   ├── server.js            # Servidor Express alternativo
+│   │   ├── middleware/
+│   │   │   └── auth.js          # Middleware de autenticación JWT
 │   │   ├── config/
-│   │   │   └── database.js      # Configuración de base de datos
+│   │   │   └── database.js     # Configuración de base de datos
 │   │   ├── controllers/         # Controladores de rutas
-│   │   ├── middlewares/         # Middlewares de Express
-│   │   ├── models/              # Modelos de datos
 │   │   ├── routes/              # Definición de rutas API
+│   │   │   ├── auth.js          # Rutas de autenticación
+│   │   │   └── users.js         # Rutas de usuarios (CRUD)
 │   │   ├── services/            # Lógica de negocio
 │   │   ├── database/            # Scripts de base de datos
-│   │   └── utils/               # Utilidades del backend
-│   ├── BD/                      # Configuración de PostgreSQL
-│   │   ├── src/
-│   │   │   ├── config/
-│   │   │   │   ├── database.js  # Configuración de conexión
-│   │   │   │   └── server.js    # Configuración del servidor
-│   │   │   └── models/
-│   │   │       └── user.js      # Modelo de usuario
-│   │   ├── POSTGRESQL_CONFIG.md # Documentación de PostgreSQL
-│   │   └── README.md            # Documentación del backend
+│   │   └── utils/
+│   │       └── helpers.js       # Utilidades (validación, logging)
+│   ├── utils/
+│   │   └── helpers.js           # Funciones auxiliares
+│   ├── db.js                    # Conexión a PostgreSQL (Pool)
+│   ├── server.js                # Servidor principal
 │   ├── package.json
-│   └── .env                     # Variables de entorno
+│   ├── .env                     # Variables de entorno
+│   └── logs/                    # Logs de seguridad
 │
 ├── build/                       # Build de producción del frontend
 │   ├── index.html
 │   └── assets/
 │
 ├── README.md                    # Documentación principal
-└── .npmrc                       # Configuración de npm
+│ └── .npmrc                       # Configuración de npm
 ```
+
+---
+
+## Arquitectura del Backend
+
+El backend de Ruta Contable es una API REST segura construida con Node.js, Express y PostgreSQL. Implementa múltiples capas de seguridad incluyendo autenticación JWT, hashing de contraseñas con bcrypt, rate limiting y validación de entradas.
+
+### Stack Tecnológico
+
+| Tecnología | Propósito |
+|------------|-----------|
+| **Node.js** | Runtime de JavaScript |
+| **Express.js** | Framework web |
+| **PostgreSQL** | Base de datos relacional |
+| **pg** | Driver de PostgreSQL |
+| **JWT** | Autenticación con tokens |
+| **bcryptjs** | Hashing de contraseñas |
+| **Helmet** | Headers de seguridad HTTP |
+| **express-rate-limit** | Limitación de intentos |
+| **morgan** | Logging de peticiones |
+| **dotenv** | Variables de entorno |
+
+### Estructura de Archivos Reales
+
+```
+backend/
+├── db.js                    # Pool de conexiones PostgreSQL
+├── server.js                # Servidor Express (entrada principal)
+├── src/
+│   ├── index.js             # Servidor con lógica inline
+│   └── pages/
+│       └── Admin_system.js   # Páginas admin
+├── middleware/
+│   └── auth.js              # Middleware requireAdmin
+├── routes/
+│   ├── auth.js              # Rutas de autenticación
+│   └── users.js             # CRUD de usuarios
+├── utils/
+│   └── helpers.js           # Validación y logging
+├── logs/
+│   └── security.log         # Intentos fallidos
+├── package.json
+└── .env
+```
+
+### Dependencias (package.json)
+
+```json
+{
+  "dependencies": {
+    "bcryptjs": "^3.0.3",
+    "cors": "^2.8.6",
+    "dotenv": "^17.4.0",
+    "express": "^5.2.1",
+    "express-rate-limit": "^8.3.2",
+    "helmet": "^8.1.0",
+    "jsonwebtoken": "^9.0.3",
+    "morgan": "^1.10.1",
+    "pg": "^8.20.0"
+  }
+}
+```
+
+### Configuración de Base de Datos
+
+La conexión a PostgreSQL usa el módulo `pg` con un pool de conexiones:
+
+```javascript
+// backend/db.js
+const { Pool } = require('pg');
+require('dotenv').config();
+
+const pool = new Pool({
+  host: process.env.DB_HOST,
+  port: process.env.DB_PORT,
+  user: process.env.DB_USER,
+  password: process.env.DB_PASSWORD,
+  database: process.env.DB_NAME,
+});
+
+module.exports = pool;
+```
+
+### Schema de la Tabla Users
+
+```sql
+CREATE TABLE users (
+  id SERIAL PRIMARY KEY,
+  username VARCHAR(50) UNIQUE NOT NULL,
+  password VARCHAR(255) NOT NULL,
+  email VARCHAR(100) UNIQUE NOT NULL,
+  full_name VARCHAR(100) NOT NULL,
+  role VARCHAR(20) DEFAULT 'user',
+  active BOOLEAN DEFAULT true,
+  failed_attempts INTEGER DEFAULT 0,
+  locked_until TIMESTAMP,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+```
+
+### Medidas de Seguridad Implementadas
+
+| Capa | Implementación | Descripción |
+|------|----------------|-------------|
+| **Helmet** | Headers de seguridad | Protege contra ataques comunes |
+| **CORS** | Configuración estricta | Origin configurable |
+| **Rate Limiting** | 10 intentos/15 min | Previene fuerza bruta |
+| **Hashing** | bcrypt (12 rounds) | Contraseñas hasheadas |
+| **JWT** | Expiración 1 día | Tokens con issuer/audience |
+| **Validación** | Input sanitization | Previene inyección SQL |
+| **Bloqueo** | 5 intentos fallidos | Bloquea 15 minutos |
+| **Logging** | security.log | Registro de intentos |
+
+### Variables de Entorno (.env)
+
+```bash
+PORT=3001
+DB_HOST=localhost
+DB_PORT=5432
+DB_NAME=rutacontable
+DB_USER=postgres
+DB_PASSWORD=your_password
+JWT_SECRET=your_secure_secret_key
+CORS_ORIGIN=http://localhost:3000
+```
+
+### Credenciales por Defecto
+
+| Rol | Username | Contraseña |
+|-----|----------|------------|
+| Admin | admin | admin123 |
+
+### Endpoints de la API
+
+#### Autenticación (Público)
+| Método | Endpoint | Descripción |
+|--------|----------|-------------|
+| POST | `/api/auth/login` | Iniciar sesión |
+| GET | `/health` | Health check |
+| GET | `/api/enana` | Ruta de prueba |
+
+#### Usuarios (Protegido - Solo Admin)
+| Método | Endpoint | Descripción |
+|--------|----------|-------------|
+| GET | `/api/users` | Obtener todos los usuarios |
+| GET | `/api/users/:id` | Obtener usuario por ID |
+| POST | `/api/users` | Crear usuario |
+| PUT | `/api/users/:id` | Actualizar usuario |
+| DELETE | `/api/users/:id` | Eliminar usuario |
+
+### Middleware de Autenticación
+
+```javascript
+// backend/middleware/auth.js
+const jwt = require('jsonwebtoken');
+const pool = require('../db');
+
+async function requireAdmin(req, res, next) {
+  const authHeader = req.headers.authorization;
+  if (!authHeader) {
+    return res.status(401).json({ success: false, message: 'Token requerido' });
+  }
+
+  const token = authHeader.split(' ')[1];
+  try {
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    if (decoded.role !== 'admin') {
+      return res.status(403).json({ success: false, message: 'Acceso denegado' });
+    }
+    req.user = decoded;
+    next();
+  } catch (error) {
+    return res.status(401).json({ success: false, message: 'Token inválido' });
+  }
+}
+
+module.exports = { requireAdmin };
+```
+
+### Utilidades del Backend
+
+#### Validación de Entradas
+
+```javascript
+// backend/utils/helpers.js
+function validateInput(username, password) {
+  const errors = [];
+  if (!username || username.trim() === '') errors.push('El usuario es requerido');
+  if (!password || password.length < 6) errors.push('La contraseña debe tener al menos 6 caracteres');
+  if (username && username.length > 50) errors.push('El usuario no puede tener más de 50 caracteres');
+  if (password && password.length > 100) errors.push('La contraseña no puede tener más de 100 caracteres');
+  return errors;
+}
+```
+
+#### Logging de Intentos Fallidos
+
+```javascript
+function logFailedAttempt(username, ip, reason) {
+  const logEntry = `${new Date().toISOString()} | IP: ${ip} | Usuario: ${username} | Razón: ${reason}\n`;
+  const logPath = path.join(__dirname, '../logs/security.log');
+  fs.appendFileSync(logPath, logEntry);
+}
+```
+
+### Inicio del Servidor
+
+```bash
+# Desarrollo
+cd backend
+npm start
+
+# Con nodemon (auto-reload)
+npm run dev
+```
+
+El servidor inicia en `http://localhost:3001` y muestra:
+- Endpoint de login: `POST http://localhost:3001/api/auth/login`
+- Health check: `GET http://localhost:3001/health`
+- Estado de todas las medidas de seguridad
 
 ---
 
@@ -185,111 +452,154 @@ function AppContent() {
 }
 ```
 
-### Backend (Node.js + Express)
+### Backend - Servidor Principal ([`backend/src/index.js`](backend/src/index.js:1))
 
-#### Punto de Entrada del Servidor ([`backend/src/index.js`](backend/src/index.js:1))
-
-Servidor Express que maneja las peticiones HTTP y la lógica de negocio.
-
-**Características Clave:**
-- Configuración de middleware (CORS, JSON parsing, etc.)
-- Definición de rutas REST API
-- Conexión a base de datos PostgreSQL
-- Manejo de errores y validaciones
+Servidor completo con todas las rutas inline y lógica de seguridad. Incluye:
+- Setup automático de base de datos
+- Validación de entradas
+- Rate limiting
+- Sistema de bloqueo de cuentas
+- Generación de JWT
+- Logging de seguridad
 
 ```javascript
+// backend/src/index.js
 const express = require('express');
 const cors = require('cors');
-const app = express();
+const helmet = require('helmet');
+const rateLimit = require('express-rate-limit');
+const bcrypt = require('bcryptjs');
+const jwt = require('jsonwebtoken');
 
-app.use(cors());
+const app = express();
+const port = process.env.PORT || 3001;
+
+app.use(helmet());
+app.use(cors({ origin: process.env.CORS_ORIGIN, credentials: true }));
 app.use(express.json());
 
-// Rutas de la API
-app.use('/api/users', require('./routes/users'));
-app.use('/api/members', require('./routes/members'));
-app.use('/api/transactions', require('./routes/transactions'));
-app.use('/api/categories', require('./routes/categories'));
-
-app.listen(3000, () => {
-  console.log('Servidor corriendo en puerto 3000');
+const loginLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 10,
+  message: { success: false, message: 'Demasiados intentos fallidos.' },
 });
+
+app.post('/api/auth/login', loginLimiter, async (req, res) => {
+  // Validación, bcrypt compare, JWT sign
+});
+
+async function start() {
+  await setupDatabase();
+  app.listen(port, () => console.log(`🚀 Servidor en http://localhost:${port}`));
+}
+start();
 ```
 
-#### Configuración de Base de Datos ([`backend/src/config/database.js`](backend/src/config/database.js:1))
+### Backend - Servidor Alternativo ([`backend/server.js`](backend/server.js:1))
 
-Configuración de la conexión a PostgreSQL usando pg-pool.
+Servidor Express que usa rutas modulares:
 
 ```javascript
-const { Pool } = require('pg');
+// backend/server.js
+const express = require('express');
+const cors = require('cors');
+const helmet = require('helmet');
+const bcrypt = require('bcryptjs');
+require('dotenv').config();
 
-const pool = new Pool({
-  host: process.env.DB_HOST,
-  port: process.env.DB_PORT,
-  database: process.env.DB_NAME,
-  user: process.env.DB_USER,
-  password: process.env.DB_PASSWORD,
+const pool = require('./db');
+const authRoutes = require('./routes/auth');
+const usersRoutes = require('./routes/users');
+
+const app = express();
+const port = process.env.PORT || 3001;
+
+app.use(helmet());
+app.use(cors({ origin: process.env.CORS_ORIGIN, credentials: true }));
+app.use(express.json());
+
+app.use('/api/auth', authRoutes);
+app.use('/api/users', usersRoutes);
+
+app.get('/health', (req, res) => res.json({ status: 'OK' }));
+
+async function setupDatabase() {
+  await pool.query(`CREATE TABLE IF NOT EXISTS users (...)`);
+}
+
+async function start() {
+  await setupDatabase();
+  app.listen(port, () => console.log(`🚀 Servidor en http://localhost:${port}`));
+}
+
+start();
+```
+
+### Rutas de Autenticación ([`backend/routes/auth.js`](backend/routes/auth.js:1))
+
+Endpoints de login con seguridad integrada usando helpers externos:
+
+```javascript
+// backend/routes/auth.js
+const express = require('express');
+const router = express.Router();
+const bcrypt = require('bcryptjs');
+const jwt = require('jsonwebtoken');
+const rateLimit = require('express-rate-limit');
+
+const pool = require('../db');
+const { validateInput, logFailedAttempt } = require('../utils/helpers');
+
+const loginLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 10,
+  message: { success: false, message: 'Demasiados intentos fallidos.' },
 });
 
-module.exports = pool;
+router.post('/login', loginLimiter, async (req, res) => {
+  const { username, password } = req.body;
+  const errors = validateInput(username, password);
+  if (errors.length > 0) {
+    return res.status(400).json({ success: false, message: 'Error de validación', errors });
+  }
+  // Buscar usuario, verificar contraseña, generar JWT
+});
+
+module.exports = router;
 ```
+
+### Rutas de Usuarios ([`backend/routes/users.js`](backend/routes/users.js:1))
+
+CRUD completo protegido por middleware `requireAdmin`:
+
+- `GET /` - Listar todos los usuarios
+- `GET /:id` - Obtener usuario por ID
+- `POST /` - Crear nuevo usuario
+- `PUT /:id` - Actualizar usuario
+- `DELETE /:id` - Eliminar usuario
 
 ### Base de Datos (PostgreSQL)
 
-#### Configuración de PostgreSQL ([`backend/BD/src/config/database.js`](backend/BD/src/config/database.js:1))
+#### Schema de la Tabla Users ([`backend/db.js`](backend/db.js:1))
 
 Script de configuración y creación de tablas en PostgreSQL.
 
-**Tablas Principales:**
-- `users` - Usuarios del sistema
-- `members` - Miembros del club
-- `transactions` - Transacciones financieras
-- `categories` - Categorías de transacciones
-- `fees` - Cuotas de membresía
-- `system_data` - Configuración del sistema
+**Tabla Principal:**
+- `users` - Usuarios del sistema (id, username, password, email, full_name, role, active, failed_attempts, locked_until, created_at)
 
-#### Modelo de Usuario ([`backend/BD/src/models/user.js`](backend/BD/src/models/user.js:1))
-
-Modelo de datos para la tabla de usuarios con operaciones CRUD.
-
-```javascript
-const pool = require('../config/database');
-
-const User = {
-  async findAll() {
-    const result = await pool.query('SELECT * FROM users');
-    return result.rows;
-  },
-  
-  async findById(id) {
-    const result = await pool.query('SELECT * FROM users WHERE id = $1', [id]);
-    return result.rows[0];
-  },
-  
-  async create(userData) {
-    const { username, password, role, fullName, email } = userData;
-    const result = await pool.query(
-      'INSERT INTO users (username, password, role, full_name, email) VALUES ($1, $2, $3, $4, $5) RETURNING *',
-      [username, password, role, fullName, email]
-    );
-    return result.rows[0];
-  },
-  
-  async update(id, userData) {
-    const { username, password, role, fullName, email, active } = userData;
-    const result = await pool.query(
-      'UPDATE users SET username=$1, password=$2, role=$3, full_name=$4, email=$5, active=$6 WHERE id=$7 RETURNING *',
-      [username, password, role, fullName, email, active, id]
-    );
-    return result.rows[0];
-  },
-  
-  async delete(id) {
-    await pool.query('DELETE FROM users WHERE id = $1', [id]);
-  }
-};
-
-module.exports = User;
+```sql
+CREATE TABLE users (
+  id SERIAL PRIMARY KEY,
+  username VARCHAR(50) UNIQUE NOT NULL,
+  password VARCHAR(255) NOT NULL,
+  email VARCHAR(100) UNIQUE NOT NULL,
+  full_name VARCHAR(100) NOT NULL,
+  role VARCHAR(20) DEFAULT 'user',
+  active BOOLEAN DEFAULT true,
+  failed_attempts INTEGER DEFAULT 0,
+  locked_until TIMESTAMP,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
 ```
 
 ---
