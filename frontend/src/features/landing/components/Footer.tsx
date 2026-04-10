@@ -2,6 +2,7 @@ import React from 'react';
 
 export function Footer() {
   return (
+    <center>
     <footer className="footer">
       <div className="footer-container">
         <div className="footer-section">
@@ -13,25 +14,12 @@ export function Footer() {
           <h3>Contacto</h3>
           <div className="footer-contact">
             <p>
-              <strong>Email:</strong> info@clubfinance.com
+              <strong>Email:</strong> Clubbmxriders@hotmail.com
             </p>
             <p>
-              <strong>Teléfono:</strong> +1 (555) 123-4567
-            </p>
-            <p>
-              <strong>Dirección:</strong> Calle Principal 123, Ciudad
+              <strong>Dirección:</strong> #66b- a, Cl. 30A #66b223, Medellín, Antioquia
             </p>
           </div>
-        </div>
-
-        <div className="footer-section">
-          <h3>Enlaces Rápidos</h3>
-          <ul className="footer-links">
-            <li><a href="#inicio">Inicio</a></li>
-            <li><a href="#servicios">Servicios</a></li>
-            <li><a href="#contacto">Contacto</a></li>
-            <li><a href="#privacidad">Política de Privacidad</a></li>
-          </ul>
         </div>
       </div>
 
@@ -39,5 +27,6 @@ export function Footer() {
         <p>&copy; {new Date().getFullYear()} ClubFinance. Todos los derechos reservados.</p>
       </div>
     </footer>
+    </center>
   );
 }
