@@ -12,21 +12,6 @@ export function Navbar({ onNavigate }: NavbarProps) {
         <div className="navbar-logo" onClick={() => onNavigate('home')} style={{ cursor: 'pointer' }}>
           <Logo />
         </div>
-        
-        <div className="navbar-buttons">
-          <button 
-            className="btn btn-outline"
-            onClick={() => onNavigate('register')}
-          >
-            Registrarse
-          </button>
-          <button 
-            className="btn btn-primary"
-            onClick={() => onNavigate('login')}
-          >
-            Iniciar Sesión
-          </button>
-        </div>
       </div>
     </nav>
   );
