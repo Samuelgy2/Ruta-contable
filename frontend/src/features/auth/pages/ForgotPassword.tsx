@@ -11,7 +11,7 @@ export function ForgotPassword({ onNavigate }: ForgotPasswordProps) {
   const [submitted, setSubmitted] = useState(false);
   const [error, setError] = useState('');
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
 
@@ -20,16 +20,30 @@ export function ForgotPassword({ onNavigate }: ForgotPasswordProps) {
       return;
     }
 
-    // Validar formato de email
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email)) {
       setError('Por favor, ingresa un correo electrónico válido');
       return;
     }
 
-    // Simular envío de correo de recuperación
-    // En una aplicación real, esto haría una llamada a la API
-    setSubmitted(true);
+    try {
+      const response = await fetch('http://localhost:3001/api/auth/forgot-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email }),
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        setSubmitted(true);
+      } else {
+        setError(data.message);
+      }
+
+    } catch (error) {
+      setError('Error al conectar con el servidor. Intenta de nuevo.');
+    }
   };
 
   if (submitted) {

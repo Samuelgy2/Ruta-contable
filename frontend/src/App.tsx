@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import { AuthProvider, useAuth } from './features/auth/contexts/AuthContext';
 import { DataProvider } from './contexts/DataContext';
 import { Login } from './features/auth/pages/Login';
-
 import { ForgotPassword } from './features/auth/pages/ForgotPassword';
 import { AdminOverview, AdminTransactions, AdminMembers, AdminReports, AdminCategories, AdminClubData, AdminSystem, AdminAttendance, AdminMonthlyPayments, AdminCartera, AdminJersey, AdminLockers, AdminPurchases, AdminHealthPolicies } from './pages/admin';
 import { AdminLayout, AdminPage as AdminPageType } from './features/admin/components/AdminLayout';

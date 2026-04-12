@@ -107,27 +107,7 @@ export function LoginForm({ onNavigate, backgroundColor, backgroundImage }: Logi
         >
           {loading ? 'Iniciando sesión...' : 'Iniciar Sesión'}
         </button>
-
-        <div className="login-footer">
-          <p>
-            ¿No tienes una cuenta?{' '}
-            <a onClick={() => onNavigate('register')} style={{ cursor: 'pointer', color: 'var(--color-green)' }}>
-              Regístrate aquí
-            </a>
-          </p>
-        </div>
       </form>
-
-      <div style={{ marginTop: '32px', paddingTop: '24px', borderTop: '1px solid var(--color-gray-200)' }}>
-        <p style={{ fontSize: '14px', color: 'var(--color-gray-600)', marginBottom: '16px' }}>
-          Credenciales de prueba:
-        </p>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', fontSize: '13px' }}>
-          <div style={{ background: 'var(--color-gray-50)', padding: '12px', borderRadius: '8px' }}>
-            <strong>Administrador:</strong> admin@rutacontable.com / admin123
-          </div>
-        </div>
-      </div>
     </div>
   );
 }

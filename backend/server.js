@@ -1,12 +1,15 @@
+require('dotenv').config();
+
+
 const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
 const bcrypt = require('bcryptjs');
-require('dotenv').config();
 
 const pool = require('./db');
 const authRoutes = require('./routes/auth');
 const usersRoutes = require('./routes/users');
+const forgotPasswordRoutes = require('./routes/forgotPassword');
 
 const app = express();
 const port = process.env.PORT || 3001;
@@ -23,6 +26,7 @@ app.use(express.json());
 // Rutas
 app.use('/api/auth', authRoutes);
 app.use('/api/users', usersRoutes);
+app.use('/api/auth', forgotPasswordRoutes);
 
 app.get('/health', (req, res) => res.json({ status: 'OK', message: 'Servidor funcionando' }));
 
@@ -42,6 +46,11 @@ async function setupDatabase() {
       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )
   `);
+  await pool.query(`
+  ALTER TABLE users 
+  ADD COLUMN IF NOT EXISTS reset_token VARCHAR(255),
+  ADD COLUMN IF NOT EXISTS reset_token_expires TIMESTAMP
+`);
 
   const adminExists = await pool.query('SELECT id FROM users WHERE username = $1', ['admin']);
   if (adminExists.rows.length === 0) {

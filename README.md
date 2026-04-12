@@ -224,7 +224,7 @@ backend/
 ├── routes/
 │   ├── auth.js              # Rutas de autenticación
 │   └── users.js             # CRUD de usuarios
-├── utils/
+├── utils/  
 │   └── helpers.js           # Validación y logging
 ├── logs/
 │   └── security.log         # Intentos fallidos

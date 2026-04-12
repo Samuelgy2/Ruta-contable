@@ -8,7 +8,7 @@ const bcrypt = require('bcryptjs');
 const pool = require('../db');
 
 // ============================================
-// Configuración Mailtrap
+// Configuración Outlook
 // ============================================
 const transporter = nodemailer.createTransport({
   host: process.env.EMAIL_HOST,
@@ -18,7 +18,11 @@ const transporter = nodemailer.createTransport({
     user: process.env.EMAIL_USER,
     pass: process.env.EMAIL_PASS,
   },
-});
+  tls: {
+    rejectUnauthorized: false,  // 👈 esto soluciona el error de certificado
+  },
+}); 
+
 
 transporter.verify((error) => {
   if (error) {
@@ -181,4 +185,4 @@ router.post('/reset-password', async (req, res) => {
   }
 });
 
-module.exports = router;
+module.exports = router;  
