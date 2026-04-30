@@ -1,6 +1,5 @@
-node_modules
+node_modules/
 .env
-*.log
 logs/
 test-api.js
 .npmrc
