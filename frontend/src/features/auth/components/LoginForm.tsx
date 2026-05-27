@@ -29,7 +29,7 @@ export function LoginForm({ onNavigate, backgroundColor, backgroundImage }: Logi
       return;
     }
 
-    setLoading(true);
+setLoading(true);
     try {
       const success = await login(username, password);
       if (!success) {
@@ -46,68 +46,109 @@ export function LoginForm({ onNavigate, backgroundColor, backgroundImage }: Logi
     ...(backgroundImage && { backgroundImage }),
     ...(backgroundColor && !backgroundImage && { backgroundColor }),
   };
-  
+
+  const overlayStyle: CSSProperties = {
+    position: 'fixed',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 9999,
+  };
 
   return (
-    
-    
-
-    <div className="login-card" style={containerStyle}>
-      <div className="login-title">
-        <h1>Iniciar Sesión</h1>
-        <p>Ingresa tus credenciales para acceder al sistema</p>
-      </div>
-
-      <form onSubmit={handleSubmit}>
-        <div className="form-group">
-          <label htmlFor="username">Usuario</label>
-          <input
-            id="username"
-            type="text"
-            className="form-input"
-            value={username}
-            onChange={(e: ChangeEvent<HTMLInputElement>) => setUsername(e.target.value)}
-            placeholder="admin@rutacontable.com"
-            disabled={loading}
-          />
-        </div>
-
-        <div className="form-group">
-          <label htmlFor="password">Contraseña</label>
-          <PasswordInput
-            id="password"
-            className="form-input"
-            value={password}
-            onChange={(e: ChangeEvent<HTMLInputElement>) => setPassword(e.target.value)}
-            placeholder="Ingresa tu contraseña"
-            disabled={loading}
-          />
-        </div>
-
-        <div style={{ textAlign: 'right', marginBottom: '16px' }}>
-          <a 
-            onClick={() => onNavigate('forgot-password')} 
-            style={{ cursor: 'pointer', color: 'var(--color-green)', fontSize: '14px' }}
-          >
-            ¿Olvidaste tu contraseña?
-          </a>
-        </div>
-
-        {error && (
-          <div className="form-error-box">
-            {error}
+    <>
+      {loading && (
+        <div style={overlayStyle}>
+          <div style={{
+            background: 'white',
+            padding: '32px',
+            borderRadius: '16px',
+            textAlign: 'center',
+            minWidth: '200px',
+          }}>
+            <div style={{
+              width: '40px',
+              height: '40px',
+              border: '3px solid #e5e7eb',
+              borderTop: '3px solid #10b981',
+              borderRadius: '50%',
+              animation: 'spin 1s linear infinite',
+              margin: '0 auto 16px',
+            }} />
+            <p style={{ margin: 0, fontWeight: 500 }}>Iniciando sesión...</p>
           </div>
-        )}
+        </div>
+      )}
 
-        <button 
-          type="submit" 
-          className="btn btn-primary btn-large" 
-          style={{ width: '100%' }}
-          disabled={loading}
-        >
-          {loading ? 'Iniciando sesión...' : 'Iniciar Sesión'}
-        </button>
-      </form>
-    </div>
+      <style>{`
+        @keyframes spin {
+          0% { transform: rotate(0deg); }
+          100% { transform: rotate(360deg); }
+        }
+      `}</style>
+
+      <div className="login-card" style={containerStyle}>
+        <div className="login-title">
+          <h1>Iniciar Sesión</h1>
+          <p>Ingresa tus credenciales para acceder al sistema</p>
+        </div>
+
+        <form onSubmit={handleSubmit}>
+          <div className="form-group">
+            <label htmlFor="username">Usuario</label>
+            <input
+              id="username"
+              type="text"
+              className="form-input"
+              value={username}
+              onChange={(e: ChangeEvent<HTMLInputElement>) => setUsername(e.target.value)}
+              placeholder="admin@rutacontable.com"
+              disabled={loading}
+            />
+          </div>
+
+          <div className="form-group">
+            <label htmlFor="password">Contraseña</label>
+            <PasswordInput
+              id="password"
+              className="form-input"
+              value={password}
+              onChange={(e: ChangeEvent<HTMLInputElement>) => setPassword(e.target.value)}
+              placeholder="Ingresa tu contraseña"
+              disabled={loading}
+            />
+          </div>
+
+          <div style={{ textAlign: 'right', marginBottom: '16px' }}>
+            <a
+              onClick={() => onNavigate('forgot-password')}
+              style={{ cursor: 'pointer', color: 'var(--color-green)', fontSize: '14px' }}
+            >
+              ¿Olvidaste tu contraseña?
+            </a>
+          </div>
+
+          {error && (
+            <div className="form-error-box">
+              {error}
+            </div>
+          )}
+
+          <button
+            type="submit"
+            className="btn btn-primary btn-large"
+            style={{ width: '100%' }}
+            disabled={loading}
+          >
+            {loading ? 'Iniciando sesión...' : 'Iniciar Sesión'}
+          </button>
+        </form>
+      </div>
+    </>
   );
 }
