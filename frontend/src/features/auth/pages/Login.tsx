@@ -16,7 +16,7 @@ export function Login({ onNavigate }: LoginProps) {
   return (
     <div className="landing-page">
       <Navbar onNavigate={onNavigate} />
-      <div className="login-page">
+      <div className="login-page" style={{ position: 'relative' }}>
         <LoginForm onNavigate={onNavigate} />
       </div>
       <Footer />
