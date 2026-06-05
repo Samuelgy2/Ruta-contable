@@ -352,7 +352,7 @@ export function AdminMembers({ onNavigate }: AdminMembersProps) {
               {f('Nombre Completo',
                 <input
                   value={form.nombre}
-                  onChange={e => setForm({ ...form, nombre: e.target.value })}
+                  onChange={e => setForm({ ...form, nombre: e.target.value.replace(/[^a-zA-ZáéíóúÁÉÍÓÚüÜñÑ ]/g, '') })}
                   placeholder="Juan Pérez"
                   style={inputStyle}
                   required
@@ -375,8 +375,8 @@ export function AdminMembers({ onNavigate }: AdminMembersProps) {
               {f('Número de Documento',
                 <input
                   value={form.documento}
-                  onChange={e => setForm({ ...form, documento: e.target.value })}
-                  placeholder="123456789"
+                  onChange={e => setForm({ ...form, documento: e.target.value.replace(/\D/g, '') })}
+                  inputMode="numeric"
                   style={inputStyle}
                   required
                 />, true
@@ -396,8 +396,8 @@ export function AdminMembers({ onNavigate }: AdminMembersProps) {
                 <input
                   type="tel"
                   value={form.telefono}
-                  onChange={e => setForm({ ...form, telefono: e.target.value })}
-                  placeholder="3001234567"
+                  onChange={e => setForm({ ...form, telefono: e.target.value.replace(/\D/g, '') })}
+                  inputMode="numeric"
                   style={inputStyle}
                 />
               )}
