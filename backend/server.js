@@ -128,10 +128,8 @@ const cron = require('node-cron');
 async function runMonthlyClose() {
   try {
     const now = new Date();
-    const prevMonth = now.getMonth();
-    const prevYear = now.getMonth() === 0 ? now.getFullYear() - 1 : now.getFullYear();
-    const monthNum = prevMonth === 0 ? 12 : prevMonth;
-    const yearNum = prevMonth === 0 ? prevYear + 1 : prevYear;
+    const monthNum = now.getMonth() === 0 ? 12 : now.getMonth();
+    const yearNum = now.getMonth() === 0 ? now.getFullYear() - 1 : now.getFullYear();
     
     const monthName = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'][monthNum - 1];
     
