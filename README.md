@@ -422,7 +422,10 @@ exportTransactionsReport(transactions, systemData);
 - [ ] Pruebas unitarias y de integración
 - [ ] Documentación con Swagger/OpenAPI
 
+## Cambios Recientes
+- [x] Generar alertas automáticas para pagos pendientes y vencidos (hook `useAlerts`)
+
 ---
 
-**Última Actualización:** Abril 2026
-**Versión:** 2.0.0
+**Última Actualización:** Mayo 2026
+**Versión:** 2.0.1

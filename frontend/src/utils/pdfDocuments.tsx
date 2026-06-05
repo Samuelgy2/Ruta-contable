@@ -302,3 +302,93 @@ export function MembersReportPDF({ members, fees, systemData }: MembersReportPro
     </Document>
   );
 }
+
+// ─── REPORTE DE CIERRE MENSUAL ─────────────────────────────────────
+interface MonthlyCloseData {
+  periodo: {
+    anio: number;
+    mes: number;
+    nombreMes: string;
+    cerrado: boolean;
+  };
+  resumen: {
+    ingresos: number;
+    gastos: number;
+    balance: number;
+    totalTransacciones: number;
+  };
+  transacciones: Transaction[];
+  systemData: SystemData;
+}
+
+export function MonthlyClosePDF({ periodo, resumen, transacciones, systemData }: MonthlyCloseData) {
+  const formatCurrency = (amount: number) => {
+    return `${systemData.currency}${amount.toLocaleString()}`;
+  };
+
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString('es-CO');
+  };
+
+  return (
+    <Document>
+      <Page size="A4" style={styles.page}>
+        <View style={styles.header}>
+          <Text style={styles.clubName}>{systemData.clubName}</Text>
+          <Text style={styles.reportTitle}>CIERRE MENSUAL {periodo.nombreMes.toUpperCase()} {periodo.anio}</Text>
+          <Text style={styles.date}>Generado: {new Date().toLocaleString('es-CO')}</Text>
+        </View>
+
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>RESUMEN DEL PERIODO</Text>
+          <View style={styles.summaryRow}>
+            <Text style={styles.summaryLabel}>Total Ingresos:</Text>
+            <Text style={[styles.summaryValue, styles.positiveValue]}>{formatCurrency(resumen.ingresos)}</Text>
+          </View>
+          <View style={styles.summaryRow}>
+            <Text style={styles.summaryLabel}>Total Gastos:</Text>
+            <Text style={[styles.summaryValue, styles.negativeValue]}>{formatCurrency(resumen.gastos)}</Text>
+          </View>
+          <View style={styles.summaryRow}>
+            <Text style={styles.summaryLabel}>Balance del Mes:</Text>
+            <Text style={[styles.summaryValue, resumen.balance >= 0 ? styles.positiveValue : styles.negativeValue]}>
+              {formatCurrency(resumen.balance)}
+            </Text>
+          </View>
+          <View style={styles.summaryRow}>
+            <Text style={styles.summaryLabel}>Transacciones Registradas:</Text>
+            <Text style={styles.summaryValue}>{resumen.totalTransacciones}</Text>
+          </View>
+        </View>
+
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>DETALLE DE TRANSACCIONES</Text>
+          <View style={styles.table}>
+            <View style={styles.tableHeader}>
+              <Text style={[styles.tableCell, styles.tableCellNarrow]}>Fecha</Text>
+              <Text style={[styles.tableCell, styles.tableCellNarrow]}>Tipo</Text>
+              <Text style={[styles.tableCell, styles.tableCellWide]}>Categoría</Text>
+              <Text style={[styles.tableCell, styles.tableCellNarrow]}>Monto</Text>
+              <Text style={[styles.tableCell, styles.tableCellWide]}>Descripción</Text>
+            </View>
+            {transacciones.map((t, index) => (
+              <View key={index} style={styles.tableRow}>
+                <Text style={[styles.tableCell, styles.tableCellNarrow]}>{formatDate(t.date)}</Text>
+                <Text style={[styles.tableCell, styles.tableCellNarrow]}>{t.type === 'income' ? 'Ingreso' : 'Gasto'}</Text>
+                <Text style={[styles.tableCell, styles.tableCellWide]}>{t.category}</Text>
+                <Text style={[styles.tableCell, styles.tableCellNarrow, t.type === 'income' ? styles.positiveValue : styles.negativeValue]}>
+                  {formatCurrency(t.amount)}
+                </Text>
+                <Text style={[styles.tableCell, styles.tableCellWide]}>{t.description}</Text>
+              </View>
+            ))}
+          </View>
+        </View>
+
+        <Text style={styles.footer}>
+          Reporte oficial de cierre contable generado por Ruta Contable
+        </Text>
+      </Page>
+    </Document>
+  );
+}
