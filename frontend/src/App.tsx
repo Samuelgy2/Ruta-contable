@@ -3,9 +3,10 @@ import { AuthProvider, useAuth } from './features/auth/contexts/AuthContext';
 import { DataProvider } from './contexts/DataContext';
 import { Login } from './features/auth/pages/Login';
 import { ForgotPassword } from './features/auth/pages/ForgotPassword';
-import { AdminOverview, AdminTransactions, AdminMembers, AdminReports, AdminCategories, AdminClubData, AdminSystem, AdminAttendance, AdminMonthlyPayments, AdminCartera, AdminJersey, AdminLockers, AdminPurchases, AdminHealthPolicies } from './pages/admin';
+import { AdminOverview, AdminTransactions, AdminMembers, AdminReports, AdminCategories, AdminClubData, AdminSystem, AdminMonthlyPayments, AdminCartera, AdminJersey } from './pages/admin';
 import { AdminLayout, AdminPage as AdminPageType } from './features/admin/components/AdminLayout';
 import { AppPage } from './types/index';
+import { ErrorBoundary } from './utils/ErrorBoundary';
 
 type Page = AppPage;
 type AdminPage = AdminPageType;
@@ -22,8 +23,7 @@ function AppContent() {
   const handleAdminNavigate = (pageOrTab: string) => {
     const validPages: AdminPage[] = [
       'overview', 'transactions', 'members', 'reports', 'categories',
-      'club-data', 'system', 'attendance', 'monthly-payments', 'cartera',
-      'jersey', 'lockers', 'purchases', 'health-policies',
+      'club-data', 'system', 'monthly-payments', 'cartera', 'jersey',
     ];
 
     if (validPages.includes(pageOrTab as AdminPage)) {
@@ -39,13 +39,9 @@ function AppContent() {
       categories:        'categories',
       data:              'club-data',
       system:            'system',
-      attendance:        'attendance',
       'monthly-payments':'monthly-payments',
       cartera:           'cartera',
       jersey:            'jersey',
-      lockers:           'lockers',
-      purchases:         'purchases',
-      'health-policies': 'health-policies',
     };
 
     const page = tabToPage[pageOrTab];
@@ -66,13 +62,9 @@ function AppContent() {
           case 'categories':       return <AdminCategories      onNavigate={handleAdminNavigate} />;
           case 'club-data':        return <AdminClubData        onNavigate={handleAdminNavigate} />;
           case 'system':           return <AdminSystem          onNavigate={handleAdminNavigate} />;
-          case 'attendance':       return <AdminAttendance      onNavigate={handleAdminNavigate} />;
           case 'monthly-payments': return <AdminMonthlyPayments onNavigate={handleAdminNavigate} />;
           case 'cartera':          return <AdminCartera         onNavigate={handleAdminNavigate} />;
           case 'jersey':           return <AdminJersey          onNavigate={handleAdminNavigate} />;
-          case 'lockers':          return <AdminLockers         onNavigate={handleAdminNavigate} />;
-          case 'purchases':        return <AdminPurchases       onNavigate={handleAdminNavigate} />;
-          case 'health-policies':  return <AdminHealthPolicies  onNavigate={handleAdminNavigate} />;
           default:                 return <AdminOverview        onNavigate={handleAdminNavigate} />;
         }
       };
@@ -104,7 +96,9 @@ export default function App() {
   return (
     <AuthProvider>
       <DataProvider>
-        <AppContent />
+        <ErrorBoundary>
+          <AppContent />
+        </ErrorBoundary>
       </DataProvider>
     </AuthProvider>
   );

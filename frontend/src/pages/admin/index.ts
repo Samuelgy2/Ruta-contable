@@ -10,10 +10,8 @@ export { AdminClubData } from './AdminClubData';
 export { AdminSystem } from './AdminSystem';
 
 // New modules
-export { AdminAttendance } from './AdminAttendance';
 export { AdminMonthlyPayments } from './AdminMonthlyPayments';
 export { AdminCartera } from './AdminCartera';
 export { AdminJersey } from './AdminJersey';
-export { AdminLockers } from './AdminLockers';
-export { AdminPurchases } from './AdminPurchases';
-export { AdminHealthPolicies } from './AdminHealthPolicies';
+
+
