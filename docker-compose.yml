@@ -1,0 +1,67 @@
+version: '3.9'
+
+services:
+
+  # ── Base de datos PostgreSQL ─────────────────────────────────
+  postgres:
+    image: postgres:15-alpine
+    container_name: rutacontable_db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB:       ${DB_NAME}
+      POSTGRES_USER:     ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data   # datos persistentes
+    ports:
+      - "5432:5432"   # expuesto para conectarte con DBeaver/pgAdmin
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER} -d ${DB_NAME}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ── Backend Express ──────────────────────────────────────────
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: rutacontable_backend
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy   # espera a que la DB esté lista
+    environment:
+      PORT:          3001
+      NODE_ENV:      production
+      DB_HOST:       postgres        # nombre del servicio, no localhost
+      DB_PORT:       5432
+      DB_NAME:       ${DB_NAME}
+      DB_USER:       ${DB_USER}
+      DB_PASSWORD:   ${DB_PASSWORD}
+      JWT_SECRET:    ${JWT_SECRET}
+      CORS_ORIGIN:   http://localhost:3000
+      EMAIL_HOST:    ${EMAIL_HOST}
+      EMAIL_PORT:    ${EMAIL_PORT}
+      EMAIL_USER:    ${EMAIL_USER}
+      EMAIL_PASS:    ${EMAIL_PASS}
+      FRONTEND_URL:  http://localhost:3000
+      CURRENCY:      COP
+      CLUB_NAME:     ${CLUB_NAME}
+    ports:
+      - "3001:3001"
+
+  # ── Frontend React ───────────────────────────────────────────
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: rutacontable_frontend
+    restart: unless-stopped
+    depends_on:
+      - backend
+    ports:
+      - "3000:80"   # nginx en el contenedor escucha en 80, lo mapeamos al 3000
+
+volumes:
+  postgres_data:    # volumen persistente para la DB
