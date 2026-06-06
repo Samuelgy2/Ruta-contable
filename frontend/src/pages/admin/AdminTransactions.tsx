@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { useData } from '../../contexts/DataContext';
 import { formatCurrency, formatDateShort } from '../../utils/format';
 
@@ -8,6 +8,11 @@ interface AdminTransactionsProps {
 
 // ─── Config ───────────────────────────────────────────────────────────────────
 const CLUB_GREEN = '#10b981';
+const API_BASE   = 'http://localhost:3001';
+
+function getToken(): string {
+  return localStorage.getItem('clubfinance_token') ?? '';
+}
 
 // ─── Toast ────────────────────────────────────────────────────────────────────
 type ToastType = 'success' | 'error' | 'warning';
@@ -122,9 +127,24 @@ const emptyForm = {
 
 type FormState = typeof emptyForm;
 
+// ─── Tipo para fila de BD ─────────────────────────────────────────────────────
+interface DBTransaction {
+  id: number;
+  tipo: string;
+  monto: string;
+  fecha: string;
+  descripcion: string | null;
+  categoria: string | null;
+  metodo_pago: string | null;
+  creado_por: string | null;
+  created_at: string;
+}
+
 // ─── Componente principal ─────────────────────────────────────────────────────
 export function AdminTransactions({ onNavigate }: AdminTransactionsProps) {
-  const { transactions, categories, addTransaction } = useData();
+  const { categories } = useData();
+  const [transactions, setTransactions] = useState<DBTransaction[]>([]);
+  const [loading,      setLoading]      = useState(true);
   const [searchTerm,   setSearchTerm]   = useState('');
   const [filterType,   setFilterType]   = useState<'all' | 'income' | 'expense'>('all');
   const [showForm,     setShowForm]     = useState(false);
@@ -138,6 +158,28 @@ export function AdminTransactions({ onNavigate }: AdminTransactionsProps) {
     fontSize: '14px', outline: 'none', boxSizing: 'border-box',
     backgroundColor: 'white',
   };
+
+  // ── Cargar transacciones desde la BD ────────────────────────────────────────
+  const fetchTransactions = useCallback(async () => {
+    setLoading(true);
+    try {
+      const res = await fetch(`${API_BASE}/api/transactions`, {
+        headers: { Authorization: `Bearer ${getToken()}` },
+      });
+      const json = await res.json();
+      if (json.success) {
+        setTransactions(json.data);
+      } else {
+        showToast('Error al cargar transacciones', 'error');
+      }
+    } catch {
+      showToast('No se pudo conectar con el servidor', 'error');
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => { void fetchTransactions(); }, [fetchTransactions]);
 
   const closeForm = () => { setShowForm(false); setForm(emptyForm); };
 
@@ -153,22 +195,21 @@ export function AdminTransactions({ onNavigate }: AdminTransactionsProps) {
 
   // ── Filtros ────────────────────────────────────────────────────────────────
   const filteredTransactions = transactions
-    .filter(t => filterType === 'all' || t.type === filterType)
+    .filter(t => {
+      if (filterType === 'all') return true;
+      const tipoFront = t.tipo === 'ingreso' ? 'income' : 'expense';
+      return tipoFront === filterType;
+    })
     .filter(t =>
-      t.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      t.category.toLowerCase().includes(searchTerm.toLowerCase())
-    )
-    .sort((a, b) => {
-      const dateA = new Date(a.date).getTime();
-      const dateB = new Date(b.date).getTime();
-      return isNaN(dateB) || isNaN(dateA) ? 0 : dateB - dateA;
-    });
+      (t.descripcion ?? '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (t.categoria   ?? '').toLowerCase().includes(searchTerm.toLowerCase())
+    );
 
   const availableCategories = categories
     .filter(c => c.active && c.type === form.type)
     .map(c => c.name);
 
-  // ── Submit ─────────────────────────────────────────────────────────────────
+  // ── Submit → POST /api/transactions ────────────────────────────────────────
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!form.amount || !form.category || !form.description) {
@@ -177,17 +218,28 @@ export function AdminTransactions({ onNavigate }: AdminTransactionsProps) {
     }
     setSubmitting(true);
     try {
-      addTransaction({
-        type:        form.type,
-        amount:      parseFloat(form.amount),
-        category:    form.category,
-        description: form.description,
-        date:        form.date,
-        metodoPago:  form.metodoPago,
-        createdBy:   'Admin',
+      const res = await fetch(`${API_BASE}/api/transactions`, {
+        method: 'POST',
+        headers: {
+          'Content-Type':  'application/json',
+          'Authorization': `Bearer ${getToken()}`,
+        },
+        body: JSON.stringify({
+          tipo:        form.type,
+          monto:       parseFloat(form.amount),
+          categoria:   form.category,
+          descripcion: form.description,
+          fecha:       form.date,
+          metodoPago:  form.metodoPago,
+        }),
       });
+      const json = await res.json();
+      if (!res.ok || !json.success) {
+        throw new Error(json.message ?? 'Error del servidor');
+      }
       showToast('Transacción registrada correctamente', 'success');
       closeForm();
+      void fetchTransactions(); // recargar tabla
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Error al guardar';
       showToast(msg, 'error');
@@ -197,19 +249,16 @@ export function AdminTransactions({ onNavigate }: AdminTransactionsProps) {
   };
 
   // ── Badge tipo ─────────────────────────────────────────────────────────────
-  const tipoBadge = (type: string): JSX.Element => {
-    const map: Record<string, { bg: string; color: string; label: string }> = {
-      income:  { bg: '#d1fae5', color: '#065f46', label: 'Ingreso' },
-      expense: { bg: '#fee2e2', color: '#991b1b', label: 'Gasto'   },
-    };
-    const s = map[type] ?? map['income'];
+  const tipoBadge = (tipo: string): JSX.Element => {
+    const isIngreso = tipo === 'ingreso' || tipo === 'income';
     return (
       <span style={{
         padding: '4px 12px', borderRadius: '9999px',
         fontSize: '12px', fontWeight: '600',
-        backgroundColor: s.bg, color: s.color,
+        backgroundColor: isIngreso ? '#d1fae5' : '#fee2e2',
+        color:           isIngreso ? '#065f46' : '#991b1b',
       }}>
-        {s.label}
+        {isIngreso ? 'Ingreso' : 'Gasto'}
       </span>
     );
   };
@@ -288,6 +337,7 @@ export function AdminTransactions({ onNavigate }: AdminTransactionsProps) {
                   type="date"
                   value={form.date}
                   onChange={e => setForm({ ...form, date: e.target.value })}
+                  max={new Date().toISOString().split('T')[0]}
                   style={inputStyle}
                   required
                 />
@@ -418,77 +468,84 @@ export function AdminTransactions({ onNavigate }: AdminTransactionsProps) {
           backgroundColor: 'white', borderRadius: '16px',
           boxShadow: '0 1px 4px rgba(0,0,0,0.08)', overflow: 'hidden',
         }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-            <thead>
-              <tr style={{ backgroundColor: '#f9fafb', borderBottom: '2px solid #e5e7eb' }}>
-                {['Fecha', 'Tipo', 'Categoría', 'Monto', 'Descripción', 'Método', 'Creado por'].map((h, i) => (
-                  <th
-                    key={i}
-                    style={{
-                      textAlign: 'left', padding: '14px 16px',
-                      color: '#6b7280', fontWeight: '600', fontSize: '13px', whiteSpace: 'nowrap',
-                    }}
-                  >{h}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {filteredTransactions.length === 0 ? (
-                <tr>
-                  <td colSpan={7} style={{ textAlign: 'center', padding: '48px', color: '#9ca3af' }}>
-                    <div style={{ fontSize: '24px' }}>📭</div>
-                    <p style={{ margin: '8px 0 0', fontSize: '14px' }}>No hay transacciones que mostrar</p>
-                  </td>
+          {loading ? (
+            <div style={{ textAlign: 'center', padding: '48px', color: '#9ca3af' }}>
+              <div style={{ fontSize: '24px' }}>⏳</div>
+              <p style={{ margin: '8px 0 0', fontSize: '14px' }}>Cargando transacciones...</p>
+            </div>
+          ) : (
+            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+              <thead>
+                <tr style={{ backgroundColor: '#f9fafb', borderBottom: '2px solid #e5e7eb' }}>
+                    {['Fecha', 'Tipo', 'Categoría', 'Monto', 'Descripción', 'Método', 'Registrado por'].map((h, i) => (
+                    <th
+                      key={i}
+                      style={{
+                        textAlign: 'left', padding: '14px 16px',
+                        color: '#6b7280', fontWeight: '600', fontSize: '13px', whiteSpace: 'nowrap',
+                      }}
+                    >{h}</th>
+                  ))}
                 </tr>
-              ) : (
-                filteredTransactions.map(transaction => (
-                  <tr
-                    key={transaction.id}
-                    style={{ borderBottom: '1px solid #f3f4f6' }}
-                    onMouseEnter={e => { (e.currentTarget as HTMLTableRowElement).style.backgroundColor = '#fafafa'; }}
-                    onMouseLeave={e => { (e.currentTarget as HTMLTableRowElement).style.backgroundColor = 'transparent'; }}
-                  >
-                    <td style={{ padding: '14px 16px', color: '#6b7280', fontSize: '14px', whiteSpace: 'nowrap' }}>
-                      {formatDateShort(transaction.date)}
-                    </td>
-                    <td style={{ padding: '14px 16px' }}>
-                      {tipoBadge(transaction.type)}
-                    </td>
-                    <td style={{ padding: '14px 16px' }}>
-                      <span style={{
-                        padding: '3px 10px', borderRadius: '6px',
-                        backgroundColor: '#eff6ff', color: '#1d4ed8',
-                        fontWeight: '500', fontSize: '13px',
-                      }}>
-                        {transaction.category}
-                      </span>
-                    </td>
-                    <td style={{
-                      padding: '14px 16px', fontSize: '14px', fontWeight: '600',
-                      color: transaction.type === 'income' ? '#059669' : '#dc2626',
-                    }}>
-                      {transaction.type === 'income' ? '+' : '−'}{formatCurrency(transaction.amount, 'COP')}
-                    </td>
-                    <td style={{ padding: '14px 16px', color: '#374151', fontSize: '14px' }}>
-                      {transaction.description}
-                    </td>
-                    <td style={{ padding: '14px 16px', color: '#6b7280', fontSize: '13px' }}>
-                      <span style={{
-                        padding: '3px 10px', borderRadius: '6px',
-                        backgroundColor: '#f3f4f6', color: '#374151',
-                        fontWeight: '500', fontSize: '12px',
-                      }}>
-                        {transaction.metodoPago ?? '—'}
-                      </span>
-                    </td>
-                    <td style={{ padding: '14px 16px', color: '#9ca3af', fontSize: '13px' }}>
-                      {transaction.createdBy}
+              </thead>
+              <tbody>
+                {filteredTransactions.length === 0 ? (
+                  <tr>
+                    <td colSpan={7} style={{ textAlign: 'center', padding: '48px', color: '#9ca3af' }}>
+                      <div style={{ fontSize: '24px' }}>📭</div>
+                      <p style={{ margin: '8px 0 0', fontSize: '14px' }}>No hay transacciones que mostrar</p>
                     </td>
                   </tr>
-                ))
-              )}
-            </tbody>
-          </table>
+                ) : (
+                  filteredTransactions.map(t => (
+                    <tr
+                      key={t.id}
+                      style={{ borderBottom: '1px solid #f3f4f6' }}
+                      onMouseEnter={e => { (e.currentTarget as HTMLTableRowElement).style.backgroundColor = '#fafafa'; }}
+                      onMouseLeave={e => { (e.currentTarget as HTMLTableRowElement).style.backgroundColor = 'transparent'; }}
+                    >
+                      <td style={{ padding: '14px 16px', color: '#6b7280', fontSize: '14px', whiteSpace: 'nowrap' }}>
+                        {formatDateShort(t.fecha)}
+                      </td>
+                      <td style={{ padding: '14px 16px' }}>
+                        {tipoBadge(t.tipo)}
+                      </td>
+                      <td style={{ padding: '14px 16px' }}>
+                        <span style={{
+                          padding: '3px 10px', borderRadius: '6px',
+                          backgroundColor: '#eff6ff', color: '#1d4ed8',
+                          fontWeight: '500', fontSize: '13px',
+                        }}>
+                          {t.categoria ?? '—'}
+                        </span>
+                      </td>
+                      <td style={{
+                        padding: '14px 16px', fontSize: '14px', fontWeight: '600',
+                        color: (t.tipo === 'ingreso' || t.tipo === 'income') ? '#059669' : '#dc2626',
+                      }}>
+                        {(t.tipo === 'ingreso' || t.tipo === 'income') ? '+' : '−'}{formatCurrency(parseFloat(t.monto), 'COP')}
+                      </td>
+                      <td style={{ padding: '14px 16px', color: '#374151', fontSize: '14px' }}>
+                        {t.descripcion ?? '—'}
+                      </td>
+                      <td style={{ padding: '14px 16px', color: '#6b7280', fontSize: '13px' }}>
+                        <span style={{
+                          padding: '3px 10px', borderRadius: '6px',
+                          backgroundColor: '#f3f4f6', color: '#374151',
+                          fontWeight: '500', fontSize: '12px',
+                        }}>
+                          {t.metodo_pago ?? '—'}
+                        </span>
+                      </td>
+                      <td style={{ padding: '14px 16px', color: '#6b7280', fontSize: '13px' }}>
+                        {t.creado_por ?? '—'}
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          )}
         </div>
       </div>
     </div>

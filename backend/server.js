@@ -12,6 +12,7 @@ const usersRoutes = require('./routes/users');
 const forgotPasswordRoutes = require('./routes/forgotPassword');
 const socioRoutes = require('./routes/Member');
 const adminRoutes = require('./routes/admin');
+const transactionRoutes = require('./routes/Transaction');
 const app = express();
 const port = process.env.PORT || 3001;
 
@@ -30,6 +31,7 @@ app.use('/api/users', usersRoutes);
 app.use('/api/auth', forgotPasswordRoutes);
 app.use('/api/socios', socioRoutes);
 app.use('/api/admin', adminRoutes); 
+app.use('/api/transactions', transactionRoutes);
 
 app.get('/health', (req, res) => res.json({ status: 'OK', message: 'Servidor funcionando' }));
 
@@ -94,10 +96,14 @@ async function setupDatabase() {
     CREATE TABLE IF NOT EXISTS transactions (
       id SERIAL PRIMARY KEY,
       tipo VARCHAR(20) NOT NULL,
-      monto DECIMAL(10,2) NOT NULL,
+      monto DECIMAL(15,2) NOT NULL,
       fecha DATE NOT NULL,
       descripcion TEXT,
+      categoria VARCHAR(100),
+      metodo_pago VARCHAR(50),
+      creado_por  VARCHAR(100),
       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+
     )
   `);
   console.log('✅ Tabla transactions lista');
@@ -128,8 +134,10 @@ const cron = require('node-cron');
 async function runMonthlyClose() {
   try {
     const now = new Date();
-    const monthNum = now.getMonth() === 0 ? 12 : now.getMonth();
-    const yearNum = now.getMonth() === 0 ? now.getFullYear() - 1 : now.getFullYear();
+    const prevMonth = now.getMonth();
+    const prevYear = now.getMonth() === 0 ? now.getFullYear() - 1 : now.getFullYear();
+    const monthNum = prevMonth === 0 ? 12 : prevMonth;
+    const yearNum = prevMonth === 0 ? prevYear + 1 : prevYear;
     
     const monthName = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'][monthNum - 1];
     
