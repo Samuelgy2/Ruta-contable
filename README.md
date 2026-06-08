@@ -31,15 +31,15 @@ Ruta contable es una aplicación web full-stack para gestión financiera diseña
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│                    Ruta Contable                             │
+│                    Ruta Contable                            |
 ├─────────────────────────────────────────────────────────────┤
-│  Frontend (React + TypeScript + Tailwind CSS)                 │
-│       │                                                    │
-│       ▼                                                    │
-│  Backend (Node.js + Express API REST)                    │
-│       │                                                    │
-│       ▼                                                    │
-│  PostgreSQL (Base de Datos)                              │
+│  Frontend (React + TypeScript + Tailwind CSS)               │
+│       │                                                     │
+│       ▼                                                     │
+│  Backend (Node.js + Express API REST)                       │
+│       │                                                     │
+│       ▼                                                     │
+│  PostgreSQL (Base de Datos)                                 │
 └─────────────────────────────────────────────────────────────┘
 ```
 
@@ -124,34 +124,54 @@ npm run dev
 
 ```
 Ruta contable/
-├─��� frontend/                    # Aplicación React
+├─frontend/                    # Aplicación React
 │   ├── src/
 │   │   ├── App.tsx            # Componente raíz
 │   │   ├── main.tsx          # Punto de entrada
 │   │   ├── features/        # Módulos por característica
-│   │   │   ├── auth/       # Autenticación
+│   │   │   ├── auth/       # Autenticación (Login, Recuperar contraseña)
 │   │   │   ├── landing/   # Página pública
-│   │   │   └── admin/    # Panel admin
+│   │   │   ├── admin/    # Panel admin (Layout y páginas)
+│   │   │   │   ├── components/AdminLayout.tsx
+│   │   │   │   └── pages/
+│   │   │   │       ├── index.ts
+│   │   │   │       ├── AdminOverview.tsx
+│   │   │   │       ├── AdminTransactions.tsx
+│   │   │   │       ├── AdminMembers.tsx
+│   │   │   │       ├── AdminReports.tsx
+│   │   │   │       ├── AdminClubData.tsx
+│   │   │   │       ├── AdminMonthlyPayments.tsx
+│   │   │   │       ├── AdminCartera.tsx
+│   │   │   │       └── AdminSystem.tsx
 │   │   ├── components/     # Componentes reutilizables
-│   │   ├── contexts/      # React Context
-│   │   ├── hooks/        # Hooks personalizados
-│   │   ├── pages/       # Páginas
+│   │   ├── contexts/      # React Context (Auth, Data)
+│   │   ├── hooks/        # Hooks personalizados (useAuth, useStats, useCrudState, useAlerts)
+│   │   ├── pages/       # Páginas legacy
 │   │   ├── types/      # Tipos TypeScript
-│   │   └── utils/      # Utilidades
+│   │   └── utils/      # Utilidades (formato, exportación)
 │   └── package.json
-│
+
 ├── backend/                 # API REST
 │   ├── src/
 │   │   ├── index.js      # Servidor principal
-│   │   ├── middleware/  # Middleware JWT
+│   │   ├── middleware/  # Middleware JWT, autenticación
 │   │   ├── routes/       # Rutas API
+│   │   │   ├── auth.routes.js
+│   │   │   ├── users.routes.js
+│   │   │   ├── members.routes.js
+│   │   │   ├── transactions.routes.js
+│   │   │   ├── categories.routes.js
+│   │   │   ├── club.routes.js
+│   │   │   ├── payments.routes.js
+│   │   │   └── cartera.routes.js
 │   │   ├── config/      # Configuración BD
 │   │   └── utils/       # Utilidades
-│   ├── db.js            # Pool PostgreSQL
 │   ├── server.js       # Servidor Express
+│   ├── db.js           # Pool PostgreSQL
 │   ├── package.json
+│   ├── docker-compose.yml
 │   └── .env           # Variables de entorno
-│
+
 └── README.md
 ```
 
@@ -165,7 +185,8 @@ Ruta contable/
 |--------|----------|-------------|
 | POST | `/api/auth/login` | Iniciar sesión |
 | POST | `/api/auth/register` | Registrar usuario |
-| GET | `/api/enana` | Ruta de prueba |
+| POST | `/api/auth/forgot-password` | Solicitar recuperación de contraseña |
+| POST | `/api/auth/reset-password` | Restablecer contraseña |
 | GET | `/health` | Health check |
 
 ### Usuarios (Protegido - Admin)
@@ -187,6 +208,7 @@ Ruta contable/
 | POST | `/api/members` | Crear miembro |
 | PUT | `/api/members/:id` | Actualizar miembro |
 | DELETE | `/api/members/:id` | Eliminar miembro |
+| GET | `/api/members/export/csv` | Exportar miembros a CSV |
 
 ### Transacciones
 
@@ -197,6 +219,7 @@ Ruta contable/
 | POST | `/api/transactions` | Crear transacción |
 | PUT | `/api/transactions/:id` | Actualizar transacción |
 | DELETE | `/api/transactions/:id` | Eliminar transacción |
+| GET | `/api/transactions/export/csv` | Exportar transacciones a CSV |
 
 ### Categorías
 
@@ -208,6 +231,31 @@ Ruta contable/
 | PUT | `/api/categories/:id` | Actualizar categoría |
 | DELETE | `/api/categories/:id` | Eliminar categoría |
 
+### Datos del Club
+
+| Método | Endpoint | Descripción |
+|--------|----------|-------------|
+| GET | `/api/club` | Obtener datos del club |
+| PUT | `/api/club` | Actualizar datos del club |
+
+### Pagos Mensuales
+
+| Método | Endpoint | Descripción |
+|--------|----------|-------------|
+| GET | `/api/payments` | Listar pagos mensuales |
+| GET | `/api/payments/overdue` | Pagos vencidos |
+| POST | `/api/payments/generate` | Generar pagos del mes |
+| POST | `/api/payments/:id/pay` | Marcar pago como pagado |
+| PUT | `/api/payments/:id` | Actualizar pago |
+
+### Cartera
+
+| Método | Endpoint | Descripción |
+|--------|----------|-------------|
+| GET | `/api/cartera` | Obtener cartera de miembros |
+| GET | `/api/cartera/:memberId` | Cartera de un miembro específico |
+| PUT | `/api/cartera/:memberId` | Actualizar cartera de miembro |
+
 ---
 
 ## Credenciales
@@ -217,6 +265,7 @@ Ruta contable/
 | Admin | `admin` | `admin123` |
 | Usuario | `usuario` | `usuario123` |
 
+> **Nota:** El sistema cuenta con funcionalidad de recuperación de contraseña mediante correo electrónico.
 ---
 
 ## Seguridad
