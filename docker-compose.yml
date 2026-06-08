@@ -1,7 +1,6 @@
 version: '3.9'
 
 services:
-
   # ── Base de datos PostgreSQL ─────────────────────────────────
   postgres:
     image: postgres:15-alpine
@@ -12,56 +11,70 @@ services:
       POSTGRES_USER:     ${DB_USER}
       POSTGRES_PASSWORD: ${DB_PASSWORD}
     volumes:
-      - postgres_data:/var/lib/postgresql/data   # datos persistentes
+      - pgdata:/var/lib/postgresql/data
     ports:
-      - "5432:5432"   # expuesto para conectarte con DBeaver/pgAdmin
+      - "5432:5432"
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${DB_USER} -d ${DB_NAME}"]
       interval: 10s
       timeout: 5s
       retries: 5
 
-  # ── Backend Express ──────────────────────────────────────────
+  # ── Backend Express (Desarrollo) ──────────────────────────────
   backend:
     build:
       context: ./backend
-      dockerfile: Dockerfile
+      dockerfile: Dockerfile.dev
     container_name: rutacontable_backend
     restart: unless-stopped
     depends_on:
       postgres:
-        condition: service_healthy   # espera a que la DB esté lista
+        condition: service_healthy
     environment:
-      PORT:          3001
-      NODE_ENV:      production
-      DB_HOST:       postgres        # nombre del servicio, no localhost
-      DB_PORT:       5432
-      DB_NAME:       ${DB_NAME}
-      DB_USER:       ${DB_USER}
-      DB_PASSWORD:   ${DB_PASSWORD}
-      JWT_SECRET:    ${JWT_SECRET}
-      CORS_ORIGIN:   http://localhost:3000
-      EMAIL_HOST:    ${EMAIL_HOST}
-      EMAIL_PORT:    ${EMAIL_PORT}
-      EMAIL_USER:    ${EMAIL_USER}
-      EMAIL_PASS:    ${EMAIL_PASS}
-      FRONTEND_URL:  http://localhost:3000
-      CURRENCY:      COP
-      CLUB_NAME:     ${CLUB_NAME}
+      PORT:                 3001
+      NODE_ENV:             development
+      DB_HOST:              postgres
+      DB_PORT:              5432
+      DB_NAME:              ${DB_NAME}
+      DB_USER:              ${DB_USER}
+      DB_PASSWORD:          ${DB_PASSWORD}
+      JWT_SECRET:           ${JWT_SECRET}
+      CORS_ORIGIN:          http://localhost:5173
+      EMAIL_HOST:           ${EMAIL_HOST}
+      EMAIL_PORT:           ${EMAIL_PORT}
+      EMAIL_USER:           ${EMAIL_USER}
+      EMAIL_PASS:           ${EMAIL_PASS}
+      FRONTEND_URL:         http://localhost:5173
+      CURRENCY:             COP
+      CLUB_NAME:            ${CLUB_NAME}
+      CHOKIDAR_USEPOLLING:  "true"
+      WATCHPACK_POLLING:    "true"
+    volumes:
+      - ./backend:/app
+      - /app/node_modules
     ports:
       - "3001:3001"
+    command: npm run dev
 
-  # ── Frontend React ───────────────────────────────────────────
+  # ── Frontend React (Desarrollo) ──────────────────────────────
   frontend:
     build:
       context: ./frontend
-      dockerfile: Dockerfile
+      dockerfile: Dockerfile.dev
     container_name: rutacontable_frontend
     restart: unless-stopped
     depends_on:
       - backend
+    environment:
+      CI: "true"
+      CHOKIDAR_USEPOLLING: "true"
+      WATCHPACK_POLLING: "true"
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
     ports:
-      - "3000:80"   # nginx en el contenedor escucha en 80, lo mapeamos al 3000
+      - "3000:5173"
+    command: npm run dev
 
 volumes:
-  postgres_data:    # volumen persistente para la DB
+  pgdata:

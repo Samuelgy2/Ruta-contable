@@ -1,0 +1,15 @@
+FROM node:18-alpine
+
+WORKDIR /app
+
+# Copiar dependencias primero para cache de capas
+COPY package*.json ./
+RUN npm install
+
+# No copiamos el código fuente aquí porque se monta por volumen
+# desde docker-compose (bind mount ./frontend:/app)
+
+# Exponer el puerto de Vite
+EXPOSE 5173
+
+CMD ["npm", "run", "dev"]

@@ -1,0 +1,15 @@
+FROM node:18-alpine
+
+WORKDIR /app
+
+# Instalar nodemon globalmente para hot-reload en desarrollo
+RUN npm install -g nodemon
+
+# Copiar dependencias primero para cache de capas
+COPY package*.json ./
+RUN npm install
+
+# Exponer el puerto del backend
+EXPOSE 3001
+
+CMD ["npm", "run", "dev"]
