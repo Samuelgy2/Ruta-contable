@@ -55,11 +55,14 @@ export default defineConfig({
     outDir: 'build',
   },
   server: {
-    port: 3000,
-    open: true,
+    host: process.env.DOCKER ? '0.0.0.0' : 'localhost',
+    port: 5173,
+    open: !process.env.DOCKER,
     proxy: {
       '/api': {
-        target: 'http://localhost:3001',
+        target: process.env.DOCKER
+          ? 'http://backend:3001'
+          : 'http://localhost:3001',
         changeOrigin: true,
       },
     },

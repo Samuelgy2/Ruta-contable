@@ -1,7 +1,6 @@
 version: '3.9'
 
 services:
-  # ── Base de datos PostgreSQL ─────────────────────────────────
   postgres:
     image: postgres:15-alpine
     container_name: rutacontable_db
@@ -20,7 +19,6 @@ services:
       timeout: 5s
       retries: 5
 
-  # ── Backend Express (Desarrollo) ──────────────────────────────
   backend:
     build:
       context: ./backend
@@ -39,12 +37,12 @@ services:
       DB_USER:              ${DB_USER}
       DB_PASSWORD:          ${DB_PASSWORD}
       JWT_SECRET:           ${JWT_SECRET}
-      CORS_ORIGIN:          http://localhost:5173
+      CORS_ORIGIN:          http://localhost:3000
       EMAIL_HOST:           ${EMAIL_HOST}
       EMAIL_PORT:           ${EMAIL_PORT}
       EMAIL_USER:           ${EMAIL_USER}
       EMAIL_PASS:           ${EMAIL_PASS}
-      FRONTEND_URL:         http://localhost:5173
+      FRONTEND_URL:         http://localhost:3000
       CURRENCY:             COP
       CLUB_NAME:            ${CLUB_NAME}
       CHOKIDAR_USEPOLLING:  "true"
@@ -56,7 +54,6 @@ services:
       - "3001:3001"
     command: npm run dev
 
-  # ── Frontend React (Desarrollo) ──────────────────────────────
   frontend:
     build:
       context: ./frontend
@@ -66,9 +63,11 @@ services:
     depends_on:
       - backend
     environment:
-      CI: "true"
+      VITE_API_URL:        /api
+      DOCKER:              "true"
+      CI:                  "true"
       CHOKIDAR_USEPOLLING: "true"
-      WATCHPACK_POLLING: "true"
+      WATCHPACK_POLLING:   "true"
     volumes:
       - ./frontend:/app
       - /app/node_modules

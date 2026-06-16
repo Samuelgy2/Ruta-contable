@@ -1,9 +1,7 @@
 import axios from 'axios';
 
-// VITE_API_URL debe ser la URL base del backend (ej: http://localhost:3001)
-// Se le agrega automáticamente '/api' como prefijo de rutas
 const base = import.meta.env.VITE_API_URL || 'http://localhost:3001';
-const API_URL = base.endsWith('/') ? `${base}api` : `${base}/api`;
+const API_URL = base === '/api' ? '/api' : base.endsWith('/') ? `${base}api` : `${base}/api`;
 
 const api = axios.create({
   baseURL: API_URL,
