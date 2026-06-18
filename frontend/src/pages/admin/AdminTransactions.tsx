@@ -140,6 +140,21 @@ interface DBTransaction {
   created_at: string;
 }
 
+// ─── Utilidades fecha dd/mm/aaaa ───────────────────────────────────────────────
+function formatFechaMask(value: string): string {
+  const digits = value.replace(/\D/g, '').slice(0, 8); // solo números, máx 8 dígitos
+  if (digits.length > 4) return `${digits.slice(0, 2)}/${digits.slice(2, 4)}/${digits.slice(4, 8)}`;
+  if (digits.length > 2) return `${digits.slice(0, 2)}/${digits.slice(2, 4)}`;
+  return digits;
+}
+
+function parseFechaInput(value: string): string | null {
+  const match = value.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+  if (!match) return null;
+  const [, dd, mm, aaaa] = match;
+  return `${aaaa}-${mm}-${dd}`; // 'YYYY-MM-DD', comparable con t.fecha
+}
+
 // ─── Componente principal ─────────────────────────────────────────────────────
 export function AdminTransactions({ onNavigate }: AdminTransactionsProps) {
   const { categories } = useData();
@@ -147,6 +162,8 @@ export function AdminTransactions({ onNavigate }: AdminTransactionsProps) {
   const [loading,      setLoading]      = useState(true);
   const [searchTerm,   setSearchTerm]   = useState('');
   const [filterType,   setFilterType]   = useState<'all' | 'income' | 'expense'>('all');
+  const [fechaInicio,  setFechaInicio]  = useState('');
+  const [fechaFin,     setFechaFin]     = useState('');
   const [showForm,     setShowForm]     = useState(false);
   const [form,         setForm]         = useState<FormState>(emptyForm);
   const [submitting,   setSubmitting]   = useState(false);
@@ -203,7 +220,16 @@ export function AdminTransactions({ onNavigate }: AdminTransactionsProps) {
     .filter(t =>
       (t.descripcion ?? '').toLowerCase().includes(searchTerm.toLowerCase()) ||
       (t.categoria   ?? '').toLowerCase().includes(searchTerm.toLowerCase())
-    );
+    )
+    .filter(t => {
+      // RF-017: consultar transacciones por rango de fechas (dd/mm/aaaa)
+      const fechaTransaccion = t.fecha.slice(0, 10); // 'YYYY-MM-DD'
+      const inicioISO = parseFechaInput(fechaInicio);
+      const finISO    = parseFechaInput(fechaFin);
+      if (inicioISO && fechaTransaccion < inicioISO) return false;
+      if (finISO    && fechaTransaccion > finISO)    return false;
+      return true;
+    });
 
   const availableCategories = categories
     .filter(c => c.active && c.type === form.type)
@@ -431,7 +457,7 @@ export function AdminTransactions({ onNavigate }: AdminTransactionsProps) {
         </div>
 
         {/* ── Filtros ──────────────────────────────────────────────── */}
-        <div style={{ display: 'flex', gap: '16px', marginBottom: '20px', flexWrap: 'wrap' }}>
+        <div style={{ display: 'flex', gap: '16px', marginBottom: '20px', flexWrap: 'wrap', alignItems: 'flex-end' }}>
           <div style={{ position: 'relative', flex: 1, minWidth: '220px' }}>
             <span style={{
               position: 'absolute', left: '14px', top: '50%',
@@ -462,6 +488,52 @@ export function AdminTransactions({ onNavigate }: AdminTransactionsProps) {
             <option value="income">Solo ingresos</option>
             <option value="expense">Solo gastos</option>
           </select>
+
+          {/* RF-017: filtro por rango de fechas (dd/mm/aaaa) */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+            <label style={{ fontSize: '12px', color: '#6b7280', fontWeight: 600 }}>Desde</label>
+            <input
+              type="text"
+              inputMode="numeric"
+              placeholder="dd/mm/aaaa"
+              maxLength={10}
+              value={fechaInicio}
+              onChange={e => setFechaInicio(formatFechaMask(e.target.value))}
+              style={{
+                padding: '9px 14px', border: '1.5px solid #e5e7eb', borderRadius: '10px',
+                fontSize: '14px', outline: 'none', backgroundColor: 'white', color: '#374151',
+                width: '130px',
+              }}
+            />
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+            <label style={{ fontSize: '12px', color: '#6b7280', fontWeight: 600 }}>Hasta</label>
+            <input
+              type="text"
+              inputMode="numeric"
+              placeholder="dd/mm/aaaa"
+              maxLength={10}
+              value={fechaFin}
+              onChange={e => setFechaFin(formatFechaMask(e.target.value))}
+              style={{
+                padding: '9px 14px', border: '1.5px solid #e5e7eb', borderRadius: '10px',
+                fontSize: '14px', outline: 'none', backgroundColor: 'white', color: '#374151',
+                width: '130px',
+              }}
+            />
+          </div>
+          {(fechaInicio || fechaFin) && (
+            <button
+              type="button"
+              onClick={() => { setFechaInicio(''); setFechaFin(''); }}
+              style={{
+                padding: '9px 14px', border: '1.5px solid #e5e7eb', borderRadius: '10px',
+                fontSize: '13px', backgroundColor: 'white', color: '#6b7280', cursor: 'pointer',
+              }}
+            >
+              Limpiar fechas
+            </button>
+          )}
         </div>
 
         {/* ── Tabla ────────────────────────────────────────────────── */}
