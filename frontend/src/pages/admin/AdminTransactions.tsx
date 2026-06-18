@@ -312,6 +312,7 @@ export function AdminTransactions({ onNavigate }: AdminTransactionsProps) {
                   type="number"
                   value={form.amount}
                   onChange={e => setForm({ ...form, amount: e.target.value })}
+                  onKeyDown={e => { if (e.key === 'e' || e.key === 'E') e.preventDefault(); }}
                   placeholder="0"
                   style={inputStyle}
                   required
