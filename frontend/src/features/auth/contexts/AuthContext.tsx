@@ -21,23 +21,22 @@ export function AuthProvider({ children }: AuthProviderProps) {
   });
 
   useEffect(() => {
-    // Check if user is already logged in on mount
     const checkAuth = async () => {
-      const token = localStorage.getItem('clubfinance_token');
-      const userStr = localStorage.getItem('clubfinance_user');
-      
-      if (token && userStr) {
-        try {
-          const user = JSON.parse(userStr) as User;
-          setAuthState({
-            isAuthenticated: true,
-            currentUser: user,
-          });
-        } catch (error) {
-          console.error('Error parsing user from localStorage:', error);
-          authService.logout();
-        }
+      const verified = await authService.verify();
+
+      if (verified?.success && verified.data?.user) {
+        setAuthState({
+          isAuthenticated: true,
+          currentUser: verified.data.user,
+        });
+        return;
       }
+
+      authService.logout();
+      setAuthState({
+        isAuthenticated: false,
+        currentUser: null,
+      });
     };
 
     checkAuth();

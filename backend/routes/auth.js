@@ -78,4 +78,42 @@ router.post('/login', loginLimiter, async (req, res) => {
   }
 });
 
+router.get('/verify', async (req, res) => {
+  try {
+    const authHeader = req.headers.authorization;
+
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return res.status(401).json({ success: false, message: 'No autorizado' });
+    }
+
+    const token = authHeader.split(' ')[1];
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const result = await pool.query(
+      'SELECT id, username, email, full_name, role, active FROM users WHERE id = $1',
+      [decoded.id]
+    );
+
+    if (result.rows.length === 0 || !result.rows[0].active) {
+      return res.status(401).json({ success: false, message: 'Token inválido o expirado' });
+    }
+
+    const user = result.rows[0];
+
+    res.json({
+      success: true,
+      data: {
+        user: { id: user.id, username: user.username, name: user.full_name, email: user.email, role: user.role },
+        token,
+      },
+    });
+  } catch (error) {
+    if (error.name === 'JsonWebTokenError' || error.name === 'TokenExpiredError') {
+      return res.status(401).json({ success: false, message: 'Token inválido o expirado' });
+    }
+
+    console.error('❌ Error en verify:', error);
+    res.status(500).json({ success: false, message: 'Error interno del servidor' });
+  }
+});
+
 module.exports = router;
