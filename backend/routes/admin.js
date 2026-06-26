@@ -2,6 +2,7 @@
 const express = require('express');
 const router  = express.Router();
 const pool    = require('../db');
+const ExcelJS = require('exceljs'); // Única librería de exportación requerida
 const { requireAdmin } = require('../middleware/auth');
 const { formatCurrency } = require('../utils/format');
 
@@ -10,17 +11,16 @@ router.get('/overview', requireAdmin, async (req, res) => {
     const now    = new Date();
     const year   = now.getFullYear();
     const month  = now.getMonth() + 1;
-    const period = `${year}-${String(month).padStart(2, '0')}`;
 
     // Socios
     const memberStats = await pool.query(`
       SELECT
-        COUNT(*)                                                  AS "totalMembers",
+        COUNT(*)                                                 AS "totalMembers",
         SUM(CASE WHEN estado = 'activo' THEN 1 ELSE 0 END)       AS "activeMembers"
       FROM socio
     `);
 
-    // Transacciones del mes (si ya tienes tabla; si no, devuelve 0)
+    // Transacciones del mes
     const txStats = await pool.query(`
       SELECT
         COALESCE(SUM(CASE WHEN tipo = 'ingreso' THEN monto ELSE 0 END), 0)  AS "monthlyIncome",
@@ -50,7 +50,7 @@ router.get('/overview', requireAdmin, async (req, res) => {
           totalTransactions: Number(txStats.rows[0].totalTransactions),
           totalMembers:      Number(memberStats.rows[0].totalMembers),
           activeMembers:     Number(memberStats.rows[0].activeMembers),
-          paidFees:   0, // conecta cuando tengas tabla de cuotas
+          paidFees:   0,
           pendingFees: 0,
         },
         system: {
@@ -93,16 +93,28 @@ router.post('/cierre-mensual', requireAdmin, async (req, res) => {
     const gastos = Number(expenseResult.rows[0].total);
     const balance = ingresos - gastos;
 
+    // Cálculo seguro del último día real en UTC
+    const ultimoDiaReal = new Date(Date.UTC(year, month, 0)).getUTCDate();
+    
+    const fechaInicio = `${year}-${String(month).padStart(2, '0')}-01`;
+    const fechaFin    = `${year}-${String(month).padStart(2, '0')}-${String(ultimoDiaReal).padStart(2, '0')}`;
+    const cerradoPor  = req.user?.username || req.user?.full_name || 'admin';
+
     const periodoResult = await pool.query(
-      `INSERT INTO periodos (anio, mes, nombreMes, fechaInicio, fechaFin, activo, cerrado, fechaCierre, observaciones, cerradoBy)
-       VALUES ($1, $2, $3, $4, $5, false, true, NOW(), $6, $7)
+      `INSERT INTO periodos 
+         (anio, mes, nombre_mes, fecha_inicio, fecha_fin, activo, cerrado, fecha_cierre, 
+          total_ingresos, total_gastos, balance, observaciones, cerrado_by)
+       VALUES ($1, $2, $3, $4, $5, false, true, NOW(), $6, $7, $8, $9, $10)
        ON CONFLICT (anio, mes) DO UPDATE SET
          cerrado = true,
-         fechaCierre = NOW(),
+         fecha_cierre = NOW(),
+         total_ingresos = EXCLUDED.total_ingresos,
+         total_gastos = EXCLUDED.total_gastos,
+         balance = EXCLUDED.balance,
          observaciones = EXCLUDED.observaciones,
-         cerradoBy = EXCLUDED.cerradoBy
+         cerrado_by = EXCLUDED.cerrado_by
        RETURNING *`,
-      [year, month, MONTH_NAMES[month - 1], `${year}-${String(month).padStart(2, '0')}-01`, `${year}-${String(month).padStart(2, '0')}-31`, observaciones || 'Cierre automático', req.user.username]
+      [year, month, MONTH_NAMES[month - 1], fechaInicio, fechaFin, ingresos, gastos, balance, observaciones || 'Cierre manual desde panel de reportes', cerradoPor]
     );
 
     const transaccionesResult = await pool.query(
@@ -136,6 +148,86 @@ router.get('/periodos', requireAdmin, async (req, res) => {
     res.json({ success: true, data: result.rows });
   } catch (err) {
     res.status(500).json({ success: false, error: 'Error al obtener periodos' });
+  }
+});
+
+// ─── EXPORTAR REPORTE MENSUAL A EXCEL (.XLSX) ──────────────────────────────
+router.get('/periodos/:id/exportar-excel', requireAdmin, async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    // 1. Validar existencia del periodo contable
+    const periodoQuery = await pool.query('SELECT * FROM periodos WHERE id = $1', [id]);
+    if (periodoQuery.rows.length === 0) {
+      return res.status(404).json({ success: false, error: 'Período no encontrado' });
+    }
+    const p = periodoQuery.rows[0];
+
+    // 2. Extraer el histórico de transacciones cruzando mes y año
+    const txQuery = await pool.query(
+      `SELECT fecha, tipo, monto, categoria, metodo_pago, creado_por, descripcion 
+       FROM transactions 
+       WHERE EXTRACT(MONTH FROM fecha) = $1 AND EXTRACT(YEAR FROM fecha) = $2 
+       ORDER BY fecha ASC`,
+      [p.mes, p.anio]
+    );
+
+    // 3. Estructurar el libro con ExcelJS
+    const workbook = new ExcelJS.Workbook();
+    
+    // Hoja A: Resumen Ejecutivo
+    const resumenSheet = workbook.addWorksheet('Resumen Financiero');
+    resumenSheet.appendRow([`REPORTE FINANCIERO - ${p.nombre_mes.toUpperCase()} ${p.anio}`]);
+    resumenSheet.appendRow([]);
+    resumenSheet.appendRow(['Concepto', 'Valor']);
+    resumenSheet.appendRow(['Total Ingresos', Number(p.total_ingresos)]);
+    resumenSheet.appendRow(['Total Gastos', Number(p.total_gastos)]);
+    resumenSheet.appendRow(['Balance Neto', Number(p.balance)]);
+    resumenSheet.appendRow([]);
+    resumenSheet.appendRow(['Cerrado por', p.cerrado_by || 'Sistema']);
+    resumenSheet.appendRow(['Fecha Cierre', p.fecha_cierre]);
+    resumenSheet.appendRow(['Observaciones', p.observaciones || '']);
+
+    // Formatear columna de saldos como moneda local
+    resumenSheet.getColumn(2).numFmt = '"$"#,##0.00';
+
+    // Hoja B: Auditoría de Transacciones
+    const txSheet = workbook.addWorksheet('Detalle Transacciones');
+    txSheet.columns = [
+      { header: 'Fecha', key: 'fecha', width: 15 },
+      { header: 'Tipo', key: 'tipo', width: 12 },
+      { header: 'Categoría', key: 'categoria', width: 20 },
+      { header: 'Monto', key: 'monto', width: 15 },
+      { header: 'Método Pago', key: 'metodo_pago', width: 15 },
+      { header: 'Ejecutado Por', key: 'creado_por', width: 18 },
+      { header: 'Descripción', key: 'descripcion', width: 35 },
+    ];
+
+    txQuery.rows.forEach(tx => {
+      txSheet.addRow({
+        fecha: new Date(tx.fecha).toISOString().split('T')[0],
+        tipo: tx.tipo.toUpperCase(),
+        categoria: tx.categoria || 'General',
+        monto: Number(tx.monto),
+        metodo_pago: tx.metodo_pago || 'N/A',
+        creado_por: tx.creado_por || 'N/A',
+        descripcion: tx.descripcion || ''
+      });
+    });
+
+    txSheet.getColumn('monto').numFmt = '"$"#,##0.00';
+
+    // 4. Stream de descarga binaria directa (.xlsx)
+    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    res.setHeader('Content-Disposition', `attachment; filename=Reporte_${p.nombre_mes}_${p.anio}.xlsx`);
+
+    await workbook.xlsx.write(res);
+    res.end();
+  } catch (error) {
+    console.error('Error exportando Excel:', error);
+    if (!res.headersSent) {
+      res.status(500).json({ success: false, error: 'Error al generar el archivo Excel' });
+    }
   }
 });
 

@@ -89,14 +89,14 @@ router.post('/forgot-password', otpLimiter, async (req, res) => {
     const user   = result.rows[0];
     const otp    = generateOTP();
     const hashed = await bcrypt.hash(otp, 10);
-    const expires = new Date(Date.now() + 10 * 60 * 1000); // 10 minutos
 
-    // Guardar OTP hasheado + expiración + resetear intentos fallidos
+    // Guardar OTP hasheado + expiración (usando LOCALTIMESTAMP de la BD) + resetear intentos fallidos
     await pool.query(
       `UPDATE users
-       SET reset_token = $1, reset_token_expires = $2
-       WHERE id = $3`,
-      [hashed, expires, user.id]
+       SET reset_token = $1, reset_token_expires = LOCALTIMESTAMP + INTERVAL '10 minutes',
+           failed_attempts = 0, otp_attempts = 0
+       WHERE id = $2`,
+      [hashed, user.id]
     );
 
     await transporter.sendMail({
@@ -135,11 +135,38 @@ router.post('/verify-otp', otpLimiter, async (req, res) => {
       `SELECT * FROM users
        WHERE email = $1
          AND reset_token IS NOT NULL
-         AND reset_token_expires > NOW()`,
+         AND reset_token_expires > LOCALTIMESTAMP`,
       [email.toLowerCase().trim()]
     );
 
     if (result.rows.length === 0) {
+      // Debug: verificar cada condición por separado
+      const debugUser = await pool.query(
+        `SELECT 
+           email,
+           reset_token IS NOT NULL AND reset_token_expires IS NOT NULL AS has_valid_token,
+           reset_token IS NOT NULL AS has_token,
+           reset_token_expires IS NOT NULL AS has_expiry,
+           reset_token_expires > LOCALTIMESTAMP AS not_expired,
+           reset_token::text AS token_preview,
+           reset_token_expires,
+           LOCALTIMESTAMP AS db_now
+         FROM users WHERE email = $1`,
+        [email.toLowerCase().trim()]
+      );
+      if (debugUser.rows.length === 0) {
+        console.log(`❌ verify-otp: email no encontrado: ${email}`);
+      } else {
+        const du = debugUser.rows[0];
+        console.log(`❌ verify-otp: diagnóstico:
+  has_valid_token: ${du.has_valid_token}
+  has_token:       ${du.has_token}
+  has_expiry:      ${du.has_expiry}
+  not_expired:     ${du.not_expired}
+  token_preview:   ${du.token_preview ? du.token_preview.substring(0, 20) + '...' : null}
+  expires:         ${du.reset_token_expires}
+  db_now:          ${du.db_now}`);
+      }
       return res.status(400).json({
         success: false,
         message: 'El código ha expirado o no existe. Solicita uno nuevo.',
@@ -153,12 +180,12 @@ router.post('/verify-otp', otpLimiter, async (req, res) => {
 
     if (!valid) {
       // Incrementar intentos fallidos
-      const attempts = (user.failed_attempts || 0) + 1;
+      const attempts = (user.otp_attempts || 0) + 1;
 
       if (attempts >= 3) {
         // Invalidar OTP tras 3 intentos
         await pool.query(
-          `UPDATE users SET reset_token = NULL, reset_token_expires = NULL, failed_attempts = 0 WHERE id = $1`,
+          `UPDATE users SET reset_token = NULL, reset_token_expires = NULL, otp_attempts = 0 WHERE id = $1`,
           [user.id]
         );
         return res.status(400).json({
@@ -169,7 +196,7 @@ router.post('/verify-otp', otpLimiter, async (req, res) => {
       }
 
       await pool.query(
-        'UPDATE users SET failed_attempts = $1 WHERE id = $2',
+        'UPDATE users SET otp_attempts = $1 WHERE id = $2',
         [attempts, user.id]
       );
 
@@ -183,13 +210,12 @@ router.post('/verify-otp', otpLimiter, async (req, res) => {
     // OTP válido — generar token temporal de un solo uso para el reset
     const { randomBytes } = require('crypto');
     const resetAccessToken = randomBytes(32).toString('hex');
-    const newExpires = new Date(Date.now() + 5 * 60 * 1000); // 5 min para hacer el reset
 
     await pool.query(
       `UPDATE users
-       SET reset_token = $1, reset_token_expires = $2, failed_attempts = 0
-       WHERE id = $3`,
-      [resetAccessToken, newExpires, user.id]
+       SET reset_token = $1, reset_token_expires = LOCALTIMESTAMP + INTERVAL '5 minutes', otp_attempts = 0
+       WHERE id = $2`,
+      [resetAccessToken, user.id]
     );
 
     console.log(`✅ OTP verificado para: ${user.username}`);
@@ -226,7 +252,7 @@ router.post('/reset-password', async (req, res) => {
     const result = await pool.query(
       `SELECT * FROM users
        WHERE reset_token = $1
-         AND reset_token_expires > NOW()`,
+         AND reset_token_expires > LOCALTIMESTAMP`,
       [resetToken]
     );
 

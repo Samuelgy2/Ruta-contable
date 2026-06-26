@@ -75,7 +75,11 @@ export function AdminReports({ onNavigate }: AdminReportsProps) {
   const { transactions, members, fees, systemData } = useData();
   const stats = useStats(transactions, fees, members);
   const [cierreLoading, setCierreLoading] = useState(false);
+  const [excelLoading, setExcelLoading] = useState(false);
   const { toasts, show: showToast } = useToast();
+
+  // Guardamos una referencia local al último periodoID creado si existiera tras el cierre
+  const [ultimoPeriodoId, setUltimoPeriodoId] = useState<number | null>(null);
 
   // ── Exportaciones ──────────────────────────────────────────────────────────
   const handleExportTransactions = () => {
@@ -99,6 +103,44 @@ export function AdminReports({ onNavigate }: AdminReportsProps) {
   const handleExportReport = async () => {
     await exportTransactionsReportPDF(transactions, systemData);
     showToast('Reporte financiero generado en PDF', 'success');
+  };
+
+  // NUEVA FUNCIÓN: Descarga directa del archivo Excel generado desde el servidor
+  const handleExportReportExcel = async () => {
+    setExcelLoading(true);
+    try {
+      const token = localStorage.getItem('clubfinance_token');
+      
+      // Si ya cerramos un periodo en esta sesión usamos su ID, si no, apuntamos al último por defecto
+      // (Puedes ajustar la URL según cómo obtengas el ID del periodo seleccionado en tu UI)
+      const periodoId = ultimoPeriodoId || 'ultimo'; 
+
+      const response = await fetch(`/api/admin/periodos/${periodoId}/exportar-excel`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      if (!response.ok) throw new Error('No se pudo generar el archivo Excel');
+
+      // Convertimos la respuesta binaria en un enlace descargable en el navegador
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `Reporte_Financiero_${new Date().getFullYear()}.xlsx`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.URL.revokeObjectURL(url);
+
+      showToast('Reporte financiero exportado a Excel (.xlsx)', 'success');
+    } catch (error: any) {
+      showToast(`Error al exportar Excel: ${error.message}`, 'error');
+    } finally {
+      setExcelLoading(false);
+    }
   };
 
   const handleExportAllData = () => {
@@ -138,6 +180,10 @@ export function AdminReports({ onNavigate }: AdminReportsProps) {
 
       const json = await res.json();
       if (json.success) {
+        // Almacenamos el ID retornado por el backend para las descargas de esta sesión
+        if (json.data?.periodo?.id) {
+          setUltimoPeriodoId(json.data.periodo.id);
+        }
         showToast(
           `Cierre completado · Ingresos: ${formatCurrency(json.data.resumen.ingresos, 'COP')} · Balance: ${formatCurrency(json.data.resumen.balance, 'COP')}`,
           'success'
@@ -178,6 +224,7 @@ export function AdminReports({ onNavigate }: AdminReportsProps) {
         transition: 'transform 0.15s, box-shadow 0.15s, border-color 0.15s',
         boxShadow: '0 1px 4px rgba(0,0,0,0.05)',
         opacity: disabled ? 0.6 : 1,
+        width: '100%',
       }}
       onMouseEnter={e => {
         if (!disabled) {
@@ -291,10 +338,20 @@ export function AdminReports({ onNavigate }: AdminReportsProps) {
           <p style={{ color: '#6b7280', fontSize: '14px', margin: '0 0 20px' }}>
             Descarga los datos del sistema en diferentes formatos
           </p>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '14px' }}>
-            <ExportBtn icon="📊" label="Transacciones"      sub="Formato CSV"  onClick={handleExportTransactions} />
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '14px' }}>
+            <ExportBtn icon="📊" label="Transacciones CSV"     sub="Formato de texto"  onClick={handleExportTransactions} />
             <ExportBtn icon="👥" label="Socios y Cuotas"    sub="Formato PDF"  onClick={handleExportMembers} />
-            <ExportBtn icon="📈" label="Reporte Financiero" sub="Formato PDF"  onClick={handleExportReport} />
+            <ExportBtn icon="📄" label="Reporte Financiero PDF" sub="Documento Oficial"  onClick={handleExportReport} />
+            
+            {/* BOTÓN REQUERIDO DE EXCEL ENLAZADO CON EL BACKEND EXCELJS */}
+            <ExportBtn 
+              icon="🟢" 
+              label={excelLoading ? 'Generando...' : 'Reporte Financiero Excel'} 
+              sub="Hoja de Cálculo (.xlsx)"  
+              onClick={handleExportReportExcel} 
+              disabled={excelLoading}
+            />
+            
             <ExportBtn icon="🗄️" label="Backup Completo"    sub="Formato JSON" onClick={handleExportAllData} />
           </div>
         </div>
