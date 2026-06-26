@@ -1,6 +1,59 @@
+# Dependencias
 node_modules/
+backend/node_modules/
+frontend/node_modules/
+
+# Variables de entorno
 .env
+.env.local
+.env.*.local
+.env.docker
+.env.example
+
+# Directorios de compilación
+build/
+frontend/build/
+frontend/dist/
+frontend/tsconfig.tsbuildinfo
+
+# Logs
 logs/
-test-api.js
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Archivos de caché
+.cache/
+.pnp/
+.pnp.js
+
+# Archivos de prueba de cobertura
+coverage/
+
+# Archivos temporales
+*.tmp
+*.temp
+
+# Editor
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Sistema operativo
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Docker
+docker-compose.override.yml
+
+# Misceláneos
 .npmrc
-.gitignore
+.eslintcache
