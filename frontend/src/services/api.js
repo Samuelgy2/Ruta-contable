@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const base = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+const base = import.meta.env.VITE_API_URL || 'https://ruta-contable.onrender.com';
 const API_URL = base === '/api' ? '/api' : base.endsWith('/') ? `${base}api` : `${base}/api`;
 
 const api = axios.create({
