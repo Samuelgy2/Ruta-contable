@@ -57,3 +57,7 @@ docker-compose.override.yml
 # Misceláneos
 .npmrc
 .eslintcache
+
+test_ts.py
+hello.py
+help_output.txt

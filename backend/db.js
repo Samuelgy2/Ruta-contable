@@ -12,10 +12,10 @@ const pool = new Pool({
   database: process.env.DB_NAME,
   ssl: { rejectUnauthorized: false },
   max: 10,
-  idleTimeoutMillis: 600000,        // 10 minutos (antes 30s) - evita cierre prematuro
-  connectionTimeoutMillis: 20000,   // 20 segundos (antes 10s) - más tiempo para reconectar
+  idleTimeoutMillis: 6000000,        // 10 minutos (antes 30s) - evita cierre prematuro
+  connectionTimeoutMillis: 200000,   // 20 segundos (antes 10s) - más tiempo para reconectar
   keepAlive: true,
-  keepAliveInitialDelay: 10000,     // 10 segundos antes del primer keepalive
+  keepAliveInitialDelay: 100000,     // 10 segundos antes del primer keepalive
   family: 4,                        // IPv4, redundante pero seguro
 });
 
