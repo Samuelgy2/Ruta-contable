@@ -34,7 +34,6 @@ interface AdminOverviewProps {
 }
 
 // ─── HOOK PERSONALIZADO — capa de acceso al backend ───────────────────────────
-
 function useOverviewData() {
   const [data,    setData]    = useState<OverviewData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -46,9 +45,12 @@ function useOverviewData() {
     try {
       const token = localStorage.getItem('clubfinance_token');
       console.log('Token:', token ? 'presente' : 'ausente');
-      const res = await fetch('/api/admin/overview', {
+
+      const apiUrl = import.meta.env.VITE_API_URL || '';
+      const res = await fetch(`${apiUrl}/api/admin/overview`, {
         headers: token ? { Authorization: `Bearer ${token}` } : undefined,
       });
+
       if (!res.ok) {
         const errorText = await res.text();
         throw new Error(`HTTP ${res.status}: ${errorText}`);
@@ -69,7 +71,7 @@ function useOverviewData() {
   useEffect(() => { fetchData(); }, [fetchData]);
 
   return { data, loading, error, refetch: fetchData };
-}
+} 
 
 // ─── SUBCOMPONENTES ───────────────────────────────────────────────────────────
 
