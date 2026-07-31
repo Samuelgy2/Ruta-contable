@@ -33,7 +33,7 @@ function getToken(): string {
 
 // ─── Toast ────────────────────────────────────────────────────────────────────
 type ToastType = 'success' | 'error' | 'warning';
-
+  
 interface Toast {
   id: number;
   message: string;
