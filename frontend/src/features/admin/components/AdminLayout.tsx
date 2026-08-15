@@ -60,7 +60,7 @@ export function AdminLayout({ children, currentPage, onNavigate }: AdminLayoutPr
   const isDesktop  = windowWidth >= 1024;
   const isExpanded = isMobileMenuOpen || (isDesktop && sidebarOpen);
   const sidebarW   = isExpanded ? '280px' : '64px';
-  const adminName  = currentUser?.fullName ?? 'Samuel Gutierrez';
+ const adminName = currentUser?.name ?? 'Usuario';
 
   const closeMobileMenu = () => setIsMobileMenuOpen(false);
   const toggleSidebar   = () =>

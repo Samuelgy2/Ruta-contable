@@ -30,7 +30,7 @@ export interface User {
   username: string;
   password: string;
   role: UserRole;
-  fullName: string;
+  name: string;
   email: string;
   active: boolean;
   lastLogin?: string;

@@ -174,7 +174,7 @@ function SkeletonCard() {
 
 // ─── COMPONENTE PRINCIPAL ─────────────────────────────────────────────────────
 
-export function AdminOverview({ onNavigate, adminName = 'Samuel Gutiérrez' }: AdminOverviewProps) {
+export function AdminOverview({ onNavigate, adminName = '' }: AdminOverviewProps) {
   const { data, loading, error, refetch } = useOverviewData();
 
   const MONTH_NAMES = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];

@@ -51,7 +51,7 @@ function AppContent() {
     if (currentUser.role === 'admin') {
       const renderAdminContent = () => {
         switch (currentAdminPage) {
-          case 'overview':         return <AdminOverview        onNavigate={handleAdminNavigate} />;
+          case 'overview': return <AdminOverview onNavigate={handleAdminNavigate} adminName={currentUser.name} />;
           case 'transactions':     return <AdminTransactions    onNavigate={handleAdminNavigate} />;
           case 'members':          return <AdminMembers         onNavigate={handleAdminNavigate} />;
           case 'reports':          return <AdminReports         onNavigate={handleAdminNavigate} />;
