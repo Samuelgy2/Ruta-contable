@@ -1,35 +1,84 @@
 const pool = require('../db');
 
-// Normaliza 'income'/'expense' (frontend) → 'ingreso'/'gasto' (BD)
+// Normaliza 'income'/'expense' (frontend legacy) → 'ingreso'/'gasto' (BD, columna transactions.tipo)
 function normalizeTipo(tipo) {
   if (tipo === 'income')  return 'ingreso';
   if (tipo === 'expense') return 'gasto';
   return tipo;
 }
 
+// Traduce tipo de transacción ('ingreso'/'gasto') → tipo de categoría ('income'/'expense')
+// Necesario porque transactions.tipo y categories.type usan vocabularios distintos.
+function tipoToCategoryType(tipoNormalizado) {
+  if (tipoNormalizado === 'ingreso') return 'income';
+  if (tipoNormalizado === 'gasto')   return 'expense';
+  return null;
+}
+
+// Busca una categoría por id, validando que exista, esté activa y coincida en tipo.
+// Devuelve la fila de categories o null.
+async function findValidCategory(categoriaId, tipoNormalizado) {
+  if (!categoriaId) return null;
+  const categoryType = tipoToCategoryType(tipoNormalizado);
+  const result = await pool.query(
+    `SELECT id, name, type, active FROM categories WHERE id = $1`,
+    [categoriaId]
+  );
+  if (result.rows.length === 0) return null;
+  const cat = result.rows[0];
+  if (!cat.active) return { ...cat, _error: 'inactive' };
+  if (categoryType && cat.type !== categoryType) return { ...cat, _error: 'type_mismatch' };
+  return cat;
+}
+
+// Fallback temporal: si el frontend todavía manda "categoria" como texto en vez de
+// categoriaId, intenta resolverla contra categories.name (case-insensitive).
+// Permite migrar el frontend sin romper la creación de transacciones mientras tanto.
+async function resolveCategoryByName(categoriaNombre, tipoNormalizado) {
+  if (!categoriaNombre) return null;
+  const categoryType = tipoToCategoryType(tipoNormalizado);
+  const result = await pool.query(
+    `SELECT id, name, type, active FROM categories
+     WHERE LOWER(name) = LOWER($1) AND ($2::varchar IS NULL OR type = $2)
+     LIMIT 1`,
+    [categoriaNombre.trim(), categoryType]
+  );
+  return result.rows[0] || null;
+}
+
+const SELECT_WITH_CATEGORY = `
+  SELECT t.*, c.name AS categoria_nombre, c.type AS categoria_tipo
+  FROM transactions t
+  LEFT JOIN categories c ON c.id = t.categoria_id
+`;
+
 // GET /api/transactions
 async function getAll(req, res) {
   try {
-    const { tipo, mes, anio, search = '' } = req.query;
+    const { tipo, mes, anio, categoriaId, search = '' } = req.query;
 
     let conditions = [];
     let params = [];
     let i = 1;
 
     if (tipo) {
-      conditions.push(`tipo = $${i++}`);
+      conditions.push(`t.tipo = $${i++}`);
       params.push(normalizeTipo(tipo));
     }
     if (mes) {
-      conditions.push(`EXTRACT(MONTH FROM fecha) = $${i++}`);
+      conditions.push(`EXTRACT(MONTH FROM t.fecha) = $${i++}`);
       params.push(parseInt(mes));
     }
     if (anio) {
-      conditions.push(`EXTRACT(YEAR FROM fecha) = $${i++}`);
+      conditions.push(`EXTRACT(YEAR FROM t.fecha) = $${i++}`);
       params.push(parseInt(anio));
     }
+    if (categoriaId) {
+      conditions.push(`t.categoria_id = $${i++}`);
+      params.push(parseInt(categoriaId));
+    }
     if (search) {
-      conditions.push(`(descripcion ILIKE $${i} OR categoria ILIKE $${i})`);
+      conditions.push(`(t.descripcion ILIKE $${i} OR t.categoria ILIKE $${i} OR c.name ILIKE $${i})`);
       params.push(`%${search}%`);
       i++;
     }
@@ -37,7 +86,7 @@ async function getAll(req, res) {
     const where = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
 
     const result = await pool.query(
-      `SELECT * FROM transactions ${where} ORDER BY fecha DESC, created_at DESC`,
+      `${SELECT_WITH_CATEGORY} ${where} ORDER BY t.fecha DESC, t.created_at DESC`,
       params
     );
 
@@ -52,7 +101,10 @@ async function getAll(req, res) {
 async function getById(req, res) {
   try {
     const { id } = req.params;
-    const result = await pool.query('SELECT * FROM transactions WHERE id = $1', [id]);
+    const result = await pool.query(
+      `${SELECT_WITH_CATEGORY} WHERE t.id = $1`,
+      [id]
+    );
 
     if (result.rows.length === 0) {
       return res.status(404).json({ success: false, message: 'Transacción no encontrada' });
@@ -68,7 +120,7 @@ async function getById(req, res) {
 // POST /api/transactions
 async function create(req, res) {
   try {
-    const { tipo, monto, fecha, descripcion, categoria, metodoPago } = req.body;
+    const { tipo, monto, fecha, descripcion, categoriaId, categoria, metodoPago, referencia } = req.body;
 
     // RN-001: monto numérico positivo mayor a cero
     const montoNum = parseFloat(monto);
@@ -91,14 +143,6 @@ async function create(req, res) {
       });
     }
 
-    // RN-003: categoría obligatoria
-    if (!categoria || categoria.trim() === '') {
-      return res.status(400).json({
-        success: false,
-        message: 'RN-003: Debe seleccionar una categoría para la transacción.',
-      });
-    }
-
     // tipo obligatorio
     if (!tipo) {
       return res.status(400).json({ success: false, message: 'El tipo de transacción es obligatorio.' });
@@ -112,21 +156,54 @@ async function create(req, res) {
       });
     }
 
-    // RN-004: usuario responsable desde el token (inyectado por requireAdmin)
-    const responsable = req.user?.username ?? req.user?.email ?? req.user?.nombre ?? 'Admin';
+    // RN-003: categoría obligatoria — ahora resuelta contra la tabla categories.
+    // Se acepta categoriaId (preferido) o categoria como texto (legacy, se resuelve por nombre).
+    let categoryRow = null;
+    if (categoriaId) {
+      categoryRow = await findValidCategory(categoriaId, tipoNormalizado);
+    } else if (categoria && categoria.trim() !== '') {
+      categoryRow = await resolveCategoryByName(categoria, tipoNormalizado);
+    }
+
+    if (!categoryRow) {
+      return res.status(400).json({
+        success: false,
+        message: 'RN-003: Debe seleccionar una categoría válida para la transacción.',
+      });
+    }
+    if (categoryRow._error === 'inactive') {
+      return res.status(400).json({
+        success: false,
+        message: 'La categoría seleccionada está inactiva.',
+      });
+    }
+    if (categoryRow._error === 'type_mismatch') {
+      return res.status(400).json({
+        success: false,
+        message: `La categoría "${categoryRow.name}" no corresponde a un ${tipoNormalizado === 'ingreso' ? 'ingreso' : 'gasto'}.`,
+      });
+    }
+
+    // RN-004: usuario responsable — se guarda id real (created_by) y username legacy (creado_por)
+    const responsableUsername = req.user?.username ?? 'Admin';
+    const responsableId = req.user?.id ?? null;
 
     const result = await pool.query(
-      `INSERT INTO transactions (tipo, monto, fecha, descripcion, categoria, metodo_pago, creado_por)
-       VALUES ($1, $2, $3, $4, $5, $6, $7)
+      `INSERT INTO transactions
+        (tipo, monto, fecha, descripcion, categoria, categoria_id, metodo_pago, creado_por, created_by, referencia)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
        RETURNING *`,
       [
         tipoNormalizado,
         montoNum,
         fecha,
         descripcion || null,
-        categoria.trim(),
+        categoryRow.name,       // legacy: se sigue llenando con el nombre de la categoría
+        categoryRow.id,
         metodoPago  || null,
-        responsable,
+        responsableUsername,
+        responsableId,
+        referencia  || null,
       ]
     );
 
@@ -145,11 +222,46 @@ async function create(req, res) {
 async function update(req, res) {
   try {
     const { id } = req.params;
-    const { tipo, monto, fecha, descripcion, categoria, metodoPago } = req.body;
+    const { tipo, monto, fecha, descripcion, categoriaId, categoria, metodoPago, referencia } = req.body;
 
-    const exists = await pool.query('SELECT id FROM transactions WHERE id = $1', [id]);
-    if (exists.rows.length === 0) {
+    const existing = await pool.query('SELECT * FROM transactions WHERE id = $1', [id]);
+    if (existing.rows.length === 0) {
       return res.status(404).json({ success: false, message: 'Transacción no encontrada' });
+    }
+
+    const tipoNormalizado = tipo ? normalizeTipo(tipo) : existing.rows[0].tipo;
+    if (tipo && !['ingreso', 'gasto'].includes(tipoNormalizado)) {
+      return res.status(400).json({
+        success: false,
+        message: "tipo debe ser 'ingreso' o 'gasto'",
+      });
+    }
+
+    // Solo se revalida categoría si el request trae categoriaId o categoria
+    let categoryRow = null;
+    if (categoriaId) {
+      categoryRow = await findValidCategory(categoriaId, tipoNormalizado);
+    } else if (categoria && categoria.trim() !== '') {
+      categoryRow = await resolveCategoryByName(categoria, tipoNormalizado);
+    }
+
+    if ((categoriaId || categoria) && !categoryRow) {
+      return res.status(400).json({
+        success: false,
+        message: 'RN-003: Debe seleccionar una categoría válida para la transacción.',
+      });
+    }
+    if (categoryRow?._error === 'inactive') {
+      return res.status(400).json({
+        success: false,
+        message: 'La categoría seleccionada está inactiva.',
+      });
+    }
+    if (categoryRow?._error === 'type_mismatch') {
+      return res.status(400).json({
+        success: false,
+        message: `La categoría "${categoryRow.name}" no corresponde a un ${tipoNormalizado === 'ingreso' ? 'ingreso' : 'gasto'}.`,
+      });
     }
 
     const result = await pool.query(
@@ -159,16 +271,20 @@ async function update(req, res) {
         fecha       = COALESCE($3, fecha),
         descripcion = COALESCE($4, descripcion),
         categoria   = COALESCE($5, categoria),
-        metodo_pago = COALESCE($6, metodo_pago)
-       WHERE id = $7
+        categoria_id= COALESCE($6, categoria_id),
+        metodo_pago = COALESCE($7, metodo_pago),
+        referencia  = COALESCE($8, referencia)
+       WHERE id = $9
        RETURNING *`,
       [
-        tipo        ? normalizeTipo(tipo) : null,
+        tipo        ? tipoNormalizado     : null,
         monto       ? parseFloat(monto)   : null,
         fecha       || null,
         descripcion || null,
-        categoria   || null,
+        categoryRow ? categoryRow.name    : null,
+        categoryRow ? categoryRow.id      : null,
         metodoPago  || null,
+        referencia  || null,
         id,
       ]
     );
