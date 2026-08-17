@@ -1,0 +1,13 @@
+C:\Users\ne\Desktop\Ruta contable\DEPLOY_VERCEL.md
+C:\Users\ne\Desktop\Ruta contable\DOCUMENTACION_TECNICA_RUTA_CONTABLE.md
+C:\Users\ne\Desktop\Ruta contable\README.md
+C:\Users\ne\Desktop\Ruta contable\Vercel-README.md
+C:\Users\ne\Desktop\Ruta contable\docker-compose.yml
+C:\Users\ne\Desktop\Ruta contable\frontend\index.html
+C:\Users\ne\Desktop\Ruta contable\frontend\src\guidelines\Guidelines.md
+C:\Users\ne\Desktop\Ruta contable\frontend\src\images\README.md
+C:\Users\ne\Desktop\Ruta contable\frontend\src\images\logo\example-logo-setup.md
+C:\Users\ne\Desktop\Ruta contable\guia_docker.md
+C:\Users\ne\Desktop\Ruta contable\help_output.txt
+C:\Users\ne\Desktop\Ruta contable\frontend\public\favicon.png
+C:\Users\ne\Desktop\Ruta contable\frontend\src\images\logo\club-logo.png

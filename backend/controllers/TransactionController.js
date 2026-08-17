@@ -47,9 +47,10 @@ async function resolveCategoryByName(categoriaNombre, tipoNormalizado) {
 }
 
 const SELECT_WITH_CATEGORY = `
-  SELECT t.*, c.name AS categoria_nombre, c.type AS categoria_tipo
+  SELECT t.*, c.name AS categoria_nombre, c.type AS categoria_tipo, u.username AS creado_por_username
   FROM transactions t
   LEFT JOIN categories c ON c.id = t.categoria_id
+  LEFT JOIN users u ON u.id = t.created_by
 `;
 
 // GET /api/transactions
@@ -78,7 +79,7 @@ async function getAll(req, res) {
       params.push(parseInt(categoriaId));
     }
     if (search) {
-      conditions.push(`(t.descripcion ILIKE $${i} OR t.categoria ILIKE $${i} OR c.name ILIKE $${i})`);
+      conditions.push(`(t.descripcion ILIKE $${i} OR c.name ILIKE $${i})`);
       params.push(`%${search}%`);
       i++;
     }
@@ -184,24 +185,21 @@ async function create(req, res) {
       });
     }
 
-    // RN-004: usuario responsable — se guarda id real (created_by) y username legacy (creado_por)
-    const responsableUsername = req.user?.username ?? 'Admin';
+    // RN-004: usuario responsable desde el token (inyectado por requireAdmin)
     const responsableId = req.user?.id ?? null;
 
     const result = await pool.query(
       `INSERT INTO transactions
-        (tipo, monto, fecha, descripcion, categoria, categoria_id, metodo_pago, creado_por, created_by, referencia)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+        (tipo, monto, fecha, descripcion, categoria_id, metodo_pago, created_by, referencia)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
        RETURNING *`,
       [
         tipoNormalizado,
         montoNum,
         fecha,
         descripcion || null,
-        categoryRow.name,       // legacy: se sigue llenando con el nombre de la categoría
         categoryRow.id,
         metodoPago  || null,
-        responsableUsername,
         responsableId,
         referencia  || null,
       ]
@@ -270,18 +268,16 @@ async function update(req, res) {
         monto       = COALESCE($2, monto),
         fecha       = COALESCE($3, fecha),
         descripcion = COALESCE($4, descripcion),
-        categoria   = COALESCE($5, categoria),
-        categoria_id= COALESCE($6, categoria_id),
-        metodo_pago = COALESCE($7, metodo_pago),
-        referencia  = COALESCE($8, referencia)
-       WHERE id = $9
+        categoria_id= COALESCE($5, categoria_id),
+        metodo_pago = COALESCE($6, metodo_pago),
+        referencia  = COALESCE($7, referencia)
+       WHERE id = $8
        RETURNING *`,
       [
         tipo        ? tipoNormalizado     : null,
         monto       ? parseFloat(monto)   : null,
         fecha       || null,
         descripcion || null,
-        categoryRow ? categoryRow.name    : null,
         categoryRow ? categoryRow.id      : null,
         metodoPago  || null,
         referencia  || null,

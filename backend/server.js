@@ -25,6 +25,11 @@ const dns = require('dns').promises;
   const socioRoutes        = require('./routes/Member');
   const adminRoutes        = require('./routes/admin');
   const transactionRoutes  = require('./routes/Transaction');
+  const proveedorRoutes    = require('./routes/proveedores');
+  const compraRoutes       = require('./routes/compras');
+  const inventarioRoutes   = require('./routes/inventario');
+  const carteraRoutes      = require('./routes/cartera');
+  const asistenciaRoutes   = require('./routes/asistencia');
 
   const app  = express();
   const port = process.env.PORT || 3001;
@@ -50,6 +55,11 @@ const dns = require('dns').promises;
   app.use('/api/socios',       socioRoutes);
   app.use('/api/admin',        adminRoutes);
   app.use('/api/transactions', transactionRoutes);
+  app.use('/api/proveedores',  proveedorRoutes);
+  app.use('/api/compras',      compraRoutes);
+  app.use('/api/inventario',   inventarioRoutes);
+  app.use('/api/cartera',      carteraRoutes);
+  app.use('/api/asistencia',   asistenciaRoutes);
   app.get('/health', (_req, res) => res.json({ status: 'OK', message: 'Servidor funcionando' }));
 
   // ─── Setup DB ─────────────────────────────────────────────────────────
@@ -124,49 +134,23 @@ const dns = require('dns').promises;
         monto       DECIMAL(15,2)   NOT NULL,
         fecha       DATE            NOT NULL,
         descripcion TEXT,
-        categoria   VARCHAR(100),
+        categoria_id INTEGER REFERENCES categories(id),
         metodo_pago VARCHAR(50),
-        creado_por  VARCHAR(100),
+        referencia  VARCHAR(100),
+        created_by  INTEGER REFERENCES users(id),
         created_at  TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       )
     `);
     console.log('✅ Tabla transactions lista');
 
-    // ── periodos (Corregida a snake_case e incluyendo campos financieros) ─────
+    // ── meses_periodo (reemplaza a la extinta tabla periodos) ────────────
     await pool.query(`
-      CREATE TABLE IF NOT EXISTS periodos (
-        id             SERIAL PRIMARY KEY,
-        anio           INTEGER      NOT NULL,
-        mes            INTEGER      NOT NULL CHECK (mes BETWEEN 1 AND 12),
-        nombre_mes     VARCHAR(20)  NOT NULL DEFAULT '',
-        fecha_inicio   DATE,
-        fecha_fin      DATE,
-        activo         BOOLEAN      NOT NULL DEFAULT true,
-        cerrado        BOOLEAN      NOT NULL DEFAULT false,
-        fecha_cierre   TIMESTAMP,
-        total_ingresos DECIMAL(15,2) DEFAULT 0.00,
-        total_gastos   DECIMAL(15,2) DEFAULT 0.00,
-        balance        DECIMAL(15,2) DEFAULT 0.00,
-        observaciones  TEXT,
-        cerrado_by     VARCHAR(100),
-        created_at     TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        UNIQUE (anio, mes)
-      )
+      ALTER TABLE meses_periodo
+        ADD COLUMN IF NOT EXISTS total_ingresos NUMERIC DEFAULT 0.00,
+        ADD COLUMN IF NOT EXISTS total_gastos   NUMERIC DEFAULT 0.00,
+        ADD COLUMN IF NOT EXISTS balance        NUMERIC DEFAULT 0.00
     `);
-    
-    // Migración segura en caso de que la tabla ya existiera con estructura vieja
-    await pool.query(`
-      ALTER TABLE periodos
-        ADD COLUMN IF NOT EXISTS nombre_mes     VARCHAR(20)  NOT NULL DEFAULT '',
-        ADD COLUMN IF NOT EXISTS fecha_inicio   DATE,
-        ADD COLUMN IF NOT EXISTS fecha_fin      DATE,
-        ADD COLUMN IF NOT EXISTS fecha_cierre   TIMESTAMP,
-        ADD COLUMN IF NOT EXISTS total_ingresos DECIMAL(15,2) DEFAULT 0.00,
-        ADD COLUMN IF NOT EXISTS total_gastos   DECIMAL(15,2) DEFAULT 0.00,
-        ADD COLUMN IF NOT EXISTS balance        DECIMAL(15,2) DEFAULT 0.00,
-        ADD COLUMN IF NOT EXISTS cerrado_by     VARCHAR(100);
-    `);
-    console.log('✅ Tabla periodos lista y verificada');
+    console.log('✅ Tabla meses_periodo lista y verificada');
   }
 
   // ─── Cron cierre mensual automático ──────────────────────────────────
@@ -203,17 +187,17 @@ const dns = require('dns').promises;
         const balance       = totalIngresos - totalGastos;
 
         const admin = await pool.query(
-          `SELECT username FROM users WHERE role = 'admin' LIMIT 1`
+          `SELECT id FROM users WHERE role = 'admin' LIMIT 1`
         );
-        const adminName = admin.rows[0]?.username || 'sistema';
+        const adminId = admin.rows[0]?.id || null;
 
         const ultimoDiaMes = new Date(yearNum, monthNum, 0).getDate();
         const fechaInicio = `${yearNum}-${String(monthNum).padStart(2,'0')}-01`;
         const fechaFin    = `${yearNum}-${String(monthNum).padStart(2,'0')}-${String(ultimoDiaMes).padStart(2,'0')}`;
 
         await pool.query(
-          `INSERT INTO periodos
-             (anio, mes, nombre_mes, fecha_inicio, fecha_fin, activo, cerrado, fecha_cierre, 
+          `INSERT INTO meses_periodo
+             (anio, mes, nombre_mes, fecha_inicio, fecha_fin, activo, cerrado, fecha_cierre,
               total_ingresos, total_gastos, balance, observaciones, cerrado_by)
            VALUES ($1,$2,$3,$4,$5,false,true,NOW(),$6,$7,$8,$9,$10)
            ON CONFLICT (anio, mes) DO UPDATE SET
@@ -223,7 +207,7 @@ const dns = require('dns').promises;
           [
             yearNum, monthNum, monthName, fechaInicio, fechaFin,
             totalIngresos, totalGastos, balance,
-            'Cierre automático por el sistema', adminName,
+            'Cierre automático por el sistema', adminId,
           ]
         );
 

@@ -3,7 +3,11 @@ import { AuthProvider, useAuth } from './features/auth/contexts/AuthContext';
 import { DataProvider } from './contexts/DataContext';
 import { Login } from './features/auth/pages/Login';
 import { ForgotPassword } from './features/auth/pages/ForgotPassword';
-import { AdminOverview, AdminTransactions, AdminMembers, AdminReports, AdminClubData, AdminMonthlyPayments, AdminCartera, AdminSystem } from './pages/admin';
+import {
+  AdminOverview, AdminTransactions, AdminMembers, AdminReports, AdminClubData,
+  AdminMonthlyPayments, AdminCartera, AdminSystem, AdminCategories, AdminJersey,
+  AdminProveedores, AdminCompras, AdminInventario, AdminAsistencia,
+} from './pages/admin';
 import { AdminLayout, AdminPage as AdminPageType } from './features/admin/components/AdminLayout';
 import { AppPage } from './types/index';
 
@@ -21,8 +25,9 @@ function AppContent() {
 
   const handleAdminNavigate = (pageOrTab: string) => {
     const validPages: AdminPage[] = [
-      'overview', 'transactions', 'members', 'reports',
-      'club-data', 'system', 'monthly-payments', 'cartera'
+      'overview', 'transactions', 'members', 'reports', 'categories',
+      'club-data', 'system', 'monthly-payments', 'cartera', 'jersey',
+      'proveedores', 'compras', 'inventario', 'asistencia',
     ];
 
     if (validPages.includes(pageOrTab as AdminPage)) {
@@ -35,9 +40,15 @@ function AppContent() {
       transactions:      'transactions',
       members:           'members',
       reports:           'reports',
+      categories:        'categories',
       data:              'club-data',
       'monthly-payments':'monthly-payments',
       cartera:           'cartera',
+      jersey:            'jersey',
+      proveedores:       'proveedores',
+      compras:           'compras',
+      inventario:        'inventario',
+      asistencia:        'asistencia',
     };
 
     const page = tabToPage[pageOrTab];
@@ -55,10 +66,16 @@ function AppContent() {
           case 'transactions':     return <AdminTransactions    onNavigate={handleAdminNavigate} />;
           case 'members':          return <AdminMembers         onNavigate={handleAdminNavigate} />;
           case 'reports':          return <AdminReports         onNavigate={handleAdminNavigate} />;
+          case 'categories':       return <AdminCategories      onNavigate={handleAdminNavigate} />;
           case 'club-data':        return <AdminClubData        onNavigate={handleAdminNavigate} />;
           case 'system':           return <AdminSystem          onNavigate={handleAdminNavigate} />;
           case 'monthly-payments': return <AdminMonthlyPayments onNavigate={handleAdminNavigate} />;
           case 'cartera':          return <AdminCartera         onNavigate={handleAdminNavigate} />;
+          case 'jersey':           return <AdminJersey          onNavigate={handleAdminNavigate} />;
+          case 'proveedores':      return <AdminProveedores     onNavigate={handleAdminNavigate} />;
+          case 'compras':          return <AdminCompras         onNavigate={handleAdminNavigate} />;
+          case 'inventario':       return <AdminInventario      onNavigate={handleAdminNavigate} />;
+          case 'asistencia':       return <AdminAsistencia      onNavigate={handleAdminNavigate} />;
         }
       };
 

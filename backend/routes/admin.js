@@ -95,14 +95,14 @@ router.post('/cierre-mensual', requireAdmin, async (req, res) => {
 
     // Cálculo seguro del último día real en UTC
     const ultimoDiaReal = new Date(Date.UTC(year, month, 0)).getUTCDate();
-    
+
     const fechaInicio = `${year}-${String(month).padStart(2, '0')}-01`;
     const fechaFin    = `${year}-${String(month).padStart(2, '0')}-${String(ultimoDiaReal).padStart(2, '0')}`;
-    const cerradoPor  = req.user?.username || req.user?.full_name || 'admin';
+    const cerradoPorId = req.user?.id || null;
 
     const periodoResult = await pool.query(
-      `INSERT INTO periodos 
-         (anio, mes, nombre_mes, fecha_inicio, fecha_fin, activo, cerrado, fecha_cierre, 
+      `INSERT INTO meses_periodo
+         (anio, mes, nombre_mes, fecha_inicio, fecha_fin, activo, cerrado, fecha_cierre,
           total_ingresos, total_gastos, balance, observaciones, cerrado_by)
        VALUES ($1, $2, $3, $4, $5, false, true, NOW(), $6, $7, $8, $9, $10)
        ON CONFLICT (anio, mes) DO UPDATE SET
@@ -114,7 +114,7 @@ router.post('/cierre-mensual', requireAdmin, async (req, res) => {
          observaciones = EXCLUDED.observaciones,
          cerrado_by = EXCLUDED.cerrado_by
        RETURNING *`,
-      [year, month, MONTH_NAMES[month - 1], fechaInicio, fechaFin, ingresos, gastos, balance, observaciones || 'Cierre manual desde panel de reportes', cerradoPor]
+      [year, month, MONTH_NAMES[month - 1], fechaInicio, fechaFin, ingresos, gastos, balance, observaciones || 'Cierre manual desde panel de reportes', cerradoPorId]
     );
 
     const transaccionesResult = await pool.query(
@@ -144,7 +144,12 @@ router.post('/cierre-mensual', requireAdmin, async (req, res) => {
 
 router.get('/periodos', requireAdmin, async (req, res) => {
   try {
-    const result = await pool.query('SELECT * FROM periodos ORDER BY anio DESC, mes DESC');
+    const result = await pool.query(
+      `SELECT mp.*, u.username AS cerrado_by_username
+       FROM meses_periodo mp
+       LEFT JOIN users u ON u.id = mp.cerrado_by
+       ORDER BY mp.anio DESC, mp.mes DESC`
+    );
     res.json({ success: true, data: result.rows });
   } catch (err) {
     res.status(500).json({ success: false, error: 'Error al obtener periodos' });
@@ -157,7 +162,13 @@ router.get('/periodos/:id/exportar-excel', requireAdmin, async (req, res) => {
     const { id } = req.params;
 
     // 1. Validar existencia del periodo contable
-    const periodoQuery = await pool.query('SELECT * FROM periodos WHERE id = $1', [id]);
+    const periodoQuery = await pool.query(
+      `SELECT mp.*, u.username AS cerrado_by_username
+       FROM meses_periodo mp
+       LEFT JOIN users u ON u.id = mp.cerrado_by
+       WHERE mp.id_periodo = $1`,
+      [id]
+    );
     if (periodoQuery.rows.length === 0) {
       return res.status(404).json({ success: false, error: 'Período no encontrado' });
     }
@@ -165,10 +176,12 @@ router.get('/periodos/:id/exportar-excel', requireAdmin, async (req, res) => {
 
     // 2. Extraer el histórico de transacciones cruzando mes y año
     const txQuery = await pool.query(
-      `SELECT fecha, tipo, monto, categoria, metodo_pago, creado_por, descripcion 
-       FROM transactions 
-       WHERE EXTRACT(MONTH FROM fecha) = $1 AND EXTRACT(YEAR FROM fecha) = $2 
-       ORDER BY fecha ASC`,
+      `SELECT t.fecha, t.tipo, t.monto, c.name AS categoria, t.metodo_pago, u.username AS creado_por, t.descripcion
+       FROM transactions t
+       LEFT JOIN categories c ON c.id = t.categoria_id
+       LEFT JOIN users u ON u.id = t.created_by
+       WHERE EXTRACT(MONTH FROM t.fecha) = $1 AND EXTRACT(YEAR FROM t.fecha) = $2
+       ORDER BY t.fecha ASC`,
       [p.mes, p.anio]
     );
 
@@ -184,7 +197,7 @@ router.get('/periodos/:id/exportar-excel', requireAdmin, async (req, res) => {
     resumenSheet.appendRow(['Total Gastos', Number(p.total_gastos)]);
     resumenSheet.appendRow(['Balance Neto', Number(p.balance)]);
     resumenSheet.appendRow([]);
-    resumenSheet.appendRow(['Cerrado por', p.cerrado_by || 'Sistema']);
+    resumenSheet.appendRow(['Cerrado por', p.cerrado_by_username || 'Sistema']);
     resumenSheet.appendRow(['Fecha Cierre', p.fecha_cierre]);
     resumenSheet.appendRow(['Observaciones', p.observaciones || '']);
 

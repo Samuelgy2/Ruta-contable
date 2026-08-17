@@ -13,5 +13,9 @@ export { AdminSystem } from './AdminSystem';
 export { AdminMonthlyPayments } from './AdminMonthlyPayments';
 export { AdminCartera } from './AdminCartera';
 export { AdminJersey } from './AdminJersey';
+export { AdminProveedores } from './AdminProveedores';
+export { AdminCompras } from './AdminCompras';
+export { AdminInventario } from './AdminInventario';
+export { AdminAsistencia } from './AdminAsistencia';
 
 

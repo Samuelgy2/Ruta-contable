@@ -1,0 +1,19 @@
+{
+  "nodes": [
+    {
+      "id": "frontend_public_favicon_icon",
+      "label": "Favicon: Riders BMX Club Logo",
+      "file_type": "image",
+      "source_file": "C:\\Users\\ne\\Desktop\\Ruta contable\\frontend\\public\\favicon.png",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    }
+  ],
+  "edges": [],
+  "hyperedges": [],
+  "input_tokens": 0,
+  "output_tokens": 0
+}

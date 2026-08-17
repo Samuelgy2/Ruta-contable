@@ -134,9 +134,9 @@ interface DBTransaction {
   monto: string;
   fecha: string;
   descripcion: string | null;
-  categoria: string | null;
+  categoria_nombre: string | null;
   metodo_pago: string | null;
-  creado_por: string | null;
+  creado_por_username: string | null;
   created_at: string;
 }
 
@@ -219,7 +219,7 @@ export function AdminTransactions({ onNavigate }: AdminTransactionsProps) {
     })
     .filter(t =>
       (t.descripcion ?? '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (t.categoria   ?? '').toLowerCase().includes(searchTerm.toLowerCase())
+      (t.categoria_nombre ?? '').toLowerCase().includes(searchTerm.toLowerCase())
     )
     .filter(t => {
       // RF-017: consultar transacciones por rango de fechas (dd/mm/aaaa)
@@ -589,7 +589,7 @@ export function AdminTransactions({ onNavigate }: AdminTransactionsProps) {
                           backgroundColor: '#eff6ff', color: '#1d4ed8',
                           fontWeight: '500', fontSize: '13px',
                         }}>
-                          {t.categoria ?? '—'}
+                          {t.categoria_nombre ?? '—'}
                         </span>
                       </td>
                       <td style={{
@@ -611,7 +611,7 @@ export function AdminTransactions({ onNavigate }: AdminTransactionsProps) {
                         </span>
                       </td>
                       <td style={{ padding: '14px 16px', color: '#6b7280', fontSize: '13px' }}>
-                        {t.creado_por ?? '—'}
+                        {t.creado_por_username ?? '—'}
                       </td>
                     </tr>
                   ))
