@@ -12,6 +12,7 @@ interface Socio {
   fecha_nacimiento: string;
   fecha_ingreso: string;
   tipo_membresia: string;
+  nivel_aprendizaje: string | null;
   estado: 'activo' | 'inactivo' | 'suspendido';
   foto: string | null;
   observaciones: string | null;

@@ -30,6 +30,10 @@ const dns = require('dns').promises;
   const inventarioRoutes   = require('./routes/inventario');
   const carteraRoutes      = require('./routes/cartera');
   const asistenciaRoutes   = require('./routes/asistencia');
+  const periodoRoutes      = require('./routes/periodos');
+  const pagoMensualRoutes  = require('./routes/pagosMensuales');
+  const categoryRoutes     = require('./routes/categories');
+  const clubDataRoutes     = require('./routes/clubData');
 
   const app  = express();
   const port = process.env.PORT || 3001;
@@ -60,6 +64,10 @@ const dns = require('dns').promises;
   app.use('/api/inventario',   inventarioRoutes);
   app.use('/api/cartera',      carteraRoutes);
   app.use('/api/asistencia',   asistenciaRoutes);
+  app.use('/api/periodos',        periodoRoutes);
+  app.use('/api/pagos-mensuales', pagoMensualRoutes);
+  app.use('/api/categories',      categoryRoutes);
+  app.use('/api/club-data',       clubDataRoutes);
   app.get('/health', (_req, res) => res.json({ status: 'OK', message: 'Servidor funcionando' }));
 
   // ─── Setup DB ─────────────────────────────────────────────────────────
@@ -113,7 +121,8 @@ const dns = require('dns').promises;
         direccion        TEXT,
         fecha_nacimiento DATE,
         fecha_ingreso    DATE NOT NULL,
-        tipo_membresia   VARCHAR(50)  DEFAULT 'Básica',
+        tipo_membresia   VARCHAR(50)  DEFAULT 'Media',
+        nivel_aprendizaje VARCHAR(50),
         estado           VARCHAR(20)  DEFAULT 'activo',
         foto             TEXT,
         observaciones    TEXT,

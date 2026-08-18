@@ -13,6 +13,7 @@ interface Socio {
   fecha_nacimiento: string;
   fecha_ingreso: string;
   tipo_membresia: string;
+  nivel_aprendizaje: string | null;
   estado: 'activo' | 'inactivo' | 'suspendido';
   foto: string | null;
   observaciones: string | null;
@@ -189,7 +190,8 @@ const emptyForm = {
   direccion:        '',
   fecha_nacimiento: '',
   fecha_ingreso:    new Date().toISOString().split('T')[0],
-  tipo_membresia:   'Básica' as 'Básica' | 'Premium' | 'Completa' | 'Honoraria',
+  tipo_membresia:   'Media' as 'Media' | 'Completa' | 'Beca',
+  nivel_aprendizaje: '' as '' | 'Iniciación' | 'Rider School' | 'Club',
   estado:           'activo' as 'activo' | 'inactivo' | 'suspendido',
   observaciones:    '',
 };
@@ -230,7 +232,8 @@ export function AdminMembers({ onNavigate }: AdminMembersProps) {
       direccion:        socio.direccion ?? '',
       fecha_nacimiento: socio.fecha_nacimiento ? socio.fecha_nacimiento.split('T')[0] : '',
       fecha_ingreso:    socio.fecha_ingreso ? socio.fecha_ingreso.split('T')[0] : '',
-      tipo_membresia:   (socio.tipo_membresia as FormState['tipo_membresia']) ?? 'Básica',
+      tipo_membresia:   (socio.tipo_membresia as FormState['tipo_membresia']) ?? 'Media',
+      nivel_aprendizaje: (socio.nivel_aprendizaje as FormState['nivel_aprendizaje']) ?? '',
       estado:           socio.estado ?? 'activo',
       observaciones:    socio.observaciones ?? '',
     });
@@ -265,11 +268,12 @@ export function AdminMembers({ onNavigate }: AdminMembersProps) {
     }
     setSubmitting(true);
     try {
+      const payload = { ...form, nivel_aprendizaje: form.nivel_aprendizaje || null };
       if (editingId !== null) {
-        const result = await updateSocio(editingId, form);
+        const result = await updateSocio(editingId, payload);
         showToast(result.message, result.success ? 'success' : 'error');
       } else {
-        const result = await createSocio(form);
+        const result = await createSocio(payload);
         showToast(result.message, result.success ? 'success' : 'error');
       }
       closeForm();
@@ -436,10 +440,22 @@ export function AdminMembers({ onNavigate }: AdminMembersProps) {
                   onChange={e => setForm({ ...form, tipo_membresia: e.target.value as FormState['tipo_membresia'] })}
                   style={inputStyle}
                 >
-                  <option value="Básica">Básica</option>
-                  <option value="Premium">Premium</option>
+                  <option value="Media">Media</option>
                   <option value="Completa">Completa</option>
-                  <option value="Honoraria">Honoraria</option>
+                  <option value="Beca">Beca</option>
+                </select>
+              )}
+
+              {f('Nivel de Aprendizaje',
+                <select
+                  value={form.nivel_aprendizaje}
+                  onChange={e => setForm({ ...form, nivel_aprendizaje: e.target.value as FormState['nivel_aprendizaje'] })}
+                  style={inputStyle}
+                >
+                  <option value="">Sin asignar</option>
+                  <option value="Iniciación">Iniciación</option>
+                  <option value="Rider School">Rider School</option>
+                  <option value="Club">Club</option>
                 </select>
               )}
 
@@ -554,11 +570,11 @@ export function AdminMembers({ onNavigate }: AdminMembersProps) {
           <table style={{ width: '100%', borderCollapse: 'collapse' }}>
             <thead>
               <tr style={{ backgroundColor: '#f9fafb', borderBottom: '2px solid #e5e7eb' }}>
-                {['Documento', 'Nombre', 'Email', 'Teléfono', 'Membresía', 'Estado', ''].map((h, i) => (
+                {['Documento', 'Nombre', 'Email', 'Teléfono', 'Membresía', 'Nivel', 'Estado', ''].map((h, i) => (
                   <th
                     key={i}
                     style={{
-                      textAlign: i === 6 ? 'right' : 'left',
+                      textAlign: i === 7 ? 'right' : 'left',
                       padding: '14px 16px', color: '#6b7280',
                       fontWeight: '600', fontSize: '13px', whiteSpace: 'nowrap',
                     }}
@@ -569,14 +585,14 @@ export function AdminMembers({ onNavigate }: AdminMembersProps) {
             <tbody>
               {loading ? (
                 <tr>
-                  <td colSpan={7} style={{ textAlign: 'center', padding: '48px', color: '#9ca3af' }}>
+                  <td colSpan={8} style={{ textAlign: 'center', padding: '48px', color: '#9ca3af' }}>
                     <div style={{ fontSize: '24px' }}>⏳</div>
                     <p style={{ margin: '8px 0 0', fontSize: '14px' }}>Cargando socios...</p>
                   </td>
                 </tr>
               ) : socios.length === 0 ? (
                 <tr>
-                  <td colSpan={7} style={{ textAlign: 'center', padding: '48px', color: '#9ca3af', fontSize: '15px' }}>
+                  <td colSpan={8} style={{ textAlign: 'center', padding: '48px', color: '#9ca3af', fontSize: '15px' }}>
                     No hay socios que mostrar
                   </td>
                 </tr>
@@ -610,6 +626,15 @@ export function AdminMembers({ onNavigate }: AdminMembersProps) {
                         fontWeight: '500', fontSize: '13px',
                       }}>
                         {socio.tipo_membresia || '—'}
+                      </span>
+                    </td>
+                    <td style={{ padding: '14px 16px' }}>
+                      <span style={{
+                        padding: '3px 10px', borderRadius: '6px',
+                        backgroundColor: '#f5f3ff', color: '#6d28d9',
+                        fontWeight: '500', fontSize: '13px',
+                      }}>
+                        {socio.nivel_aprendizaje || '—'}
                       </span>
                     </td>
                     <td style={{ padding: '14px 16px' }}>

@@ -1,6 +1,7 @@
 // src/hooks/useAlerts.ts
-import { useMemo } from 'react';
-import { useData } from '../contexts/DataContext';
+import { useEffect, useMemo, useState } from 'react';
+import { pagoMensualService } from '../services/pagoMensualService';
+import { PagoMensualItem } from './usePagosMensuales';
 
 export type AlertSeverity = 'danger' | 'warning';
 
@@ -13,45 +14,63 @@ export interface Alert {
 }
 
 /**
- * Calcula alertas de pagos pendientes y vencidos
- * directamente desde el DataContext (fees + members).
+ * Calcula alertas de pagos pendientes y vencidos (RF-025)
+ * directamente desde pago_mensual (pendiente / moroso).
  */
 export function useAlerts(): { alerts: Alert[]; total: number; dangers: number; warnings: number } {
-  const { fees, members } = useData();
+  const [pagos, setPagos] = useState<PagoMensualItem[]>([]);
+
+  useEffect(() => {
+    let active = true;
+    (async () => {
+      try {
+        const [pendientes, morosos] = await Promise.all([
+          pagoMensualService.getAll({ estado: 'pendiente' }),
+          pagoMensualService.getAll({ estado: 'moroso' }),
+        ]);
+        if (!active) return;
+        const data = [
+          ...(pendientes.success ? pendientes.data || [] : []),
+          ...(morosos.success ? morosos.data || [] : []),
+        ];
+        setPagos(data);
+      } catch {
+        if (active) setPagos([]);
+      }
+    })();
+    return () => { active = false; };
+  }, []);
 
   const alerts = useMemo<Alert[]>(() => {
     const result: Alert[] = [];
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
-    fees.forEach(fee => {
-      const member = members.find(m => m.id === fee.memberId);
-      const name   = member?.name ?? `Socio #${fee.memberId}`;
+    pagos.forEach(pago => {
+      const name = pago.socio_nombre ?? `Socio #${pago.id_socio}`;
 
-      if (fee.status === 'overdue') {
-        const due  = new Date(fee.dueDate);
-        const days = Math.floor((today.getTime() - due.getTime()) / (1000 * 60 * 60 * 24));
+      if (pago.estado === 'moroso') {
+        const dias = pago.dias_mora || Math.floor((today.getTime() - new Date(pago.fecha_vencimiento).getTime()) / (1000 * 60 * 60 * 24));
         result.push({
-          id:       `overdue-${fee.id}`,
+          id:       `moroso-${pago.id_pago}`,
           severity: 'danger',
           title:    'Pago vencido',
-          message:  `${name} lleva ${days} día${days !== 1 ? 's' : ''} con cuota vencida`,
-          memberId: fee.memberId,
+          message:  `${name} lleva ${dias} día${dias !== 1 ? 's' : ''} con cuota vencida`,
+          memberId: String(pago.id_socio),
         });
-      } else if (fee.status === 'pending') {
-        const due        = new Date(fee.dueDate);
-        const daysLeft   = Math.floor((due.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
-        const isUrgent   = daysLeft <= 3;
+      } else if (pago.estado === 'pendiente') {
+        const due      = new Date(pago.fecha_vencimiento);
+        const daysLeft = Math.floor((due.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
         result.push({
-          id:       `pending-${fee.id}`,
-          severity: isUrgent ? 'warning' : 'warning',
+          id:       `pendiente-${pago.id_pago}`,
+          severity: 'warning',
           title:    'Pago pendiente',
           message:  daysLeft < 0
             ? `${name} tiene cuota pendiente vencida`
             : daysLeft === 0
               ? `${name} tiene cuota que vence hoy`
               : `${name} tiene cuota que vence en ${daysLeft} día${daysLeft !== 1 ? 's' : ''}`,
-          memberId: fee.memberId,
+          memberId: String(pago.id_socio),
         });
       }
     });
@@ -62,7 +81,7 @@ export function useAlerts(): { alerts: Alert[]; total: number; dangers: number; 
       if (b.severity === 'danger' && a.severity !== 'danger') return  1;
       return 0;
     });
-  }, [fees, members]);
+  }, [pagos]);
 
   return {
     alerts,

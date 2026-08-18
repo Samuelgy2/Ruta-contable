@@ -45,7 +45,7 @@ async function create(req, res) {
       nombre, documento, tipo_documento = 'CC',
       email, telefono, direccion,
       fecha_nacimiento, fecha_ingreso,
-      tipo_membresia = 'Básica', estado = 'activo',
+      tipo_membresia = 'Media', nivel_aprendizaje, estado = 'activo',
       foto, observaciones,
     } = req.body;
 
@@ -69,15 +69,15 @@ async function create(req, res) {
     const result = await pool.query(
       `INSERT INTO socio
         (nombre, documento, tipo_documento, email, telefono, direccion,
-         fecha_nacimiento, fecha_ingreso, tipo_membresia, estado,
+         fecha_nacimiento, fecha_ingreso, tipo_membresia, nivel_aprendizaje, estado,
          foto, observaciones, created_by)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14)
        RETURNING *`,
       [
         nombre, documento, tipo_documento,
         email || null, telefono || null, direccion || null,
         fecha_nacimiento || null, fecha_ingreso,
-        tipo_membresia, estado,
+        tipo_membresia, nivel_aprendizaje || null, estado,
         foto || null, observaciones || null,
         req.user.id,
       ]
@@ -102,7 +102,7 @@ async function update(req, res) {
       nombre, documento, tipo_documento,
       email, telefono, direccion,
       fecha_nacimiento, fecha_ingreso,
-      tipo_membresia, estado, foto, observaciones,
+      tipo_membresia, nivel_aprendizaje, estado, foto, observaciones,
     } = req.body;
 
     const exists = await pool.query(
@@ -136,17 +136,18 @@ async function update(req, res) {
         fecha_nacimiento = COALESCE($7,  fecha_nacimiento),
         fecha_ingreso    = COALESCE($8,  fecha_ingreso),
         tipo_membresia   = COALESCE($9,  tipo_membresia),
-        estado           = COALESCE($10, estado),
-        foto             = COALESCE($11, foto),
-        observaciones    = COALESCE($12, observaciones),
+        nivel_aprendizaje = COALESCE($10, nivel_aprendizaje),
+        estado           = COALESCE($11, estado),
+        foto             = COALESCE($12, foto),
+        observaciones    = COALESCE($13, observaciones),
         updated_at       = CURRENT_TIMESTAMP
-       WHERE id_socio = $13
+       WHERE id_socio = $14
        RETURNING *`,
       [
         nombre, documento, tipo_documento,
         email, telefono, direccion,
         fecha_nacimiento, fecha_ingreso,
-        tipo_membresia, estado, foto, observaciones,
+        tipo_membresia, nivel_aprendizaje, estado, foto, observaciones,
         id,
       ]
     );

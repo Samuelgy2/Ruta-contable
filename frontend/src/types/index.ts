@@ -6,7 +6,8 @@
 
 export type UserRole = 'user' | 'admin' | 'tesorero' | 'secretario' | 'entrenador';
 export type DocumentType = 'CC' | 'TI' | 'CE' | 'PAS';
-export type MembershipType = 'Completa' | 'Básica' | 'Premium' | 'Honoraria';
+export type MembershipType = 'Completa' | 'Media' | 'Beca';
+export type NivelAprendizaje = 'Iniciación' | 'Rider School' | 'Club';
 export type MemberStatus = 'activo' | 'inactivo' | 'suspendido';
 export type TransactionType = 'income' | 'expense';
 export type PaymentMethod = 'efectivo' | 'transferencia' | 'tarjeta' | 'cheque';
@@ -52,6 +53,7 @@ export interface Member {
   fechaNacimiento?: string;
   joinDate: string;
   membershipType: string;
+  nivelAprendizaje?: NivelAprendizaje | null;
   estado: MemberStatus;
   foto?: string;
   observaciones?: string;
