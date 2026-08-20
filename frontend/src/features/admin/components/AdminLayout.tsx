@@ -23,7 +23,7 @@ const adminMenuItems = [
   { id: 'reports',          label: 'Reportes',         icon: FileText,      section: 'socios'  },
   { id: 'categories',       label: 'Categorías',       icon: Folder,        section: 'socios'  },
   { id: 'club-data',        label: 'Datos del Club',   icon: Building2,     section: 'datos'   },
-  { id: 'system',           label: 'Sistema',          icon: Settings,      section: 'datos'   },
+  { id: 'system',           label: 'Configuración del Sistema', icon: Settings,      section: 'datos'   },
   { id: 'monthly-payments', label: 'Mensualidades',    icon: CreditCard,    section: 'gestión' },
   { id: 'cartera',          label: 'Cartera',          icon: Wallet,        section: 'gestión' },
   { id: 'proveedores',      label: 'Proveedores',      icon: Building2,     section: 'gestión' },
