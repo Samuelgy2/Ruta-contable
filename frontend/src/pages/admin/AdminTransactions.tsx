@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useEffect } from 'react';
-import { useData } from '../../contexts/DataContext';
+import { useCategories } from '../../hooks/useCategories';
 import { formatCurrency, formatDateShort } from '../../utils/format';
 
 interface AdminTransactionsProps {
@@ -119,7 +119,7 @@ function Modal({ children, onClose }: { children: React.ReactNode; onClose: () =
 const emptyForm = {
   type:        'income' as 'income' | 'expense',
   amount:      '',
-  category:    '',
+  categoryId:  '',
   description: '',
   date:        new Date().toISOString().split('T')[0],
   metodoPago:  'efectivo' as 'efectivo' | 'transferencia' | 'tarjeta' | 'cheque',
@@ -157,7 +157,7 @@ function parseFechaInput(value: string): string | null {
 
 // ─── Componente principal ─────────────────────────────────────────────────────
 export function AdminTransactions({ onNavigate }: AdminTransactionsProps) {
-  const { categories } = useData();
+  const { categories } = useCategories();
   const [transactions, setTransactions] = useState<DBTransaction[]>([]);
   const [loading,      setLoading]      = useState(true);
   const [searchTerm,   setSearchTerm]   = useState('');
@@ -231,14 +231,12 @@ export function AdminTransactions({ onNavigate }: AdminTransactionsProps) {
       return true;
     });
 
-  const availableCategories = categories
-    .filter(c => c.active && c.type === form.type)
-    .map(c => c.name);
+  const availableCategories = categories.filter(c => c.active && c.type === form.type);
 
   // ── Submit → POST /api/transactions ────────────────────────────────────────
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    if (!form.amount || !form.category || !form.description) {
+    if (!form.amount || !form.categoryId || !form.description) {
       showToast('Monto, categoría y descripción son obligatorios', 'error');
       return;
     }
@@ -253,7 +251,7 @@ export function AdminTransactions({ onNavigate }: AdminTransactionsProps) {
         body: JSON.stringify({
           tipo:        form.type,
           monto:       parseFloat(form.amount),
-          categoria:   form.category,
+          categoriaId: Number(form.categoryId),
           descripcion: form.description,
           fecha:       form.date,
           metodoPago:  form.metodoPago,
@@ -325,7 +323,7 @@ export function AdminTransactions({ onNavigate }: AdminTransactionsProps) {
               {f('Tipo', (
                 <select
                   value={form.type}
-                  onChange={e => setForm({ ...form, type: e.target.value as FormState['type'], category: '' })}
+                  onChange={e => setForm({ ...form, type: e.target.value as FormState['type'], categoryId: '' })}
                   style={inputStyle}
                 >
                   <option value="income">Ingreso</option>
@@ -347,14 +345,14 @@ export function AdminTransactions({ onNavigate }: AdminTransactionsProps) {
 
               {f('Categoría', (
                 <select
-                  value={form.category}
-                  onChange={e => setForm({ ...form, category: e.target.value })}
+                  value={form.categoryId}
+                  onChange={e => setForm({ ...form, categoryId: e.target.value })}
                   style={inputStyle}
                   required
                 >
                   <option value="">Seleccionar...</option>
                   {availableCategories.map(cat => (
-                    <option key={cat} value={cat}>{cat}</option>
+                    <option key={cat.id} value={cat.id}>{cat.name}</option>
                   ))}
                 </select>
               ), true)}
