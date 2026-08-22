@@ -6,7 +6,6 @@ export { AdminTransactions } from './AdminTransactions';
 export { AdminMembers } from './AdminMembers';
 export { AdminReports } from './AdminReports';
 export { AdminCategories } from './AdminCategories';
-export { AdminClubData } from './AdminClubData';
 export { AdminSystem } from './AdminSystem';
 
 // New modules

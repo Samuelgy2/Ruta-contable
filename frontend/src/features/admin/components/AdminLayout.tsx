@@ -13,7 +13,7 @@ const CLUB_GREEN = '#10b981';
 
 export type AdminPage =
   | 'overview' | 'transactions' | 'members' | 'reports' | 'categories'
-  | 'club-data' | 'system' |'monthly-payments' | 'cartera' | 'jersey'
+  | 'system' | 'monthly-payments' | 'cartera' | 'jersey'
   | 'proveedores' | 'compras' | 'inventario' | 'asistencia'
 
 const adminMenuItems = [
@@ -22,8 +22,7 @@ const adminMenuItems = [
   { id: 'members',          label: 'Socios',           icon: Folder,        section: 'socios'  },
   { id: 'reports',          label: 'Reportes',         icon: FileText,      section: 'socios'  },
   { id: 'categories',       label: 'Categorías',       icon: Folder,        section: 'socios'  },
-  { id: 'club-data',        label: 'Datos del Club',   icon: Building2,     section: 'datos'   },
-  { id: 'system',           label: 'Configuración del Sistema', icon: Settings,      section: 'datos'   },
+  { id: 'system',           label: 'Configuración del Sistema',    icon: Settings,      section: 'sistema' },
   { id: 'monthly-payments', label: 'Mensualidades',    icon: CreditCard,    section: 'gestión' },
   { id: 'cartera',          label: 'Cartera',          icon: Wallet,        section: 'gestión' },
   { id: 'proveedores',      label: 'Proveedores',      icon: Building2,     section: 'gestión' },
@@ -36,7 +35,7 @@ const adminMenuItems = [
 const menuSections = {
   resumen: { title: 'RESUMEN',        items: adminMenuItems.filter(i => i.section === 'resumen') },
   socios:  { title: 'SOCIOS',         items: adminMenuItems.filter(i => i.section === 'socios')  },
-  datos:   { title: 'DATOS DEL CLUB', items: adminMenuItems.filter(i => i.section === 'datos')   },
+  sistema: { title: 'SISTEMA',       items: adminMenuItems.filter(i => i.section === 'sistema')   },
   gestión: { title: 'GESTIÓN',        items: adminMenuItems.filter(i => i.section === 'gestión') },
 };
 

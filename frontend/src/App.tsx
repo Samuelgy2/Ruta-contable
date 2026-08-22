@@ -4,10 +4,11 @@ import { DataProvider } from './contexts/DataContext';
 import { Login } from './features/auth/pages/Login';
 import { ForgotPassword } from './features/auth/pages/ForgotPassword';
 import {
-  AdminOverview, AdminTransactions, AdminMembers, AdminReports, AdminClubData,
+  AdminOverview, AdminTransactions, AdminMembers, AdminReports,
   AdminMonthlyPayments, AdminCartera, AdminSystem, AdminCategories, AdminJersey,
   AdminProveedores, AdminCompras, AdminInventario, AdminAsistencia,
 } from './pages/admin';
+import { SystemTab } from './pages/admin/AdminSystem';
 import { AdminLayout, AdminPage as AdminPageType } from './features/admin/components/AdminLayout';
 import { AppPage } from './types/index';
 
@@ -18,15 +19,30 @@ function AppContent() {
   const { isAuthenticated, currentUser } = useAuth();
   const [currentPage,      setCurrentPage]      = useState<Page>('home');
   const [currentAdminPage, setCurrentAdminPage] = useState<AdminPage>('overview');
+  const [systemTab,        setSystemTab]        = useState<SystemTab>('club-data');
 
   const handleNavigate = (page: Page) => {
     setCurrentPage(page);
   };
 
   const handleAdminNavigate = (pageOrTab: string) => {
+    // Los antiguos módulos "Datos del Club" y "Usuarios" ahora son pestañas
+    // dentro de Configuración del Sistema; se conservan sus alias de navegación.
+    const systemAliases: Record<string, SystemTab> = {
+      'club-data': 'club-data',
+      data:        'club-data',
+      users:       'users',
+    };
+
+    if (pageOrTab in systemAliases) {
+      setSystemTab(systemAliases[pageOrTab]);
+      setCurrentAdminPage('system');
+      return;
+    }
+
     const validPages: AdminPage[] = [
       'overview', 'transactions', 'members', 'reports', 'categories',
-      'club-data', 'system', 'monthly-payments', 'cartera', 'jersey',
+      'system', 'monthly-payments', 'cartera', 'jersey',
       'proveedores', 'compras', 'inventario', 'asistencia',
     ];
 
@@ -41,7 +57,6 @@ function AppContent() {
       members:           'members',
       reports:           'reports',
       categories:        'categories',
-      data:              'club-data',
       'monthly-payments':'monthly-payments',
       cartera:           'cartera',
       jersey:            'jersey',
@@ -67,8 +82,7 @@ function AppContent() {
           case 'members':          return <AdminMembers         onNavigate={handleAdminNavigate} />;
           case 'reports':          return <AdminReports         onNavigate={handleAdminNavigate} />;
           case 'categories':       return <AdminCategories      onNavigate={handleAdminNavigate} />;
-          case 'club-data':        return <AdminClubData        onNavigate={handleAdminNavigate} />;
-          case 'system':           return <AdminSystem          onNavigate={handleAdminNavigate} />;
+          case 'system':           return <AdminSystem          onNavigate={handleAdminNavigate} initialTab={systemTab} key={systemTab} />;
           case 'monthly-payments': return <AdminMonthlyPayments onNavigate={handleAdminNavigate} />;
           case 'cartera':          return <AdminCartera         onNavigate={handleAdminNavigate} />;
           case 'jersey':           return <AdminJersey          onNavigate={handleAdminNavigate} />;

@@ -5,5 +5,4 @@ export { AdminTransactions } from '../../pages/admin/AdminTransactions';
 export { AdminMembers } from '../../pages/admin/AdminMembers';
 export { AdminReports } from '../../pages/admin/AdminReports';
 export { AdminCategories } from '../../pages/admin/AdminCategories';
-export { AdminClubData } from '../../pages/admin/AdminClubData';
 export { AdminSystem } from '../../pages/admin/AdminSystem';
