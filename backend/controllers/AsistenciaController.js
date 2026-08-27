@@ -150,6 +150,75 @@ async function remove(req, res) {
   }
 }
 
+// POST /api/asistencia/checklist (checklist masiva: registra/actualiza asistencia de varios socios en una fecha)
+async function saveChecklist(req, res) {
+  const client = await pool.connect();
+  try {
+    const { fecha, tipoEntrenamiento, registros } = req.body;
+    const estadosValidos = ['Presente', 'Ausente', 'Justificado', 'Tarde'];
+
+    if (!fecha || isNaN(Date.parse(fecha))) {
+      return res.status(400).json({ success: false, message: 'Debe ingresar una fecha válida' });
+    }
+    if (!Array.isArray(registros) || registros.length === 0) {
+      return res.status(400).json({ success: false, message: 'Debe incluir al menos un registro de socio' });
+    }
+    for (const r of registros) {
+      if (!r.idSocio || !estadosValidos.includes(r.estado)) {
+        return res.status(400).json({
+          success: false,
+          message: "Cada registro debe tener idSocio y estado ('Presente', 'Ausente', 'Justificado' o 'Tarde')",
+        });
+      }
+    }
+
+    await client.query('BEGIN');
+
+    let creados = 0;
+    let actualizados = 0;
+
+    for (const r of registros) {
+      const existing = await client.query(
+        'SELECT id_asistencia FROM asistencia WHERE id_socio = $1 AND fecha = $2',
+        [r.idSocio, fecha]
+      );
+
+      if (existing.rows.length > 0) {
+        await client.query(
+          `UPDATE asistencia SET
+            estado             = $1,
+            tipo_entrenamiento = COALESCE($2, tipo_entrenamiento),
+            observacion        = COALESCE($3, observacion)
+           WHERE id_asistencia = $4`,
+          [r.estado, tipoEntrenamiento || null, r.observacion || null, existing.rows[0].id_asistencia]
+        );
+        actualizados++;
+      } else {
+        await client.query(
+          `INSERT INTO asistencia (id_socio, fecha, tipo_entrenamiento, estado, observacion, registrado_by)
+           VALUES ($1,$2,$3,$4,$5,$6)`,
+          [r.idSocio, fecha, tipoEntrenamiento || null, r.estado, r.observacion || null, req.user.id]
+        );
+        creados++;
+      }
+    }
+
+    await client.query('COMMIT');
+
+    res.status(201).json({
+      success: true,
+      message: `Checklist guardada: ${creados} registrada${creados !== 1 ? 's' : ''}, ${actualizados} actualizada${actualizados !== 1 ? 's' : ''}`,
+      data: { creados, actualizados },
+    });
+  } catch (error) {
+    await client.query('ROLLBACK');
+    console.error('Error saveChecklist asistencia:', error);
+    res.status(500).json({ success: false, message: 'Error al guardar checklist de asistencia' });
+  } finally {
+    client.release();
+  }
+}
+
 // GET /api/asistencia/alertas (RF-066: alertas por inasistencia acumulada/consecutiva)
 // Umbral configurable por query params; por defecto 3 consecutivas o 5 acumuladas
 // en los últimos 30 días.
@@ -273,4 +342,4 @@ async function exportarExcel(req, res) {
   }
 }
 
-module.exports = { getAll, getById, create, update, remove, getAlertas, exportarExcel };
+module.exports = { getAll, getById, create, update, remove, saveChecklist, getAlertas, exportarExcel };

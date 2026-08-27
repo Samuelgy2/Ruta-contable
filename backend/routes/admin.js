@@ -179,20 +179,23 @@ router.get('/periodos', requireAdmin, async (req, res) => {
 // ─── EXPORTAR REPORTE MENSUAL A EXCEL (.XLSX) ──────────────────────────────
 router.get('/periodos/:id/exportar-excel', requireAdmin, async (req, res) => {
   try {
-    const { id } = req.params;
-
-    // 1. Validar existencia del periodo contable
-    const periodoQuery = await pool.query(
-      `SELECT mp.*, u.username AS cerrado_by_username
-       FROM meses_periodo mp
-       LEFT JOIN users u ON u.id = mp.cerrado_by
-       WHERE mp.id_periodo = $1`,
-      [id]
-    );
-    if (periodoQuery.rows.length === 0) {
-      return res.status(404).json({ success: false, error: 'Período no encontrado' });
-    }
-    const p = periodoQuery.rows[0];
+        const { id } = req.params;
+    const periodoQuery = /^\d+$/.test(id)
+      ? await pool.query(
+          `SELECT mp.*, u.username AS cerrado_by_username
+           FROM meses_periodo mp
+           LEFT JOIN users u ON u.id = mp.cerrado_by
+           WHERE mp.id_periodo = $1`,
+          [id]
+        )
+      : await pool.query(
+          `SELECT mp.*, u.username AS cerrado_by_username
+           FROM meses_periodo mp
+           LEFT JOIN users u ON u.id = mp.cerrado_by
+           WHERE mp.cerrado = true
+           ORDER BY mp.fecha_cierre DESC
+           LIMIT 1`
+        );
 
     // 2. Extraer el histórico de transacciones cruzando mes y año
     const txQuery = await pool.query(

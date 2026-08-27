@@ -128,7 +128,7 @@ async function create(req, res) {
     if (!monto || isNaN(montoNum) || montoNum <= 0) {
       return res.status(400).json({
         success: false,
-        message: 'RN-001: El monto debe ser un valor numérico positivo mayor a cero.',
+        message: 'El monto debe ser un valor numérico positivo mayor a cero.',
       });
     }
 
