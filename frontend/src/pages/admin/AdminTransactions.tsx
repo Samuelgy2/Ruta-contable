@@ -1,6 +1,7 @@
 import React, { useState, useCallback, useEffect } from 'react';
 import { useCategories } from '../../hooks/useCategories';
 import { formatCurrency, formatDateShort } from '../../utils/format';
+import { emitDataChanged } from '../../lib/dataEvents';
 
 interface AdminTransactionsProps {
   onNavigate?: (tab: string) => void;
@@ -264,6 +265,9 @@ export function AdminTransactions({ onNavigate }: AdminTransactionsProps) {
       showToast('Transacción registrada correctamente', 'success');
       closeForm();
       void fetchTransactions(); // recargar tabla
+      // Esta vista no pasa por el cliente axios, así que avisa a mano al bus
+      // para que el resumen y las notificaciones se actualicen.
+      emitDataChanged('transactions');
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Error al guardar';
       showToast(msg, 'error');

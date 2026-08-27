@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { emitDataChanged, resourceFromUrl } from '../lib/dataEvents';
 
 const base = import.meta.env.VITE_API_URL || 'https://ruta-contable.onrender.com';
 const API_URL = base === '/api' ? '/api' : base.endsWith('/') ? `${base}api` : `${base}/api`;
@@ -22,9 +23,17 @@ api.interceptors.request.use(
   (error) => Promise.reject(error)
 );
 
-// Interceptor para manejar errores de autenticación
+// Interceptor para manejar errores de autenticación y avisar de mutaciones
 api.interceptors.response.use(
-  (response) => response,
+  (response) => {
+    // Toda escritura correcta notifica al bus para que las vistas derivadas
+    // (campana de notificaciones, resumen) se refresquen sin recargar.
+    const method = (response.config?.method || 'get').toLowerCase();
+    if (method !== 'get') {
+      emitDataChanged(resourceFromUrl(response.config?.url));
+    }
+    return response;
+  },
   (error) => {
     if (error.response?.status === 401) {
       // Token expirado o inválido

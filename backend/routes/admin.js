@@ -32,7 +32,24 @@ router.get('/overview', requireAdmin, async (req, res) => {
       rows: [{ monthlyIncome: 0, monthlyExpenses: 0, totalTransactions: 0 }]
     }));
 
+    // Cuotas (pago_mensual): pagadas vs pendientes.
+    // 'moroso' cuenta como pendiente porque sigue sin cobrarse; 'exento' y
+    // 'cancelado' quedan fuera de ambos totales.
+    const feeStats = await pool.query(`
+      SELECT
+        COUNT(*) FILTER (WHERE estado = 'pagado')                              AS "paidFees",
+        COUNT(*) FILTER (WHERE estado IN ('pendiente', 'moroso'))              AS "pendingFees",
+        COUNT(*) FILTER (WHERE estado = 'moroso')                              AS "overdueFees",
+        COALESCE(SUM(valor) FILTER (WHERE estado = 'pagado'), 0)               AS "paidFeesAmount",
+        COALESCE(SUM(valor) FILTER (WHERE estado IN ('pendiente', 'moroso')), 0) AS "pendingFeesAmount"
+      FROM pago_mensual
+    `).catch(() => ({
+      rows: [{ paidFees: 0, pendingFees: 0, overdueFees: 0, paidFeesAmount: 0, pendingFeesAmount: 0 }]
+    }));
+
     const currency = process.env.CURRENCY || 'COP';
+    const paidFeesAmount    = Number(feeStats.rows[0].paidFeesAmount);
+    const pendingFeesAmount = Number(feeStats.rows[0].pendingFeesAmount);
     const income   = Number(txStats.rows[0].monthlyIncome);
     const expenses = Number(txStats.rows[0].monthlyExpenses);
     const balance  = income - expenses;
@@ -50,8 +67,11 @@ router.get('/overview', requireAdmin, async (req, res) => {
           totalTransactions: Number(txStats.rows[0].totalTransactions),
           totalMembers:      Number(memberStats.rows[0].totalMembers),
           activeMembers:     Number(memberStats.rows[0].activeMembers),
-          paidFees:   0,
-          pendingFees: 0,
+          paidFees:    Number(feeStats.rows[0].paidFees),
+          pendingFees: Number(feeStats.rows[0].pendingFees),
+          overdueFees: Number(feeStats.rows[0].overdueFees),
+          paidFeesAmount:    { raw: paidFeesAmount,    formatted: formatCurrency(paidFeesAmount,    currency) },
+          pendingFeesAmount: { raw: pendingFeesAmount, formatted: formatCurrency(pendingFeesAmount, currency) },
         },
         system: {
           clubName:   process.env.CLUB_NAME   || 'Mi Club',

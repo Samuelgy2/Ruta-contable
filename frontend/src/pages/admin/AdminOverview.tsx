@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useCallback } from 'react';
+import { useAutoRefresh } from '../../hooks/useAutoRefresh';
 
 // ─── TIPOS ────────────────────────────────────────────────────────────────────
 
@@ -15,6 +16,9 @@ interface OverviewData {
     activeMembers:     number;
     paidFees:          number;
     pendingFees:       number;
+    overdueFees?:      number;
+    paidFeesAmount?:    { raw: number; formatted: string };
+    pendingFeesAmount?: { raw: number; formatted: string };
   };
   system: {
     clubName:   string;
@@ -35,16 +39,18 @@ interface AdminOverviewProps {
 
 // ─── HOOK PERSONALIZADO — capa de acceso al backend ───────────────────────────
 function useOverviewData() {
-  const [data,    setData]    = useState<OverviewData | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error,   setError]   = useState<string | null>(null);
+  const [data,       setData]       = useState<OverviewData | null>(null);
+  const [loading,    setLoading]    = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [error,      setError]      = useState<string | null>(null);
 
-  const fetchData = useCallback(async () => {
-    setLoading(true);
+  // `silent` evita el esqueleto de carga en los refrescos automáticos: la
+  // vista sigue mostrando los datos anteriores hasta que llegan los nuevos.
+  const fetchData = useCallback(async ({ silent = false }: { silent?: boolean } = {}) => {
+    if (silent) setRefreshing(true); else setLoading(true);
     setError(null);
     try {
       const token = localStorage.getItem('clubfinance_token');
-      console.log('Token:', token ? 'presente' : 'ausente');
 
       const apiUrl = import.meta.env.VITE_API_URL || '';
       const res = await fetch(`${apiUrl}/api/admin/overview`, {
@@ -65,13 +71,29 @@ function useOverviewData() {
       setError(err.message ?? 'Error desconocido');
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
   }, []);
 
-  useEffect(() => { fetchData(); }, [fetchData]);
+  useEffect(() => { void fetchData(); }, [fetchData]);
 
-  return { data, loading, error, refetch: fetchData };
-} 
+  const silentRefresh = useCallback(() => { void fetchData({ silent: true }); }, [fetchData]);
+
+  // El resumen depende de transacciones, socios y cuotas: cualquier cambio en
+  // esos módulos lo deja obsoleto, así que se recarga solo.
+  useAutoRefresh(silentRefresh, {
+    resources: ['transactions', 'pagos-mensuales', 'socios', 'members', 'cartera', 'periodos', 'club-data'],
+    pollMs:    60000,
+  });
+
+  return {
+    data,
+    loading,
+    refreshing,
+    error,
+    refetch: () => { void fetchData({ silent: Boolean(data) }); },
+  };
+}
 
 // ─── SUBCOMPONENTES ───────────────────────────────────────────────────────────
 
@@ -139,6 +161,11 @@ function StatCard({
   );
 }
 
+/** "12 · $240.000" — el importe solo aparece si el backend lo envía. */
+function formatFees(count: number, amount?: string): string {
+  return amount ? `${count} · ${amount}` : String(count);
+}
+
 function InfoRow({ label, value, highlight }: { label: string; value: string | number; highlight?: boolean }) {
   return (
     <div style={{
@@ -175,7 +202,8 @@ function SkeletonCard() {
 // ─── COMPONENTE PRINCIPAL ─────────────────────────────────────────────────────
 
 export function AdminOverview({ onNavigate, adminName = '' }: AdminOverviewProps) {
-  const { data, loading, error, refetch } = useOverviewData();
+  const { data, loading, refreshing, error, refetch } = useOverviewData();
+  const busy = loading || refreshing;
 
   const MONTH_NAMES = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
   const currentMonthName = MONTH_NAMES[new Date().getMonth()];
@@ -191,6 +219,10 @@ export function AdminOverview({ onNavigate, adminName = '' }: AdminOverviewProps
         @keyframes fadeUp {
           from { opacity: 0; transform: translateY(12px); }
           to   { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes spin {
+          from { transform: rotate(0deg); }
+          to   { transform: rotate(360deg); }
         }
         .fade-up { animation: fadeUp 0.4s ease both; }
       `}</style>
@@ -223,26 +255,26 @@ export function AdminOverview({ onNavigate, adminName = '' }: AdminOverviewProps
 
           <button
             onClick={refetch}
-            disabled={loading}
+            disabled={busy}
             style={{
               display:       'flex',
               alignItems:    'center',
               gap:           '6px',
               padding:       '10px 18px',
-              background:    loading ? '#f3f4f6' : '#111827',
-              color:         loading ? '#9ca3af' : 'white',
+              background:    busy ? '#f3f4f6' : '#111827',
+              color:         busy ? '#9ca3af' : 'white',
               border:        'none',
               borderRadius:  '12px',
               fontSize:      '13px',
               fontWeight:    600,
-              cursor:        loading ? 'not-allowed' : 'pointer',
+              cursor:        busy ? 'not-allowed' : 'pointer',
               transition:    'background 0.15s',
             }}
           >
-            <span style={{ fontSize: '15px', display: 'inline-block', transform: loading ? 'rotate(360deg)' : 'none', transition: 'transform 0.6s' }}>
+            <span style={{ fontSize: '15px', display: 'inline-block', animation: busy ? 'spin 0.9s linear infinite' : 'none' }}>
               ↻
             </span>
-            {loading ? 'Cargando…' : 'Actualizar'}
+            {busy ? 'Actualizando…' : 'Actualizar'}
           </button>
         </div>
 
@@ -308,8 +340,23 @@ export function AdminOverview({ onNavigate, adminName = '' }: AdminOverviewProps
               </div>
               <InfoRow label="Total transacciones" value={data.stats.totalTransactions} />
               <InfoRow label="Total socios"         value={data.stats.totalMembers} />
-              <InfoRow label="Cuotas pagadas"       value={data.stats.paidFees}    highlight={true} />
-              <InfoRow label="Cuotas pendientes"    value={data.stats.pendingFees} highlight={false} />
+              <InfoRow
+                label="Cuotas pagadas"
+                value={formatFees(data.stats.paidFees, data.stats.paidFeesAmount?.formatted)}
+                highlight={true}
+              />
+              <InfoRow
+                label="Cuotas pendientes"
+                value={formatFees(data.stats.pendingFees, data.stats.pendingFeesAmount?.formatted)}
+                highlight={false}
+              />
+              {typeof data.stats.overdueFees === 'number' && data.stats.overdueFees > 0 && (
+                <InfoRow
+                  label="· de ellas vencidas"
+                  value={data.stats.overdueFees}
+                  highlight={false}
+                />
+              )}
             </div>
 
             {/* Información del club */}

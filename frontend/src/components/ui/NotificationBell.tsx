@@ -1,14 +1,32 @@
 // src/components/ui/NotificationBell.tsx
 import React, { useState, useRef, useEffect } from 'react';
-import { Bell } from 'lucide-react';
+import { Bell, RefreshCw } from 'lucide-react';
 import { useAlerts, Alert } from '../../hooks/useAlerts';
 
 const CLUB_GREEN = '#10b981';
 
+function formatUpdated(date: Date | null): string {
+  if (!date) return 'Sin datos aún';
+  const seconds = Math.floor((Date.now() - date.getTime()) / 1000);
+  if (seconds < 10) return 'Actualizado ahora mismo';
+  if (seconds < 60) return `Actualizado hace ${seconds} s`;
+  const minutes = Math.floor(seconds / 60);
+  if (minutes < 60) return `Actualizado hace ${minutes} min`;
+  return `Actualizado a las ${date.toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' })}`;
+}
+
 export function NotificationBell() {
-  const { alerts, total, dangers } = useAlerts();
+  const { alerts, total, dangers, loading, lastUpdated, refresh } = useAlerts();
   const [open, setOpen] = useState(false);
   const ref             = useRef<HTMLDivElement>(null);
+
+  // Con el panel abierto, re-renderiza cada 15 s para que el "hace X" avance.
+  const [, setTick] = useState(0);
+  useEffect(() => {
+    if (!open) return;
+    const id = window.setInterval(() => setTick(t => t + 1), 15000);
+    return () => window.clearInterval(id);
+  }, [open]);
 
   // Cerrar al hacer clic fuera
   useEffect(() => {
@@ -46,8 +64,16 @@ export function NotificationBell() {
           from { opacity: 0; transform: translateX(24px); }
           to   { opacity: 1; transform: translateX(0); }
         }
+        @keyframes spin {
+          from { transform: rotate(0deg); }
+          to   { transform: rotate(360deg); }
+        }
         .bell-btn:hover .bell-icon {
           animation: bellRing 0.7s ease;
+        }
+        .bell-refresh:hover {
+          background: #f3f4f6;
+          color: #374151;
         }
       `}</style>
 
@@ -137,8 +163,9 @@ export function NotificationBell() {
                   : `${total} alerta${total !== 1 ? 's' : ''} activa${total !== 1 ? 's' : ''}`}
               </p>
             </div>
-            {total > 0 && (
-              <div style={{ display: 'flex', gap: '6px' }}>
+            <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
+              {total > 0 && (
+                <>
                 {dangers > 0 && (
                   <span style={{
                     padding: '3px 10px', borderRadius: '9999px',
@@ -157,8 +184,26 @@ export function NotificationBell() {
                     {total - dangers} pendiente{(total - dangers) !== 1 ? 's' : ''}
                   </span>
                 )}
-              </div>
-            )}
+                </>
+              )}
+
+              <button
+                className="bell-refresh"
+                onClick={refresh}
+                disabled={loading}
+                title="Actualizar notificaciones"
+                aria-label="Actualizar notificaciones"
+                style={{
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  width: '28px', height: '28px', borderRadius: '8px',
+                  border: '1px solid #e5e7eb', background: 'white',
+                  color: '#9ca3af', cursor: loading ? 'default' : 'pointer',
+                  transition: 'background 0.15s, color 0.15s',
+                }}
+              >
+                <RefreshCw size={14} style={{ animation: loading ? 'spin 0.9s linear infinite' : 'none' }} />
+              </button>
+            </div>
           </div>
 
           {/* Lista de alertas */}
@@ -181,17 +226,20 @@ export function NotificationBell() {
           </div>
 
           {/* Footer */}
-          {total > 0 && (
-            <div style={{
-              padding:     '12px 20px',
-              borderTop:   '1px solid #f3f4f6',
-              textAlign:   'center',
-            }}>
-              <p style={{ margin: 0, fontSize: '12px', color: '#9ca3af' }}>
+          <div style={{
+            padding:     '10px 20px',
+            borderTop:   '1px solid #f3f4f6',
+            textAlign:   'center',
+          }}>
+            {total > 0 && (
+              <p style={{ margin: '0 0 4px', fontSize: '12px', color: '#9ca3af' }}>
                 Ve a <strong style={{ color: '#374151' }}>Mensualidades</strong> para gestionar los pagos
               </p>
-            </div>
-          )}
+            )}
+            <p style={{ margin: 0, fontSize: '11px', color: '#d1d5db' }}>
+              {formatUpdated(lastUpdated)}
+            </p>
+          </div>
         </div>
       )}
     </div>
