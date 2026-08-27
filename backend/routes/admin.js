@@ -179,7 +179,10 @@ router.get('/periodos', requireAdmin, async (req, res) => {
 // ─── EXPORTAR REPORTE MENSUAL A EXCEL (.XLSX) ──────────────────────────────
 router.get('/periodos/:id/exportar-excel', requireAdmin, async (req, res) => {
   try {
-        const { id } = req.params;
+           const { id } = req.params;
+
+    // 1. Validar existencia del periodo contable
+    // "ultimo" (o cualquier id no numérico) resuelve al periodo cerrado más reciente.
     const periodoQuery = /^\d+$/.test(id)
       ? await pool.query(
           `SELECT mp.*, u.username AS cerrado_by_username

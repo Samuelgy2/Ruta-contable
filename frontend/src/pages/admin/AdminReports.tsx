@@ -200,32 +200,7 @@ export function AdminReports({ onNavigate }: AdminReportsProps) {
     showToast('Backup completo exportado en JSON', 'success');
   };
 
-  // ── Descarga de Excel de un periodo cerrado (por id real, o 'ultimo') ──────
-  const handleExportPeriodoExcel = async (id: number | 'ultimo', label: string) => {
-    setExcelLoading(id);
-    try {
-      const response = await fetch(`${API_URL}/api/admin/periodos/${id}/exportar-excel`, {
-        headers: { Authorization: `Bearer ${getToken()}` },
-      });
-      if (!response.ok) throw new Error('No se pudo generar el archivo Excel');
 
-      const blob = await response.blob();
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `Reporte_Financiero_${label}.xlsx`;
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-      window.URL.revokeObjectURL(url);
-
-      showToast('Reporte financiero exportado a Excel (.xlsx)', 'success');
-    } catch (error: any) {
-      showToast(`Error al exportar Excel: ${error.message}`, 'error');
-    } finally {
-      setExcelLoading(null);
-    }
-  };
 
   // ── Cierre mensual ─────────────────────────────────────────────────────────
   const MONTH_NAMES = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto',
@@ -443,14 +418,7 @@ export function AdminReports({ onNavigate }: AdminReportsProps) {
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '14px' }}>
             <ExportBtn icon="📊" label="Transacciones CSV"     sub="Formato de texto"  onClick={handleExportTransactions} />
             <ExportBtn icon="👥" label="Socios y Cuotas"       sub="Formato PDF"       onClick={handleExportMembers} />
-            <ExportBtn icon="📄" label="Reporte Financiero PDF" sub="Documento Oficial" onClick={handleExportReport} />
-            <ExportBtn
-              icon="🟢"
-              label={excelLoading === 'ultimo' ? 'Generando...' : 'Último Cierre Excel'}
-              sub="Hoja de Cálculo (.xlsx)"
-              onClick={() => { void handleExportPeriodoExcel('ultimo', 'Ultimo_Cierre'); }}
-              disabled={excelLoading !== null}
-            />
+            <ExportBtn icon="📄" label="Reporte Financiero PDF" sub="Documento Oficial" onClick={handleExportReport} /> 
             <ExportBtn icon="🗄️" label="Backup Completo" sub="Formato JSON" onClick={handleExportAllData} />
           </div>
         </div>
