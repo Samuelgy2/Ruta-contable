@@ -1,8 +1,6 @@
 import axios from 'axios';
 import { emitDataChanged, resourceFromUrl } from '../lib/dataEvents';
-
-const base = import.meta.env.VITE_API_URL || 'https://ruta-contable.onrender.com';
-const API_URL = base === '/api' ? '/api' : base.endsWith('/') ? `${base}api` : `${base}/api`;
+import { API_URL } from './apiConfig';
 
 const api = axios.create({
   baseURL: API_URL,

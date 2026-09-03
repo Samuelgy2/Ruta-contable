@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { useAutoRefresh } from '../../hooks/useAutoRefresh';
+import { API_URL } from '../../services/apiConfig';
 
 // ─── TIPOS ────────────────────────────────────────────────────────────────────
 
@@ -52,8 +53,7 @@ function useOverviewData() {
     try {
       const token = localStorage.getItem('clubfinance_token');
 
-      const apiUrl = import.meta.env.VITE_API_URL || '';
-      const res = await fetch(`${apiUrl}/api/admin/overview`, {
+      const res = await fetch(`${API_URL}/admin/overview`, {
         headers: token ? { Authorization: `Bearer ${token}` } : undefined,
       });
 

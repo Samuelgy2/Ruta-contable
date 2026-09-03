@@ -3,6 +3,7 @@ import { useAsistencia, AsistenciaItem } from '../../hooks/useAsistencia';
 import { useSocios } from '../../hooks/useSocios';
 import { asistenciaService } from '../../services/asistenciaService';
 import { formatDateShort } from '../../utils/format';
+import { API_URL } from '../../services/apiConfig';
 
 interface AdminAsistenciaProps {
   onNavigate?: (tab: string) => void;
@@ -116,7 +117,6 @@ type FormState = typeof emptyForm;
 function getToken(): string {
   return localStorage.getItem('clubfinance_token') ?? '';
 }
-const API_URL: string = (import.meta as any).env?.VITE_API_URL ?? 'http://localhost:3001';
 
 export function AdminAsistencia({ onNavigate }: AdminAsistenciaProps) {
   const { asistencia, alertas, loading, fetchAsistencia, createAsistencia, updateAsistencia, removeAsistencia } = useAsistencia();
@@ -187,8 +187,7 @@ export function AdminAsistencia({ onNavigate }: AdminAsistenciaProps) {
     setExporting(true);
     try {
       const path = asistenciaService.exportarExcelUrl({ fechaInicio: fechaInicio || undefined, fechaFin: fechaFin || undefined });
-      const base = API_URL.endsWith('/api') ? API_URL : `${API_URL.replace(/\/$/, '')}/api`;
-      const res = await fetch(`${base}${path}`, { headers: { Authorization: `Bearer ${getToken()}` } });
+      const res = await fetch(`${API_URL}${path}`, { headers: { Authorization: `Bearer ${getToken()}` } });
       if (!res.ok) throw new Error('No se pudo generar el archivo');
       const blob = await res.blob();
       const url = window.URL.createObjectURL(blob);

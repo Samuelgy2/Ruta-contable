@@ -2,6 +2,7 @@ import React, { useState, useCallback, useEffect } from 'react';
 import { useCategories } from '../../hooks/useCategories';
 import { formatCurrency, formatDateShort } from '../../utils/format';
 import { emitDataChanged } from '../../lib/dataEvents';
+import { API_URL } from '../../services/apiConfig';
 
 interface AdminTransactionsProps {
   onNavigate?: (tab: string) => void;
@@ -9,7 +10,6 @@ interface AdminTransactionsProps {
 
 // ─── Config ───────────────────────────────────────────────────────────────────
 const CLUB_GREEN = '#10b981';
-const API_BASE   = 'http://localhost:3001';
 
 function getToken(): string {
   return localStorage.getItem('clubfinance_token') ?? '';
@@ -181,7 +181,7 @@ export function AdminTransactions({ onNavigate }: AdminTransactionsProps) {
   const fetchTransactions = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await fetch(`${API_BASE}/api/transactions`, {
+      const res = await fetch(`${API_URL}/transactions`, {
         headers: { Authorization: `Bearer ${getToken()}` },
       });
       const json = await res.json();
@@ -243,7 +243,7 @@ export function AdminTransactions({ onNavigate }: AdminTransactionsProps) {
     }
     setSubmitting(true);
     try {
-      const res = await fetch(`${API_BASE}/api/transactions`, {
+      const res = await fetch(`${API_URL}/transactions`, {
         method: 'POST',
         headers: {
           'Content-Type':  'application/json',

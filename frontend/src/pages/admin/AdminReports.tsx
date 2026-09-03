@@ -4,6 +4,7 @@ import { useCartera } from '../../hooks/useCartera';
 import { useClubData } from '../../hooks/useClubData';
 import { formatCurrency, formatDateShort } from '../../utils/format';
 import { exportToCSV, exportToJSON, exportMembersReportPDF, exportTransactionsReportPDF } from '../../utils/export';
+import { API_URL } from '../../services/apiConfig';
 
 interface AdminReportsProps {
   onNavigate?: (tab: string) => void;
@@ -11,7 +12,6 @@ interface AdminReportsProps {
 
 // ─── Config ───────────────────────────────────────────────────────────────────
 const CLUB_GREEN = '#10b981';
-const API_URL: string = (import.meta as any).env?.VITE_API_URL ?? '';
 
 function getToken(): string {
   return localStorage.getItem('clubfinance_token') ?? '';
@@ -101,7 +101,7 @@ function useOverviewSummary() {
   const fetchSummary = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await fetch(`${API_URL}/api/admin/overview`, {
+      const res = await fetch(`${API_URL}/admin/overview`, {
         headers: { Authorization: `Bearer ${getToken()}` },
       });
       const json = await res.json();
@@ -124,7 +124,7 @@ function usePeriodos() {
   const fetchPeriodos = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await fetch(`${API_URL}/api/admin/periodos`, {
+      const res = await fetch(`${API_URL}/admin/periodos`, {
         headers: { Authorization: `Bearer ${getToken()}` },
       });
       const json = await res.json();
@@ -217,7 +217,7 @@ export function AdminReports({ onNavigate }: AdminReportsProps) {
 
     setCierreLoading(true);
     try {
-      const res = await fetch(`${API_URL}/api/admin/cierre-mensual`, {
+      const res = await fetch(`${API_URL}/admin/cierre-mensual`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

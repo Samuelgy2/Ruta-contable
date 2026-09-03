@@ -24,7 +24,6 @@ interface AdminMembersProps {
 }
 
 // ─── Config ───────────────────────────────────────────────────────────────────
-const API_URL: string = (import.meta as any).env?.VITE_API_URL ?? 'http://localhost:3001';
 const CLUB_GREEN = '#10b981';
 
 // ─── Helper Token ─────────────────────────────────────────────────────────────

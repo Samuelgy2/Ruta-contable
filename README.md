@@ -22,7 +22,7 @@ Aplicación web full-stack para gestión financiera de clubes y organizaciones.
 8. [API Endpoints](#api-endpoints)
 9. [Seguridad](#seguridad)
 10. [Assets del Frontend](#assets-del-frontend)
-11. [Despliegue en Vercel](#despliegue-en-vercel)
+11. [Despliegue](#despliegue)
 12. [Mejoras Pendientes](#mejoras-pendientes)
 
 ---
@@ -143,6 +143,7 @@ PostgreSQL (prepared statements, pg.Pool directo — sin cliente Supabase JS)
 | Docker + Docker Compose | Entorno de desarrollo local aislado |
 | Supabase (Postgres 17) | Base de datos real del proyecto, `hfibhmntifttdududwpw` |
 | Vercel | Hosting del frontend estático |
+| Render | Hosting del backend (Node + Express) |
 
 ---
 
@@ -649,40 +650,78 @@ Para logos vectoriales: guardar como `.svg` en la misma carpeta y actualizar la 
 
 ---
 
-## Despliegue en Vercel
+## Despliegue
 
-El repo es un **monorepo** (`backend/` + `frontend/`). Vercel solo sirve el **frontend estático** (React + Vite); el backend (Node/Express/PostgreSQL) va aparte (Railway, Render, Fly.io, o un VPS con `docker-compose.yml`).
+El repo es un **monorepo** (`backend/` + `frontend/`) y cada mitad se despliega en una plataforma distinta. Un `push` a `main` dispara el despliegue en ambas: no hay ningún paso manual.
 
-### Configuración en el dashboard
+| Pieza | Plataforma | URL de producción |
+|---|---|---|
+| Frontend (React + Vite, estático) | Vercel | https://ruta-contable-samuelgy2s-projects.vercel.app |
+| Backend (Node + Express) | Render | https://ruta-contable.onrender.com |
+| Base de datos (PostgreSQL) | Supabase | proyecto `hfibhmntifttdududwpw` |
 
-1. **Settings → General → Root Directory** → cambiar de `/` a `frontend`, guardar
-2. Verificar detección automática:
-   - Framework Preset: `Vite`
-   - Build Command: `npm run build`
-   - Output Directory: `build`
-   - Install Command: `npm install`
-3. **Settings → Environment Variables**: agregar `VITE_API_URL` apuntando al backend desplegado (ej. `https://tu-backend.railway.app`), en Production/Preview/Development
-4. Redeploy: **Deployments** → último deploy → ⋮ → **Redeploy**, o `git push`
+Comprobación rápida de que el backend está vivo:
 
-### Verificación de un deploy exitoso
-
-```
-Root Directory: frontend
-Installing dependencies... npm install
-Running build command: npm run build
-Output directory: build
-Ready! https://ruta-contable-xxx.vercel.app
+```bash
+curl https://ruta-contable.onrender.com/health
+# {"status":"OK","message":"Servidor funcionando"}
 ```
 
-### `frontend/vercel.json` (reescritura SPA)
+> **Ojo con `https://ruta-contable.vercel.app`.** Esa URL **no pertenece a este proyecto** y responde `404: DEPLOYMENT_NOT_FOUND`. Es el enlace que figura en el campo *About* del repositorio en GitHub, y por eso parece que el despliegue está caído. La URL buena es la de la tabla de arriba.
+
+### Configuración de Vercel
+
+El despliegue está descrito en `vercel.json`, en la **raíz** del repositorio:
 
 ```json
 {
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "framework": "vite",
+  "installCommand": "npm install --prefix frontend",
+  "buildCommand": "npm run build --prefix frontend",
+  "outputDirectory": "frontend/build",
   "rewrites": [
     { "source": "/(.*)", "destination": "/index.html" }
   ]
 }
 ```
+
+- `outputDirectory` es `frontend/build` y **no** `frontend/dist` porque `frontend/vite.config.ts` define `build.outDir: 'build'`.
+- Los `rewrites` mandan cualquier ruta a `index.html`: sin ellos, recargar en `/login` o `/admin` da 404.
+- **El Root Directory del panel de Vercel debe quedarse en `/`.** Si se cambia a `frontend`, Vercel ignora el `vercel.json` de la raíz y usa `frontend/vercel.json`, que solo contiene el rewrite: se pierden los comandos de build.
+
+### Variables de entorno (pendientes de configurar a mano)
+
+| Plataforma | Variable | Valor |
+|---|---|---|
+| Vercel | `VITE_API_URL` | `https://ruta-contable.onrender.com` |
+| Render | `CORS_ORIGIN` | `https://ruta-contable-samuelgy2s-projects.vercel.app` |
+
+`VITE_API_URL` es una variable de **build**: Vite la sustituye al compilar, así que después de crearla o cambiarla hay que **volver a desplegar** para que surta efecto.
+
+### Cómo se resuelve la URL del backend
+
+Un único módulo decide a qué backend apunta el frontend: `frontend/src/services/apiConfig.ts`.
+
+```ts
+import { API_URL } from '../../services/apiConfig';
+
+const res = await fetch(`${API_URL}/admin/overview`, { ... });
+```
+
+- `API_BASE` es el origen del backend, sin barra final y sin sufijo.
+- `API_URL` es `API_BASE + '/api'`, o sea la raíz de la API REST: las rutas cuelgan de ahí sin repetir `/api`.
+- Sin `VITE_API_URL` definida: en desarrollo se usa ruta relativa y el proxy de `vite.config.ts` reenvía `/api` al `localhost:3001`; en producción se recurre al backend de Render.
+
+**No leas `import.meta.env.VITE_API_URL` en componentes nuevos.** Importa `API_URL` de `apiConfig.ts`. Antes había seis archivos resolviendo la URL por su cuenta con valores por defecto distintos, y parte de la aplicación acababa llamando a `http://localhost:3001` en producción, es decir al equipo de quien visitaba la página.
+
+### Checklist de despliegue
+
+- [ ] Root Directory de Vercel = `/`
+- [ ] `VITE_API_URL` configurada en Vercel + redeploy ejecutado
+- [ ] `CORS_ORIGIN` configurada en Render
+- [ ] Rutas internas (`/login`, `/admin`) cargan sin 404
+- [ ] `GET /health` del backend responde `OK`
 
 ### Bundle grande (advertencia real del build)
 
@@ -692,22 +731,17 @@ assets/index-C_u4hTQW.js   1,938.82 kB │ gzip: 633.92 kB
 
 Recomendación: code-splitting con lazy loading de rutas para bajar el chunk principal de 500 kB.
 
-### Checklist
-
-- [ ] Root Directory = `frontend`
-- [ ] `VITE_API_URL` configurada
-- [ ] Redeploy ejecutado
-- [ ] Rutas internas (`/login`, `/admin`) cargan sin 404
-- [ ] CORS del backend acepta el dominio de Vercel
-
 ### Problemas comunes
 
 | Error | Causa | Solución |
 |---|---|---|
-| `No entrypoint found` | Vercel no encuentra el entrypoint | Confirmar `frontend/build/index.html` existe tras el build |
-| Rutas de API no encontradas | Backend está separado del frontend | Configurar `VITE_API_URL` al backend real, o proxy reverso |
-| CORS no configurado | `CORS_ORIGIN` del backend no incluye el dominio de Vercel | Actualizar `CORS_ORIGIN` en el backend desplegado |
-| Base de datos no conectada | Variables de entorno del backend mal configuradas | Revisar `DB_HOST`/`DB_USER`/`DB_PASSWORD` en la plataforma del backend |
+| `404: DEPLOYMENT_NOT_FOUND` | Se está entrando por `ruta-contable.vercel.app`, que no es de este proyecto | Usar `https://ruta-contable-samuelgy2s-projects.vercel.app` y corregir el campo *About* del repositorio |
+| El build no ejecuta `npm run build` | Root Directory apunta a `frontend`, así que se aplica `frontend/vercel.json` | Devolver el Root Directory a `/` |
+| Rutas internas dan 404 al recargar | Falta el rewrite SPA | Confirmar el bloque `rewrites` de `vercel.json` |
+| Las peticiones van a `localhost:3001` | `VITE_API_URL` no estaba definida al compilar | Definirla en Vercel y **volver a desplegar** |
+| CORS bloquea las peticiones | `CORS_ORIGIN` de Render no incluye el dominio de Vercel | Actualizar `CORS_ORIGIN` en Render |
+| Primera petición muy lenta | El plan gratuito de Render duerme el servicio tras un rato inactivo | Esperar al arranque en frío (~30 s) |
+| Base de datos no conectada | Variables del backend mal configuradas | Revisar `DB_HOST`/`DB_USER`/`DB_PASSWORD` en Render |
 
 ---
 
