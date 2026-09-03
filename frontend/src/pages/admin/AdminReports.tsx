@@ -149,7 +149,6 @@ export function AdminReports({ onNavigate }: AdminReportsProps) {
   const { periodos, loading: periodosLoading, refetch: refetchPeriodos } = usePeriodos();
 
   const [cierreLoading, setCierreLoading] = useState(false);
-  const [excelLoading, setExcelLoading] = useState<number | 'ultimo' | null>(null);
   const { toasts, show: showToast } = useToast();
 
   const currency = clubData?.moneda ?? systemData.currency;
@@ -501,17 +500,6 @@ export function AdminReports({ onNavigate }: AdminReportsProps) {
                       <span style={{ fontSize: '13px', fontWeight: 700, color: Number(p.balance) >= 0 ? '#059669' : '#dc2626' }}>
                         {formatCurrency(Number(p.balance), currency)}
                       </span>
-                      <button
-                        onClick={() => { void handleExportPeriodoExcel(p.id_periodo, `${p.nombre_mes}_${p.anio}`); }}
-                        disabled={excelLoading !== null}
-                        style={{
-                          padding: '6px 14px', borderRadius: '7px', border: '1px solid #d1fae5',
-                          backgroundColor: '#f0fdf4', color: '#065f46', fontSize: '12px', fontWeight: 600,
-                          cursor: excelLoading !== null ? 'default' : 'pointer',
-                        }}
-                      >
-                        {excelLoading === p.id_periodo ? 'Generando...' : '⬇ Excel'}
-                      </button>
                     </div>
                   </div>
                 ))}
