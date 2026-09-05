@@ -273,11 +273,17 @@ export function AdminLayout({ children, currentPage, onNavigate }: AdminLayoutPr
             {adminName}
           </span>
 
-          {/* Separador */}
-          <div style={{ width: '1px', height: '20px', background: '#e5e7eb' }} />
+          {/* La campana consulta alertas de mensualidades, que sólo puede leer
+              un administrador: para un socio devolvería 403 cada minuto. */}
+          {currentUser?.role === 'admin' && (
+            <>
+              {/* Separador */}
+              <div style={{ width: '1px', height: '20px', background: '#e5e7eb' }} />
 
-          {/* 🔔 Campana de notificaciones */}
-          <NotificationBell />
+              {/* 🔔 Campana de notificaciones */}
+              <NotificationBell />
+            </>
+          )}
         </div>
 
         {/* Contenido de la página */}

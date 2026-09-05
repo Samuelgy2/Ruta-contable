@@ -53,7 +53,12 @@ function cargarSdkPayPal(): Promise<any> {
 
   promesaSdk = new Promise((resolve, reject) => {
     if (!PAYPAL_CLIENT_ID) {
-      reject(new Error('Falta VITE_PAYPAL_CLIENT_ID'));
+      // Vite incrusta las variables VITE_* al compilar: definirla en el
+      // servidor no basta, hay que volver a desplegar el frontend.
+      reject(new Error(
+        'Falta configurar VITE_PAYPAL_CLIENT_ID en el entorno de build del frontend. '
+        + 'Defínela (en Vercel o en frontend/.env) y vuelve a desplegar.'
+      ));
       return;
     }
 
@@ -146,7 +151,9 @@ export function PortalPayments({ onNavigate }: PortalPaymentsProps) {
       .catch(e => {
         if (!cancelado) {
           console.error(e);
-          setError('El pago en línea no está disponible: no se pudo cargar PayPal.');
+          // Si el fallo trae explicación (variable de build ausente), se muestra.
+          const detalle = e instanceof Error && e.message ? e.message : 'no se pudo cargar PayPal.';
+          setError(`El pago en línea no está disponible: ${detalle}`);
         }
       });
 
