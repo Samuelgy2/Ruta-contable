@@ -1,4 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { usePaginacion } from '../../hooks/usePaginacion';
+import { Paginacion } from '../../components/ui/Paginacion';
 import { useInventario, Producto } from '../../hooks/useInventario';
 import { formatCurrency, formatDateShort } from '../../utils/format';
 
@@ -102,6 +104,8 @@ export function AdminInventario({ onNavigate }: AdminInventarioProps) {
     productos, categorias, jerseys, loading,
     fetchProductos, fetchJerseys, createProducto, updateProducto, removeProducto, createCategoria,
   } = useInventario();
+  const pagJerseys = usePaginacion(jerseys);
+  const pagProductos = usePaginacion(productos);
   const [tab, setTab] = useState<'productos' | 'indumentaria'>('productos');
   const [searchTerm, setSearchTerm] = useState('');
   const [showForm, setShowForm] = useState(false);
@@ -281,7 +285,7 @@ export function AdminInventario({ onNavigate }: AdminInventarioProps) {
                     <tr><td colSpan={5} style={{ textAlign: 'center', padding: '32px', color: '#9ca3af' }}>Cargando...</td></tr>
                   ) : productos.length === 0 ? (
                     <tr><td colSpan={5} style={{ textAlign: 'center', padding: '32px', color: '#9ca3af' }}>No hay productos registrados</td></tr>
-                  ) : productos.map(p => (
+                  ) : pagProductos.itemsPagina.map(p => (
                     <tr key={p.id} style={{ borderBottom: '1px solid #f3f4f6' }}>
                       <td style={{ padding: '14px 16px', fontSize: '14px', color: '#1f2937', fontWeight: '500' }}>{p.name}</td>
                       <td style={{ padding: '14px 16px', fontSize: '14px', color: '#6b7280' }}>{p.categoria_nombre ?? '—'}</td>
@@ -299,6 +303,7 @@ export function AdminInventario({ onNavigate }: AdminInventarioProps) {
                   ))}
                 </tbody>
               </table>
+              <Paginacion {...pagProductos} etiqueta="productos" />
             </div>
           </>
         )}
@@ -316,7 +321,7 @@ export function AdminInventario({ onNavigate }: AdminInventarioProps) {
               <tbody>
                 {jerseys.length === 0 ? (
                   <tr><td colSpan={6} style={{ textAlign: 'center', padding: '32px', color: '#9ca3af' }}>No hay pedidos de indumentaria</td></tr>
-                ) : jerseys.map(j => (
+                ) : pagJerseys.itemsPagina.map(j => (
                   <tr key={j.id_pedido} style={{ borderBottom: '1px solid #f3f4f6' }}>
                     <td style={{ padding: '14px 16px', fontSize: '14px', color: '#6b7280' }}>{formatDateShort(j.fecha)}</td>
                     <td style={{ padding: '14px 16px', fontSize: '14px', color: '#1f2937', fontWeight: '500' }}>{j.socio_nombre ?? '—'}</td>
@@ -328,6 +333,7 @@ export function AdminInventario({ onNavigate }: AdminInventarioProps) {
                 ))}
               </tbody>
             </table>
+            <Paginacion {...pagJerseys} etiqueta="pedidos" />
             <div style={{ padding: '12px 16px', borderTop: '1px solid #f3f4f6', fontSize: '12px', color: '#9ca3af' }}>
               La gestión completa de pedidos de indumentaria vive en la página "Jersey" — aquí solo se consulta el estado real.
             </div>

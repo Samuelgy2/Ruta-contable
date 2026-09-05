@@ -1,4 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { usePaginacion } from '../../hooks/usePaginacion';
+import { Paginacion } from '../../components/ui/Paginacion';
 import { useSocios } from '../../hooks/useSocios';
 
 // ─── Tipos ────────────────────────────────────────────────────────────────────
@@ -200,6 +202,7 @@ type FormState = typeof emptyForm;
 // ─── Componente principal ─────────────────────────────────────────────────────
 export function AdminMembers({ onNavigate }: AdminMembersProps) {
   const { socios, loading, error, fetchSocios, createSocio, updateSocio, deleteSocio } = useSocios();
+  const pagSocios = usePaginacion(socios);
   const [searchTerm, setSearchTerm] = useState<string>('');
   const [showForm, setShowForm] = useState<boolean>(false);
   const [editingId, setEditingId] = useState<number | null>(null);
@@ -596,7 +599,7 @@ export function AdminMembers({ onNavigate }: AdminMembersProps) {
                   </td>
                 </tr>
               ) : (
-                socios.map(socio => (
+                pagSocios.itemsPagina.map(socio => (
                   <tr
                     key={socio.id_socio}
                     style={{ borderBottom: '1px solid #f3f4f6' }}
@@ -662,6 +665,7 @@ export function AdminMembers({ onNavigate }: AdminMembersProps) {
               )}
             </tbody>
           </table>
+          <Paginacion {...pagSocios} etiqueta="socios" />
         </div>
       </div>
     </div>

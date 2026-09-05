@@ -1,4 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
+import { usePaginacion } from '../../hooks/usePaginacion';
+import { Paginacion } from '../../components/ui/Paginacion';
 import { portalService } from '../../services/portalService';
 import { pagoService } from '../../services/pagoService';
 import { useAuth } from '../../features/auth/contexts/AuthContext';
@@ -75,6 +77,7 @@ function cargarSdkPayPal(): Promise<any> {
 export function PortalPayments({ onNavigate }: PortalPaymentsProps) {
   const { currentUser } = useAuth();
   const [pagos, setPagos] = useState<PagoPasarela[]>([]);
+  const pagPagos = usePaginacion(pagos);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [concepto, setConcepto] = useState(CONCEPTOS[0].valor);
@@ -86,6 +89,8 @@ export function PortalPayments({ onNavigate }: PortalPaymentsProps) {
   // una vez: con una referencia se evita que capture el valor inicial.
   const conceptoRef = useRef(concepto);
   conceptoRef.current = concepto;
+  // Referencia del pago en curso, para capturarlo en onApprove.
+  const referenciaRef = useRef<string | null>(null);
 
   const cargar = async () => {
     setLoading(true);
@@ -129,13 +134,36 @@ export function PortalPayments({ onNavigate }: PortalPaymentsProps) {
               throw new Error(respuesta?.message || 'No se pudo crear la orden de pago');
             }
 
+            referenciaRef.current = respuesta.data.referencia ?? null;
             return respuesta.data.ordenId;
           },
 
-          // El cobro real lo confirma el webhook: aquí sólo se avisa y recarga.
+          // El comprador aprobó: se pide al backend que capture (cobre) la orden.
+          // El webhook de PayPal queda como respaldo idempotente.
           onApprove: async () => {
-            setAviso('Pago aprobado. Estamos confirmando el cobro con PayPal; en unos segundos aparecerá como aprobado.');
-            await cargar();
+            const referencia = referenciaRef.current;
+
+            if (!referencia) {
+              setAviso('Pago aprobado. Estamos confirmando el cobro con PayPal.');
+              await cargar();
+              return;
+            }
+
+            try {
+              const respuesta = await pagoService.capturar(referencia);
+
+              if (respuesta?.success) {
+                setAviso(respuesta.message || 'Pago confirmado correctamente');
+              } else {
+                setError(respuesta?.message || 'No se pudo confirmar el pago');
+              }
+            } catch (e) {
+              const mensaje = (e as { response?: { data?: { message?: string } } })?.response?.data?.message;
+              setError(mensaje || 'No se pudo confirmar el pago con PayPal');
+            } finally {
+              referenciaRef.current = null;
+              await cargar();
+            }
           },
 
           onCancel: () => {
@@ -256,7 +284,7 @@ export function PortalPayments({ onNavigate }: PortalPaymentsProps) {
               </tr>
             </thead>
             <tbody>
-              {pagos.map(pago => {
+              {pagPagos.itemsPagina.map(pago => {
                 const estado = ESTADOS[pago.estado] ?? { label: pago.estado, clase: 'badge' };
                 return (
                   <tr key={pago.id}>
@@ -280,6 +308,7 @@ export function PortalPayments({ onNavigate }: PortalPaymentsProps) {
               })}
             </tbody>
           </table>
+          <Paginacion {...pagPagos} etiqueta="pagos" />
         </div>
       )}
     </div>

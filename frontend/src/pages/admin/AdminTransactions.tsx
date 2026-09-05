@@ -1,4 +1,6 @@
 import React, { useState, useCallback, useEffect } from 'react';
+import { usePaginacion } from '../../hooks/usePaginacion';
+import { Paginacion } from '../../components/ui/Paginacion';
 import { useCategories } from '../../hooks/useCategories';
 import { formatCurrency, formatDateShort } from '../../utils/format';
 import { emitDataChanged } from '../../lib/dataEvents';
@@ -226,7 +228,7 @@ export function AdminTransactions({ onNavigate }: AdminTransactionsProps) {
 
   useEffect(() => { void fetchTransactions(); }, [fetchTransactions]);
 
-  // ── Detalle del pago de la pasarela (payload_raw) ───────────────────────────
+  // ── Detalle del pago de la pasarela ─────────────────────────────────────────
   const verDetallePago = async (referencia: string) => {
     setCargandoPago(true);
     try {
@@ -279,6 +281,7 @@ export function AdminTransactions({ onNavigate }: AdminTransactionsProps) {
       return true;
     });
 
+  const pagTransacciones = usePaginacion(filteredTransactions);
   const availableCategories = categories.filter(c => c.active && c.type === form.type);
 
   // ── Submit → POST /api/transactions ────────────────────────────────────────
@@ -505,18 +508,6 @@ export function AdminTransactions({ onNavigate }: AdminTransactionsProps) {
             ))}
           </div>
 
-          <p style={{ margin: '0 0 8px', fontSize: '13px', fontWeight: 600, color: '#374151' }}>
-            Evento recibido de PayPal (payload_raw)
-          </p>
-          <pre style={{
-            margin: 0, padding: '14px', borderRadius: '10px',
-            backgroundColor: '#f9fafb', border: '1px solid #e5e7eb',
-            fontSize: '12px', maxHeight: '320px', overflow: 'auto', whiteSpace: 'pre-wrap',
-          }}>
-            {pagoDetalle.payload_raw
-              ? JSON.stringify(pagoDetalle.payload_raw, null, 2)
-              : 'Todavía no se ha recibido ningún evento para este pago.'}
-          </pre>
 
           <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '20px' }}>
             <button
@@ -651,6 +642,7 @@ export function AdminTransactions({ onNavigate }: AdminTransactionsProps) {
               <p style={{ margin: '8px 0 0', fontSize: '14px' }}>Cargando transacciones...</p>
             </div>
           ) : (
+            <>
             <table style={{ width: '100%', borderCollapse: 'collapse' }}>
               <thead>
                 <tr style={{ backgroundColor: '#f9fafb', borderBottom: '2px solid #e5e7eb' }}>
@@ -674,7 +666,7 @@ export function AdminTransactions({ onNavigate }: AdminTransactionsProps) {
                     </td>
                   </tr>
                 ) : (
-                  filteredTransactions.map(t => (
+                  pagTransacciones.itemsPagina.map(t => (
                     <tr
                       key={t.id}
                       style={{ borderBottom: '1px solid #f3f4f6' }}
@@ -757,6 +749,8 @@ export function AdminTransactions({ onNavigate }: AdminTransactionsProps) {
                 )}
               </tbody>
             </table>
+            <Paginacion {...pagTransacciones} etiqueta="transacciones" />
+            </>
           )}
         </div>
       </div>

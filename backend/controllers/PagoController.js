@@ -180,6 +180,198 @@ function datosDelEvento(evento) {
   };
 }
 
+// Escritura compartida por el webhook y la captura desde el frontend. Debe
+// llamarse dentro de una transacción ya abierta, con la fila de pagos_pasarela
+// bloqueada con FOR UPDATE. Actualiza el pago y, sólo si el estado propio queda
+// en APPROVED y aún no hay asiento, inserta en transactions y enlaza el id.
+// Devuelve el transaction_id resultante (o el que ya existía).
+async function aplicarResultado(client, pago, { estadoPropio, estadoProveedor, ordenId, capturaId, monto, payload }) {
+  const esFinal = ESTADOS_FINALES.includes(estadoPropio);
+  const montoValido = typeof monto === 'number' && Number.isFinite(monto) ? monto : null;
+
+  await client.query(
+    `UPDATE pagos_pasarela SET
+       orden_id         = COALESCE($1, orden_id),
+       proveedor_id     = COALESCE($2, proveedor_id),
+       estado           = $3,
+       estado_proveedor = COALESCE($4, estado_proveedor),
+       monto            = COALESCE($5, monto),
+       amount_in_cents  = COALESCE($6, amount_in_cents),
+       payload_raw      = $7,
+       finalized_at     = CASE WHEN $8 THEN NOW() ELSE finalized_at END,
+       updated_at       = NOW()
+     WHERE id = $9`,
+    [
+      ordenId ?? null,
+      capturaId ?? null,
+      estadoPropio,
+      estadoProveedor ?? null,
+      montoValido,
+      montoValido === null ? null : Math.round(montoValido * 100),
+      JSON.stringify(payload),
+      esFinal,
+      pago.id,
+    ]
+  );
+
+  let transactionId = pago.transaction_id;
+
+  // Sólo un pago cuyo estado propio quede en APPROVED genera asiento contable.
+  if (estadoPropio === 'APPROVED' && transactionId === null) {
+    // Se comprueba antes de insertar en lugar de depender del índice único.
+    const asientoPrevio = await client.query(
+      'SELECT id FROM transactions WHERE referencia = $1 LIMIT 1',
+      [pago.referencia]
+    );
+
+    if (asientoPrevio.rows.length > 0) {
+      transactionId = asientoPrevio.rows[0].id;
+    } else {
+      const categoriaId = await buscarCategoriaIngreso(client);
+
+      const asiento = await client.query(
+        `INSERT INTO transactions
+           (tipo, monto, fecha, descripcion, categoria_id, metodo_pago, referencia, created_by)
+         VALUES ('ingreso', $1, CURRENT_DATE, $2, $3, $4, $5, $6)
+         RETURNING id`,
+        [
+          montoValido ?? pago.monto,
+          pago.concepto || 'Pago en línea',
+          categoriaId,
+          METODO_CONTABLE,
+          pago.referencia,
+          pago.user_id,
+        ]
+      );
+
+      transactionId = asiento.rows[0].id;
+    }
+
+    await client.query(
+      'UPDATE pagos_pasarela SET transaction_id = $1, updated_at = NOW() WHERE id = $2',
+      [transactionId, pago.id]
+    );
+  }
+
+  return transactionId;
+}
+
+// Traducción del estado de una captura de PayPal al vocabulario propio.
+const ESTADOS_CAPTURA = {
+  COMPLETED: 'APPROVED',
+  DECLINED:  'DECLINED',
+  PENDING:   'PENDING',
+  REFUNDED:  'REFUNDED',
+  FAILED:    'DECLINED',
+};
+
+// POST /api/pagos/:referencia/capturar — el comprador ya aprobó en la ventana
+// de PayPal (onApprove del SDK) y el frontend pide cobrar de verdad. Reutiliza
+// la misma escritura idempotente del webhook; si el webhook llega después,
+// encuentra el pago cerrado y responde 200 sin duplicar.
+async function capturar(req, res) {
+  const { referencia } = req.params;
+  const client = await pool.connect();
+
+  try {
+    await client.query('BEGIN');
+
+    const existente = await client.query(
+      `SELECT id, referencia, user_id, estado, transaction_id, finalized_at, concepto, orden_id, proveedor_id, monto
+         FROM pagos_pasarela
+        WHERE referencia = $1
+        FOR UPDATE`,
+      [referencia]
+    );
+
+    if (existente.rows.length === 0) {
+      await client.query('ROLLBACK');
+      return res.status(404).json({ success: false, message: 'Pago no encontrado' });
+    }
+
+    const pago = existente.rows[0];
+
+    // Sólo el comprador captura su propio pago. Nunca se devuelve el pago ajeno.
+    if (pago.user_id !== req.user.id) {
+      await client.query('ROLLBACK');
+      return res.status(403).json({ success: false, message: 'No tienes acceso a este pago' });
+    }
+
+    if (!pago.orden_id) {
+      await client.query('ROLLBACK');
+      return res.status(400).json({ success: false, message: 'El pago no tiene una orden de PayPal asociada' });
+    }
+
+    // Idempotente: si ya está cerrado (por el webhook o por un clic anterior)
+    // se devuelve el estado actual sin volver a cobrar.
+    if (pago.finalized_at !== null) {
+      await client.query('ROLLBACK');
+      return res.json({
+        success: true,
+        message: 'El pago ya estaba procesado',
+        data: { referencia: pago.referencia, estado: pago.estado, transactionId: pago.transaction_id },
+      });
+    }
+
+    let respuestaCaptura;
+    try {
+      respuestaCaptura = await paypal.capturarOrden(pago.orden_id);
+    } catch (error) {
+      const issue = error.datos?.details?.[0]?.issue;
+
+      // El comprador no aprobó en la ventana de PayPal: no hay nada que cobrar.
+      if (issue === 'ORDER_NOT_APPROVED') {
+        await client.query('ROLLBACK');
+        return res.status(409).json({ success: false, message: 'El pago aún no fue aprobado en PayPal' });
+      }
+
+      // Ya se capturó (reintento o carrera con el webhook): se toma la captura existente.
+      if (issue === 'ORDER_ALREADY_CAPTURED') {
+        respuestaCaptura = await paypal.consultarOrden(pago.orden_id);
+      } else {
+        await client.query('ROLLBACK');
+        console.error(`❌ No se pudo capturar la orden ${pago.orden_id}:`, error.message);
+        return res.status(502).json({ success: false, message: 'PayPal no pudo procesar el cobro' });
+      }
+    }
+
+    const captura = respuestaCaptura?.purchase_units?.[0]?.payments?.captures?.[0] ?? null;
+    const estadoProveedor = captura?.status ?? respuestaCaptura?.status ?? null;
+    const estadoPropio = ESTADOS_CAPTURA[String(estadoProveedor).toUpperCase()] ?? 'ERROR';
+    const valor = captura?.amount?.value;
+    const monto = valor === undefined ? null : Number(valor);
+
+    const transactionId = await aplicarResultado(client, pago, {
+      estadoPropio,
+      estadoProveedor,
+      ordenId: pago.orden_id,
+      capturaId: captura?.id ?? null,
+      monto,
+      payload: respuestaCaptura,
+    });
+
+    await client.query('COMMIT');
+
+    const mensajes = {
+      APPROVED: 'Pago confirmado correctamente',
+      PENDING:  'PayPal está revisando el pago; se confirmará en unos minutos',
+      DECLINED: 'PayPal rechazó el pago',
+    };
+
+    res.json({
+      success: estadoPropio !== 'DECLINED' && estadoPropio !== 'ERROR',
+      message: mensajes[estadoPropio] ?? 'El pago no pudo completarse',
+      data: { referencia: pago.referencia, estado: estadoPropio, transactionId },
+    });
+  } catch (error) {
+    await client.query('ROLLBACK').catch(() => {});
+    console.error('❌ Error capturando el pago:', error);
+    res.status(500).json({ success: false, message: 'Error al confirmar el pago' });
+  } finally {
+    client.release();
+  }
+}
+
 // POST /api/pagos/webhook — público. Su autenticación es la verificación remota
 // de la firma contra PayPal.
 async function webhook(req, res) {
@@ -253,71 +445,9 @@ async function webhook(req, res) {
       });
     }
 
-    const esFinal = ESTADOS_FINALES.includes(estadoPropio);
-
-    await client.query(
-      `UPDATE pagos_pasarela SET
-         orden_id         = COALESCE($1, orden_id),
-         proveedor_id     = COALESCE($2, proveedor_id),
-         estado           = $3,
-         estado_proveedor = COALESCE($4, estado_proveedor),
-         monto            = COALESCE($5, monto),
-         amount_in_cents  = COALESCE($6, amount_in_cents),
-         payload_raw      = $7,
-         finalized_at     = CASE WHEN $8 THEN NOW() ELSE finalized_at END,
-         updated_at       = NOW()
-       WHERE id = $9`,
-      [
-        ordenId,
-        capturaId,
-        estadoPropio,
-        estadoProveedor,
-        monto,
-        monto === null ? null : Math.round(monto * 100),
-        JSON.stringify(evento),
-        esFinal,
-        pago.id,
-      ]
-    );
-
-    let transactionId = pago.transaction_id;
-
-    // Sólo un pago cuyo estado propio quede en APPROVED genera asiento contable.
-    if (estadoPropio === 'APPROVED' && transactionId === null) {
-      // Se comprueba antes de insertar en lugar de depender del índice único.
-      const asientoPrevio = await client.query(
-        'SELECT id FROM transactions WHERE referencia = $1 LIMIT 1',
-        [pago.referencia]
-      );
-
-      if (asientoPrevio.rows.length > 0) {
-        transactionId = asientoPrevio.rows[0].id;
-      } else {
-        const categoriaId = await buscarCategoriaIngreso(client);
-
-        const asiento = await client.query(
-          `INSERT INTO transactions
-             (tipo, monto, fecha, descripcion, categoria_id, metodo_pago, referencia, created_by)
-           VALUES ('ingreso', $1, CURRENT_DATE, $2, $3, $4, $5, $6)
-           RETURNING id`,
-          [
-            monto,
-            pago.concepto || 'Pago en línea',
-            categoriaId,
-            METODO_CONTABLE,
-            pago.referencia,
-            pago.user_id,
-          ]
-        );
-
-        transactionId = asiento.rows[0].id;
-      }
-
-      await client.query(
-        'UPDATE pagos_pasarela SET transaction_id = $1, updated_at = NOW() WHERE id = $2',
-        [transactionId, pago.id]
-      );
-    }
+    const transactionId = await aplicarResultado(client, pago, {
+      estadoPropio, estadoProveedor, ordenId, capturaId, monto, payload: evento,
+    });
 
     // El comprador aprobó, pero con intent CAPTURE el dinero no está cobrado
     // hasta llamar a /capture. Se hace fuera de la transacción, ya confirmada.
@@ -453,4 +583,4 @@ async function getAll(req, res) {
   }
 }
 
-module.exports = { checkout, webhook, getByReferencia, getAll, CONCEPTOS, EVENTOS, datosDelEvento };
+module.exports = { checkout, webhook, capturar, getByReferencia, getAll, CONCEPTOS, EVENTOS, datosDelEvento };

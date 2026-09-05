@@ -1,4 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { usePaginacion } from '../../hooks/usePaginacion';
+import { Paginacion } from '../../components/ui/Paginacion';
 import { useCartera, CarteraItem } from '../../hooks/useCartera';
 import { useSocios } from '../../hooks/useSocios';
 import { formatCurrency, formatDateShort } from '../../utils/format';
@@ -95,6 +97,7 @@ type FormState = typeof emptyForm;
 export function AdminCartera({ onNavigate }: AdminCarteraProps) {
   const { cartera, loading, fetchCartera, createCartera, updateCartera } = useCartera();
   const { socios } = useSocios();
+  const pagCartera = usePaginacion(cartera);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterEstado, setFilterEstado] = useState<string>('all');
   const [showForm, setShowForm] = useState(false);
@@ -241,7 +244,7 @@ export function AdminCartera({ onNavigate }: AdminCarteraProps) {
                 <tr><td colSpan={7} style={{ textAlign: 'center', padding: '32px', color: '#9ca3af' }}>Cargando...</td></tr>
               ) : cartera.length === 0 ? (
                 <tr><td colSpan={7} style={{ textAlign: 'center', padding: '32px', color: '#9ca3af' }}>No hay registros de cartera</td></tr>
-              ) : cartera.map(c => (
+              ) : pagCartera.itemsPagina.map(c => (
                 <tr key={c.id_cartera} style={{ borderBottom: '1px solid #f3f4f6' }}>
                   <td style={{ padding: '14px 16px', fontSize: '14px', color: '#6b7280' }}>{formatDateShort(c.fecha)}</td>
                   <td style={{ padding: '14px 16px', fontSize: '14px', color: '#1f2937', fontWeight: '500' }}>{c.socio_nombre ?? '—'}</td>
@@ -258,6 +261,7 @@ export function AdminCartera({ onNavigate }: AdminCarteraProps) {
               ))}
             </tbody>
           </table>
+          <Paginacion {...pagCartera} etiqueta="movimientos" />
         </div>
       </div>
     </div>

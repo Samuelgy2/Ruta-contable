@@ -1,4 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { usePaginacion } from '../../hooks/usePaginacion';
+import { Paginacion } from '../../components/ui/Paginacion';
 import { usePagosMensuales, PagoMensualItem } from '../../hooks/usePagosMensuales';
 import { usePeriodos } from '../../hooks/usePeriodos';
 import { useSocios } from '../../hooks/useSocios';
@@ -99,6 +101,7 @@ export function AdminMonthlyPayments({ onNavigate }: AdminMonthlyPaymentsProps) 
   const { pagosMensuales, loading, fetchPagosMensuales, createPagoMensual, updatePagoMensual } = usePagosMensuales();
   const { periodos } = usePeriodos();
   const { socios } = useSocios();
+  const pagMensualidades = usePaginacion(pagosMensuales);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterEstado, setFilterEstado] = useState<string>('all');
   const [filterPeriodo, setFilterPeriodo] = useState<string>('all');
@@ -291,7 +294,7 @@ export function AdminMonthlyPayments({ onNavigate }: AdminMonthlyPaymentsProps) 
                 <tr><td colSpan={9} style={{ textAlign: 'center', padding: '32px', color: '#9ca3af' }}>Cargando...</td></tr>
               ) : pagosMensuales.length === 0 ? (
                 <tr><td colSpan={9} style={{ textAlign: 'center', padding: '32px', color: '#9ca3af' }}>No hay pagos mensuales registrados</td></tr>
-              ) : pagosMensuales.map((p: PagoMensualItem) => (
+              ) : pagMensualidades.itemsPagina.map((p: PagoMensualItem) => (
                 <tr key={p.id_pago} style={{ borderBottom: '1px solid #f3f4f6' }}>
                   <td style={{ padding: '14px 16px', fontSize: '14px', color: '#6b7280' }}>{p.nombre_mes ? `${p.nombre_mes} ${p.anio}` : '—'}</td>
                   <td style={{ padding: '14px 16px', fontSize: '14px', color: '#1f2937', fontWeight: '500' }}>{p.socio_nombre ?? '—'}</td>
@@ -316,6 +319,7 @@ export function AdminMonthlyPayments({ onNavigate }: AdminMonthlyPaymentsProps) 
               ))}
             </tbody>
           </table>
+          <Paginacion {...pagMensualidades} etiqueta="mensualidades" />
         </div>
       </div>
     </div>

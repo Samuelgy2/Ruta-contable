@@ -1,4 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { usePaginacion } from '../../hooks/usePaginacion';
+import { Paginacion } from '../../components/ui/Paginacion';
 import { useCompras, Compra, DetalleCompra } from '../../hooks/useCompras';
 import { useProveedores } from '../../hooks/useProveedores';
 import { formatCurrency, formatDateShort } from '../../utils/format';
@@ -119,6 +121,7 @@ function DetalleModal({ compra, onClose, onAdded, onRemoved, showToast }: {
 }) {
   const [lineForm, setLineForm] = useState({ concepto: '', cantidad: '1', valorUnitario: '' });
   const [detalle, setDetalle] = useState<DetalleCompra[]>(compra.detalle ?? []);
+  const pagDetalle = usePaginacion(detalle);
   const [submitting, setSubmitting] = useState(false);
   const puedeEditar = compra.estado === 'aprobada';
 
@@ -164,7 +167,7 @@ function DetalleModal({ compra, onClose, onAdded, onRemoved, showToast }: {
           <tbody>
             {detalle.length === 0 ? (
               <tr><td colSpan={6} style={{ textAlign: 'center', padding: '20px', color: '#9ca3af', fontSize: '13px' }}>Sin líneas de detalle</td></tr>
-            ) : detalle.map(d => (
+            ) : pagDetalle.itemsPagina.map(d => (
               <tr key={d.nro_linea} style={{ borderTop: '1px solid #e5e7eb' }}>
                 <td style={{ padding: '10px 12px', fontSize: '13px', color: '#6b7280' }}>{d.nro_linea}</td>
                 <td style={{ padding: '10px 12px', fontSize: '13px', color: '#1f2937' }}>{d.concepto}</td>
@@ -195,6 +198,7 @@ function DetalleModal({ compra, onClose, onAdded, onRemoved, showToast }: {
             </tfoot>
           )}
         </table>
+        <Paginacion {...pagDetalle} etiqueta="líneas" />
       </div>
 
       {puedeEditar && (
@@ -214,6 +218,7 @@ function DetalleModal({ compra, onClose, onAdded, onRemoved, showToast }: {
 export function AdminCompras({ onNavigate }: AdminComprasProps) {
   const { compras, loading, fetchCompras, createCompra, aprobarCompra, removeCompra, getDetalleCompra, addDetalle, removeDetalle } = useCompras();
   const { proveedores } = useProveedores();
+  const pagCompras = usePaginacion(compras);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterEstado, setFilterEstado] = useState<string>('all');
   const [showForm, setShowForm] = useState(false);
@@ -380,7 +385,7 @@ export function AdminCompras({ onNavigate }: AdminComprasProps) {
                 <tr><td colSpan={6} style={{ textAlign: 'center', padding: '32px', color: '#9ca3af' }}>Cargando...</td></tr>
               ) : compras.length === 0 ? (
                 <tr><td colSpan={6} style={{ textAlign: 'center', padding: '32px', color: '#9ca3af' }}>No hay compras registradas</td></tr>
-              ) : compras.map(c => (
+              ) : pagCompras.itemsPagina.map(c => (
                 <tr key={c.id_compra} style={{ borderBottom: '1px solid #f3f4f6' }}>
                   <td style={{ padding: '14px 16px', fontSize: '14px', color: '#6b7280' }}>{formatDateShort(c.fecha)}</td>
                   <td style={{ padding: '14px 16px', fontSize: '14px', color: '#1f2937', fontWeight: '500' }}>{c.concepto}</td>
@@ -400,6 +405,7 @@ export function AdminCompras({ onNavigate }: AdminComprasProps) {
               ))}
             </tbody>
           </table>
+          <Paginacion {...pagCompras} etiqueta="compras" />
         </div>
       </div>
     </div>

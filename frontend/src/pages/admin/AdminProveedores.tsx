@@ -1,4 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { usePaginacion } from '../../hooks/usePaginacion';
+import { Paginacion } from '../../components/ui/Paginacion';
 import { useProveedores, Proveedor } from '../../hooks/useProveedores';
 
 interface AdminProveedoresProps {
@@ -107,6 +109,7 @@ type FormState = typeof emptyForm;
 
 export function AdminProveedores({ onNavigate }: AdminProveedoresProps) {
   const { proveedores, loading, fetchProveedores, createProveedor, updateProveedor, removeProveedor } = useProveedores();
+  const pagProveedores = usePaginacion(proveedores);
   const [searchTerm, setSearchTerm] = useState('');
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
@@ -264,7 +267,7 @@ export function AdminProveedores({ onNavigate }: AdminProveedoresProps) {
                 <tr><td colSpan={6} style={{ textAlign: 'center', padding: '32px', color: '#9ca3af' }}>Cargando...</td></tr>
               ) : proveedores.length === 0 ? (
                 <tr><td colSpan={6} style={{ textAlign: 'center', padding: '32px', color: '#9ca3af' }}>No hay proveedores registrados</td></tr>
-              ) : proveedores.map(p => (
+              ) : pagProveedores.itemsPagina.map(p => (
                 <tr key={p.id_proveedor} style={{ borderBottom: '1px solid #f3f4f6' }}>
                   <td style={{ padding: '14px 16px', fontSize: '14px', color: '#1f2937', fontWeight: '500' }}>{p.nombre}</td>
                   <td style={{ padding: '14px 16px', fontSize: '14px', color: '#6b7280' }}>{p.nit ?? '—'}</td>
@@ -285,6 +288,7 @@ export function AdminProveedores({ onNavigate }: AdminProveedoresProps) {
               ))}
             </tbody>
           </table>
+          <Paginacion {...pagProveedores} etiqueta="proveedores" />
         </div>
       </div>
     </div>

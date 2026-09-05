@@ -1,4 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { usePaginacion } from '../../hooks/usePaginacion';
+import { Paginacion } from '../../components/ui/Paginacion';
 import { useAsistencia, AsistenciaItem } from '../../hooks/useAsistencia';
 import { useSocios } from '../../hooks/useSocios';
 import { asistenciaService } from '../../services/asistenciaService';
@@ -143,6 +145,7 @@ export function AdminAsistencia({ onNavigate }: AdminAsistenciaProps) {
   }, [filterEstado, fechaInicio, fechaFin, fetchAsistencia]);
 
   const filtered = asistencia.filter(a => (a.socio_nombre ?? '').toLowerCase().includes(searchTerm.toLowerCase()));
+  const pagAsistencia = usePaginacion(filtered);
 
   const openCreate = () => { setEditingId(null); setForm(emptyForm); setShowForm(true); };
   const openEdit = (a: AsistenciaItem) => {
@@ -317,7 +320,7 @@ export function AdminAsistencia({ onNavigate }: AdminAsistenciaProps) {
                 <tr><td colSpan={6} style={{ textAlign: 'center', padding: '32px', color: '#9ca3af' }}>Cargando...</td></tr>
               ) : filtered.length === 0 ? (
                 <tr><td colSpan={6} style={{ textAlign: 'center', padding: '32px', color: '#9ca3af' }}>No hay registros de asistencia</td></tr>
-              ) : filtered.map(a => (
+              ) : pagAsistencia.itemsPagina.map(a => (
                 <tr key={a.id_asistencia} style={{ borderBottom: '1px solid #f3f4f6' }}>
                   <td style={{ padding: '14px 16px', fontSize: '14px', color: '#6b7280' }}>{formatDateShort(a.fecha)}</td>
                   <td style={{ padding: '14px 16px', fontSize: '14px', color: '#1f2937', fontWeight: '500' }}>{a.socio_nombre ?? '—'}</td>
@@ -332,6 +335,7 @@ export function AdminAsistencia({ onNavigate }: AdminAsistenciaProps) {
               ))}
             </tbody>
           </table>
+          <Paginacion {...pagAsistencia} etiqueta="registros" />
         </div>
       </div>
     </div>

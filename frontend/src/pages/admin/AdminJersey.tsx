@@ -1,4 +1,6 @@
 import React, { useState } from 'react';
+import { usePaginacion } from '../../hooks/usePaginacion';
+import { Paginacion } from '../../components/ui/Paginacion';
 import { useData } from '../../contexts/DataContext';
 import { formatCurrency, formatDateShort } from '../../utils/format';
 
@@ -31,6 +33,7 @@ export function AdminJersey({ onNavigate }: AdminJerseyProps) {
       return memberName.includes(searchTerm.toLowerCase());
     })
     .sort((a, b) => new Date(b.fecha).getTime() - new Date(a.fecha).getTime());
+  const pagPedidos = usePaginacion(filteredOrders);
 
   const getMemberName = (idSocio: string) => {
     const member = members.find(m => m.id === idSocio);
@@ -273,7 +276,7 @@ export function AdminJersey({ onNavigate }: AdminJerseyProps) {
                   </td>
                 </tr>
               ) : (
-                filteredOrders.map((order) => (
+                pagPedidos.itemsPagina.map((order) => (
                   <tr key={order.id}>
                     <td>{formatDateShort(order.fecha)}</td>
                     <td>{getMemberName(order.idSocio)}</td>
@@ -291,6 +294,7 @@ export function AdminJersey({ onNavigate }: AdminJerseyProps) {
               )}
             </tbody>
           </table>
+          <Paginacion {...pagPedidos} etiqueta="pedidos" />
         </div>
       </div>
     </div>

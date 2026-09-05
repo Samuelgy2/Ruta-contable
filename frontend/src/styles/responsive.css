@@ -1,0 +1,218 @@
+/* ─── Responsive y paginación ──────────────────────────────────────────────
+   index.css es CSS precompilado, así que los ajustes de pantalla pequeña y
+   los estilos del componente Paginacion viven aquí. Se importa en main.tsx
+   después de index.css para poder sobrescribir. */
+
+/* ─── Paginación ─────────────────────────────────────────────────────────── */
+
+.paginacion {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+  padding: 14px 16px;
+  border-top: 1px solid var(--color-gray-100);
+  background: var(--color-white);
+}
+
+.paginacion-info {
+  color: var(--color-gray-600);
+  font-size: 13px;
+}
+
+.paginacion-controles {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.paginacion-btn {
+  min-width: 34px;
+  height: 34px;
+  padding: 0 8px;
+  border: 1px solid var(--color-gray-200);
+  border-radius: 8px;
+  background: var(--color-white);
+  color: var(--color-gray-700);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: all .15s;
+}
+
+.paginacion-btn:hover:not(:disabled) {
+  border-color: var(--color-primary);
+  color: var(--color-primary-dark);
+}
+
+.paginacion-btn:disabled {
+  opacity: .45;
+  cursor: not-allowed;
+}
+
+.paginacion-btn.is-active {
+  background: var(--color-primary);
+  border-color: var(--color-primary);
+  color: var(--color-white);
+}
+
+.paginacion-puntos {
+  color: #9ca3af;
+  padding: 0 4px;
+  font-size: 13px;
+}
+
+/* ─── Tablas ─────────────────────────────────────────────────────────────── */
+
+/* Toda tabla de datos puede desplazarse en horizontal dentro de su tarjeta en
+   lugar de desbordar la página. */
+.tabla-responsive {
+  width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* ─── Pantallas medianas ─────────────────────────────────────────────────── */
+
+@media (width <= 1024px) {
+  .stats-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 16px;
+  }
+
+  .admin-grid,
+  .features-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+/* ─── Móvil ──────────────────────────────────────────────────────────────── */
+
+@media (width <= 768px) {
+  /* Contenido del panel: menos aire lateral */
+  .admin-layout main > div:last-child {
+    padding: 16px !important;
+  }
+
+  .container {
+    padding: 0 12px;
+  }
+
+  .card,
+  .stat-card {
+    padding: 18px;
+  }
+
+  .stats-grid {
+    grid-template-columns: 1fr;
+    gap: 12px;
+    margin-bottom: 20px;
+  }
+
+  .stat-value {
+    font-size: 26px;
+  }
+
+  .admin-grid {
+    grid-template-columns: 1fr;
+  }
+
+  /* Cabeceras de página: título arriba, acciones debajo a todo el ancho */
+  .header-content {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+  }
+
+  .header-content h2 {
+    font-size: 22px;
+  }
+
+  .header-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .header-actions .btn,
+  .contact-actions .btn {
+    flex: 1 1 auto;
+  }
+
+  /* Formularios en una columna */
+  .form-row,
+  .form-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .form-group .btn {
+    width: 100%;
+  }
+
+  /* Filtros y barras de búsqueda apiladas */
+  .filters,
+  .search-bar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .filters > *,
+  .search-bar > * {
+    width: 100%;
+    min-width: 0;
+  }
+
+  /* Tablas: desplazamiento horizontal dentro de su contenedor, celdas
+     compactas y sin saltos de línea que rompan la lectura. */
+  table.table,
+  .tabla-responsive table,
+  .card table,
+  .container table {
+    display: block;
+    overflow-x: auto;
+    white-space: nowrap;
+    max-width: 100%;
+  }
+
+  .table th,
+  .table td {
+    padding: 10px 12px;
+    font-size: 13px;
+  }
+
+  .paginacion {
+    justify-content: center;
+    text-align: center;
+  }
+
+  /* Modales a todo el ancho útil */
+  .modal-content {
+    max-width: 100%;
+    margin: 12px;
+    padding: 20px;
+  }
+
+  /* Pestañas desplazables en vez de amontonarse */
+  .tabs,
+  .tab-nav {
+    overflow-x: auto;
+    flex-wrap: nowrap;
+    -webkit-overflow-scrolling: touch;
+  }
+}
+
+@media (width <= 480px) {
+  .stat-value {
+    font-size: 22px;
+  }
+
+  .paginacion-btn {
+    min-width: 30px;
+    height: 30px;
+    font-size: 12px;
+  }
+}

@@ -1,5 +1,7 @@
 // Panel "Usuarios" dentro de Configuración del Sistema.
 import React, { useState } from 'react';
+import { usePaginacion } from '../../../hooks/usePaginacion';
+import { Paginacion } from '../../../components/ui/Paginacion';
 import { PasswordInput } from '../../../components/ui/password-input';
 import { useUsers } from '../../../hooks/useUsers';
 import { UserRole } from '../../../types';
@@ -42,6 +44,7 @@ export function UsersPanel({ showToast }: UsersPanelProps) {
   const [submitting, setSubmitting] = useState(false);
 
   const visibleUsers = users.filter((u: any) => u.username !== 'admin');
+  const pagUsuarios = usePaginacion(visibleUsers);
   const inactivos = visibleUsers.filter((u: any) => !u.active);
   const admins = visibleUsers.filter((u: any) => u.role === 'admin');
 
@@ -160,7 +163,7 @@ export function UsersPanel({ showToast }: UsersPanelProps) {
               <tr><td colSpan={6} style={{ textAlign: 'center', padding: '32px', color: '#9ca3af' }}>Cargando...</td></tr>
             ) : visibleUsers.length === 0 ? (
               <tr><td colSpan={6} style={{ textAlign: 'center', padding: '32px', color: '#9ca3af' }}>No hay usuarios registrados</td></tr>
-            ) : visibleUsers.map((user: User) => (
+            ) : pagUsuarios.itemsPagina.map((user: User) => (
               <tr key={user.id} style={{ borderBottom: '1px solid #f3f4f6' }}>
                 <td style={{ padding: '14px 16px', fontSize: '14px', color: '#1f2937', fontWeight: '500' }}>{user.username}</td>
                 <td style={{ padding: '14px 16px', fontSize: '14px', color: '#6b7280' }}>{user.fullName}</td>
@@ -175,6 +178,7 @@ export function UsersPanel({ showToast }: UsersPanelProps) {
             ))}
           </tbody>
         </table>
+        <Paginacion {...pagUsuarios} etiqueta="usuarios" />
       </div>
     </>
   );

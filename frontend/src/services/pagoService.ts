@@ -8,6 +8,13 @@ export const pagoService = {
     return response.data;
   },
 
+  // Cobra de verdad una orden que el comprador ya aprobó en la ventana de
+  // PayPal. El backend valida que el pago sea del usuario en sesión.
+  capturar: async (referencia: string) => {
+    const response = await api.post(`/pagos/${encodeURIComponent(referencia)}/capturar`);
+    return response.data;
+  },
+
   // Estado de un pago. El backend sólo lo entrega a su dueño o a un administrador.
   getByReferencia: async (referencia: string) => {
     const response = await api.get(`/pagos/${encodeURIComponent(referencia)}`);

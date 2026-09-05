@@ -9,6 +9,7 @@ const pagoController = require('../controllers/PagoController');
 router.post('/webhook', express.json(), pagoController.webhook);         // POST /api/pagos/webhook
 
 router.post('/checkout', requireAuth, pagoController.checkout);          // POST /api/pagos/checkout
+router.post('/:referencia/capturar', requireAuth, pagoController.capturar); // POST /api/pagos/:referencia/capturar
 router.get('/', requireAdmin, pagoController.getAll);                    // GET  /api/pagos
 router.get('/:referencia', requireAuth, pagoController.getByReferencia); // GET  /api/pagos/:referencia
 
