@@ -1,5 +1,12 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import { pagoMensualService } from '../services/pagoMensualService';
+
+export interface PagoMensualFiltros {
+  estado?: string;
+  idSocio?: string | number;
+  idPeriodo?: string | number;
+  search?: string;
+}
 
 export interface PagoMensualItem {
   id_pago: number;
@@ -24,7 +31,7 @@ interface UsePagosMensualesResult {
   pagosMensuales: PagoMensualItem[];
   loading: boolean;
   error: string | null;
-  fetchPagosMensuales: (filtros?: { estado?: string; idSocio?: string | number; idPeriodo?: string | number; search?: string }) => Promise<void>;
+  fetchPagosMensuales: (filtros?: PagoMensualFiltros) => Promise<void>;
   createPagoMensual: (data: Partial<PagoMensualItem>) => Promise<{ success: boolean; message: string }>;
   updatePagoMensual: (id: number, data: Partial<PagoMensualItem>) => Promise<{ success: boolean; message: string }>;
   removePagoMensual: (id: number) => Promise<{ success: boolean; message: string }>;
@@ -35,20 +42,30 @@ export function usePagosMensuales(): UsePagosMensualesResult {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const fetchPagosMensuales = useCallback(async (filtros: { estado?: string; idSocio?: string | number; idPeriodo?: string | number; search?: string } = {}) => {
+  // Últimos filtros usados: tras crear/actualizar/eliminar se recarga con los
+  // mismos filtros para que la vista no pierda su búsqueda ni su estado.
+  const ultimosFiltros = useRef<PagoMensualFiltros>({});
+  // Descarta respuestas de peticiones antiguas que lleguen después de una nueva.
+  const requestId = useRef(0);
+
+  const fetchPagosMensuales = useCallback(async (filtros: PagoMensualFiltros = ultimosFiltros.current) => {
+    ultimosFiltros.current = filtros;
+    const id = ++requestId.current;
     try {
       setLoading(true);
       setError(null);
       const response = await pagoMensualService.getAll(filtros);
+      if (id !== requestId.current) return;
       if (response.success) {
         setPagosMensuales(response.data || []);
       } else {
         setError(response.message || 'Error al cargar pagos mensuales');
       }
     } catch (err: any) {
+      if (id !== requestId.current) return;
       setError(err.response?.data?.message || err.message || 'Error al cargar pagos mensuales');
     } finally {
-      setLoading(false);
+      if (id === requestId.current) setLoading(false);
     }
   }, []);
 

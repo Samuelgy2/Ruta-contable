@@ -1,12 +1,22 @@
 import React, { useState } from 'react';
 import { PasswordInput } from '../../../components/ui/password-input';
+import { AppPage } from '../../../types/index';
 
 interface RegisterFormProps {
-  onNavigate: (page: 'home' | 'login' | 'register') => void;
-  onRegister: (data: { firstName: string; lastName: string; email: string; password: string }) => boolean;
+  onNavigate: (page: AppPage) => void;
+  onRegister: (data: {
+    firstName: string;
+    lastName: string;
+    email: string;
+    password: string;
+  }) => Promise<boolean>;
   backgroundColor?: string;
   backgroundImage?: string;
 }
+
+// El backend exige ocho caracteres como mínimo; el formulario valida lo mismo
+// para no mandar una petición que ya se sabe que va a fallar.
+const LONGITUD_MINIMA_PASSWORD = 8;
 
 export function RegisterForm({ onNavigate, onRegister, backgroundColor, backgroundImage }: RegisterFormProps) {
   const [formData, setFormData] = useState({
@@ -18,6 +28,9 @@ export function RegisterForm({ onNavigate, onRegister, backgroundColor, backgrou
   });
 
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [submitting, setSubmitting] = useState(false);
+  const [mensajeError, setMensajeError] = useState('');
+  const [mensajeExito, setMensajeExito] = useState('');
 
   const validateForm = () => {
     const newErrors: Record<string, string> = {};
@@ -38,8 +51,8 @@ export function RegisterForm({ onNavigate, onRegister, backgroundColor, backgrou
 
     if (!formData.password) {
       newErrors.password = 'La contraseña es requerida';
-    } else if (formData.password.length < 6) {
-      newErrors.password = 'La contraseña debe tener al menos 6 caracteres';
+    } else if (formData.password.length < LONGITUD_MINIMA_PASSWORD) {
+      newErrors.password = `La contraseña debe tener al menos ${LONGITUD_MINIMA_PASSWORD} caracteres`;
     }
 
     if (!formData.confirmPassword) {
@@ -52,30 +65,43 @@ export function RegisterForm({ onNavigate, onRegister, backgroundColor, backgrou
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    setMensajeError('');
+    setMensajeExito('');
 
     if (!validateForm()) {
       return;
     }
 
-    const success = onRegister({
-      firstName: formData.firstName,
-      lastName: formData.lastName,
-      email: formData.email,
-      password: formData.password,
-    });
+    setSubmitting(true);
 
-    if (success) {
-      alert('¡Registro exitoso! Ahora puedes iniciar sesión.');
-      onNavigate('login');
-    } else {
-      setErrors({ email: 'Este correo electrónico ya está registrado' });
+    try {
+      const success = await onRegister({
+        firstName: formData.firstName,
+        lastName: formData.lastName,
+        email: formData.email,
+        password: formData.password,
+      });
+
+      if (success) {
+        setMensajeExito('¡Cuenta creada! Te llevamos al inicio de sesión…');
+        // Pausa breve para que el mensaje se alcance a leer antes de redirigir.
+        setTimeout(() => onNavigate('login'), 1500);
+      } else {
+        setMensajeError('No se pudo crear la cuenta. El correo o el usuario ya podrían estar registrados.');
+        setSubmitting(false);
+      }
+    } catch {
+      setMensajeError('No se pudo conectar con el servidor. Inténtalo de nuevo en un momento.');
+      setSubmitting(false);
     }
   };
 
   const handleChange = (field: string, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }));
+    setMensajeError('');
     // Limpiar error del campo cuando el usuario empiece a escribir
     if (errors[field]) {
       setErrors(prev => {
@@ -109,6 +135,7 @@ export function RegisterForm({ onNavigate, onRegister, backgroundColor, backgrou
               value={formData.firstName}
               onChange={(e) => handleChange('firstName', e.target.value)}
               placeholder="Ingresa tu nombre"
+              disabled={submitting}
             />
             {errors.firstName && (
               <span className="form-error">{errors.firstName}</span>
@@ -124,6 +151,7 @@ export function RegisterForm({ onNavigate, onRegister, backgroundColor, backgrou
               value={formData.lastName}
               onChange={(e) => handleChange('lastName', e.target.value)}
               placeholder="Ingresa tu apellido"
+              disabled={submitting}
             />
             {errors.lastName && (
               <span className="form-error">{errors.lastName}</span>
@@ -140,6 +168,7 @@ export function RegisterForm({ onNavigate, onRegister, backgroundColor, backgrou
             value={formData.email}
             onChange={(e) => handleChange('email', e.target.value)}
             placeholder="ejemplo@correo.com"
+            disabled={submitting}
           />
           {errors.email && (
             <span className="form-error">{errors.email}</span>
@@ -153,7 +182,8 @@ export function RegisterForm({ onNavigate, onRegister, backgroundColor, backgrou
             className={`form-input ${errors.password ? 'error' : ''}`}
             value={formData.password}
             onChange={(e) => handleChange('password', e.target.value)}
-            placeholder="Mínimo 6 caracteres"
+            placeholder={`Mínimo ${LONGITUD_MINIMA_PASSWORD} caracteres`}
+            disabled={submitting}
           />
           {errors.password && (
             <span className="form-error">{errors.password}</span>
@@ -168,14 +198,30 @@ export function RegisterForm({ onNavigate, onRegister, backgroundColor, backgrou
             value={formData.confirmPassword}
             onChange={(e) => handleChange('confirmPassword', e.target.value)}
             placeholder="Repite tu contraseña"
+            disabled={submitting}
           />
           {errors.confirmPassword && (
             <span className="form-error">{errors.confirmPassword}</span>
           )}
         </div>
 
-        <button type="submit" className="btn btn-primary btn-large" style={{ width: '100%' }}>
-          Registrarse
+        {/* Mensajes en línea, en lugar del alert() que había antes. */}
+        {mensajeError && (
+          <div className="form-error-box">{mensajeError}</div>
+        )}
+        {mensajeExito && (
+          <div className="form-error-box" style={{ color: '#047857', background: '#ecfdf5', borderColor: '#a7f3d0' }}>
+            {mensajeExito}
+          </div>
+        )}
+
+        <button
+          type="submit"
+          className="btn btn-primary btn-large"
+          style={{ width: '100%' }}
+          disabled={submitting}
+        >
+          {submitting ? 'Creando cuenta…' : 'Registrarse'}
         </button>
 
         <div className="register-footer">

@@ -13,10 +13,11 @@ const dns = require('dns').promises;
   }
 
   // ── Ahora cargar el resto del servidor ─────────────────────────────────
-  const express = require('express');
-  const cors    = require('cors');
-  const helmet  = require('helmet');
-  const bcrypt  = require('bcryptjs');
+  const express   = require('express');
+  const cors      = require('cors');
+  const helmet    = require('helmet');
+  const bcrypt    = require('bcryptjs');
+  const rateLimit = require('express-rate-limit');
 
   const pool           = require('./db');
   const authRoutes         = require('./routes/auth');
@@ -34,6 +35,32 @@ const dns = require('dns').promises;
   const pagoMensualRoutes  = require('./routes/pagosMensuales');
   const categoryRoutes     = require('./routes/categories');
   const clubDataRoutes     = require('./routes/clubData');
+  const portalRoutes       = require('./routes/portal');
+  const pagoRoutes         = require('./routes/pagos');
+
+  // ── Variables de entorno de PayPal ────────────────────────────────────
+  // Se validan al arranque para fallar rápido y no descubrir el problema con
+  // un pago a medias. Siempre sandbox.
+  const VARIABLES_PAYPAL = [
+    'PAYPAL_BASE_URL',
+    'PAYPAL_CLIENT_ID',
+    'PAYPAL_CLIENT_SECRET',
+    'PAYPAL_WEBHOOK_ID',
+  ];
+
+  const faltantes = VARIABLES_PAYPAL.filter((nombre) => !process.env[nombre]);
+
+  if (faltantes.length > 0) {
+    console.error('❌ Faltan variables de entorno de PayPal:', faltantes.join(', '));
+    console.error('   Añádelas a tu .env siguiendo la plantilla de .env.docker antes de arrancar.');
+    process.exit(1);
+  }
+
+  if (!process.env.PAYPAL_BASE_URL.includes('sandbox')) {
+    console.error('❌ La integración de pagos sólo debe usar el sandbox de PayPal.');
+    console.error('   PAYPAL_BASE_URL debe apuntar a https://api-m.sandbox.paypal.com');
+    process.exit(1);
+  }
 
   const app  = express();
   const port = process.env.PORT || 3001;
@@ -52,6 +79,17 @@ const dns = require('dns').promises;
   }));
   app.use(express.json());
 
+  // ─── Límite general de peticiones ─────────────────────────────────────
+  // Sólo cubre /api: /health queda fuera para no romper los chequeos de estado.
+  const apiLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000,
+    max: 300,
+    message: { success: false, message: 'Demasiadas peticiones. Intenta de nuevo en unos minutos.' },
+    standardHeaders: true,
+    legacyHeaders: false,
+  });
+  app.use('/api', apiLimiter);
+
   // ─── Rutas ────────────────────────────────────────────────────────────
   app.use('/api/auth',         authRoutes);
   app.use('/api/users',        usersRoutes);
@@ -68,6 +106,8 @@ const dns = require('dns').promises;
   app.use('/api/pagos-mensuales', pagoMensualRoutes);
   app.use('/api/categories',      categoryRoutes);
   app.use('/api/club-data',       clubDataRoutes);
+  app.use('/api/portal',          portalRoutes);
+  app.use('/api/pagos',           pagoRoutes);
   app.get('/health', (_req, res) => res.json({ status: 'OK', message: 'Servidor funcionando' }));
 
   // ─── Setup DB ─────────────────────────────────────────────────────────

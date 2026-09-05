@@ -139,6 +139,31 @@ interface DBTransaction {
   metodo_pago: string | null;
   creado_por_username: string | null;
   created_at: string;
+  // Origen del movimiento: 'pasarela' si llegó por un pago en línea, 'manual' si
+  // lo cargó un administrador a mano.
+  origen: 'pasarela' | 'manual';
+  pago_id: number | null;
+  pago_referencia: string | null;
+  pago_estado: string | null;
+  pago_proveedor: string | null;
+}
+
+// Detalle de auditoría del pago asociado a una transacción de la pasarela.
+interface PagoDetalle {
+  referencia: string;
+  proveedor: string;
+  orden_id: string | null;
+  proveedor_id: string | null;
+  concepto: string | null;
+  monto: string;
+  moneda: string;
+  // Estado propio de la aplicación; estado_proveedor es el crudo de la pasarela.
+  estado: string;
+  estado_proveedor: string | null;
+  metodo_pago: string | null;
+  created_at: string;
+  finalized_at: string | null;
+  payload_raw: unknown;
 }
 
 // ─── Utilidades fecha dd/mm/aaaa ───────────────────────────────────────────────
@@ -168,6 +193,8 @@ export function AdminTransactions({ onNavigate }: AdminTransactionsProps) {
   const [showForm,     setShowForm]     = useState(false);
   const [form,         setForm]         = useState<FormState>(emptyForm);
   const [submitting,   setSubmitting]   = useState(false);
+  const [pagoDetalle,  setPagoDetalle]  = useState<PagoDetalle | null>(null);
+  const [cargandoPago, setCargandoPago] = useState(false);
   const { toasts, show: showToast }     = useToast();
 
   const inputStyle: React.CSSProperties = {
@@ -198,6 +225,26 @@ export function AdminTransactions({ onNavigate }: AdminTransactionsProps) {
   }, []);
 
   useEffect(() => { void fetchTransactions(); }, [fetchTransactions]);
+
+  // ── Detalle del pago de la pasarela (payload_raw) ───────────────────────────
+  const verDetallePago = async (referencia: string) => {
+    setCargandoPago(true);
+    try {
+      const res = await fetch(`${API_URL}/pagos/${encodeURIComponent(referencia)}`, {
+        headers: { Authorization: `Bearer ${getToken()}` },
+      });
+      const json = await res.json();
+      if (json.success) {
+        setPagoDetalle(json.data as PagoDetalle);
+      } else {
+        showToast(json.message ?? 'No se pudo cargar el pago', 'error');
+      }
+    } catch {
+      showToast('No se pudo conectar con el servidor', 'error');
+    } finally {
+      setCargandoPago(false);
+    }
+  };
 
   const closeForm = () => { setShowForm(false); setForm(emptyForm); };
 
@@ -430,6 +477,61 @@ export function AdminTransactions({ onNavigate }: AdminTransactionsProps) {
         </Modal>
       )}
 
+      {/* ── Detalle del pago de la pasarela ─────────────────────────── */}
+      {pagoDetalle && (
+        <Modal onClose={() => setPagoDetalle(null)}>
+          <h3 style={{ margin: '0 0 4px', fontSize: '20px', fontWeight: '700', color: '#1f2937' }}>
+            Pago de la pasarela
+          </h3>
+          <p style={{ margin: '0 0 20px', color: '#6b7280', fontSize: '14px' }}>
+            Referencia {pagoDetalle.referencia} · {pagoDetalle.proveedor}
+          </p>
+
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '20px' }}>
+            {[
+              ['Estado', pagoDetalle.estado],
+              ['Estado en la pasarela', pagoDetalle.estado_proveedor ?? '—'],
+              ['Monto', `${pagoDetalle.moneda} ${parseFloat(pagoDetalle.monto).toLocaleString('es-CO')}`],
+              ['Método', pagoDetalle.metodo_pago ?? '—'],
+              ['Concepto', pagoDetalle.concepto ?? '—'],
+              ['Orden', pagoDetalle.orden_id ?? '—'],
+              ['Captura', pagoDetalle.proveedor_id ?? '—'],
+              ['Finalizado', pagoDetalle.finalized_at ? formatDateShort(pagoDetalle.finalized_at) : '—'],
+            ].map(([etiqueta, valor]) => (
+              <div key={etiqueta as string}>
+                <p style={{ margin: 0, fontSize: '12px', color: '#6b7280', fontWeight: 600 }}>{etiqueta}</p>
+                <p style={{ margin: '2px 0 0', fontSize: '14px', color: '#1f2937' }}>{valor}</p>
+              </div>
+            ))}
+          </div>
+
+          <p style={{ margin: '0 0 8px', fontSize: '13px', fontWeight: 600, color: '#374151' }}>
+            Evento recibido de PayPal (payload_raw)
+          </p>
+          <pre style={{
+            margin: 0, padding: '14px', borderRadius: '10px',
+            backgroundColor: '#f9fafb', border: '1px solid #e5e7eb',
+            fontSize: '12px', maxHeight: '320px', overflow: 'auto', whiteSpace: 'pre-wrap',
+          }}>
+            {pagoDetalle.payload_raw
+              ? JSON.stringify(pagoDetalle.payload_raw, null, 2)
+              : 'Todavía no se ha recibido ningún evento para este pago.'}
+          </pre>
+
+          <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '20px' }}>
+            <button
+              type="button"
+              onClick={() => setPagoDetalle(null)}
+              style={{
+                padding: '11px 24px', borderRadius: '8px', border: '1.5px solid #e5e7eb',
+                backgroundColor: 'white', color: '#374151', fontSize: '14px',
+                fontWeight: '500', cursor: 'pointer',
+              }}
+            >Cerrar</button>
+          </div>
+        </Modal>
+      )}
+
       <div className="container">
 
         {/* ── Header ──────────────────────────────────────────────── */}
@@ -552,7 +654,7 @@ export function AdminTransactions({ onNavigate }: AdminTransactionsProps) {
             <table style={{ width: '100%', borderCollapse: 'collapse' }}>
               <thead>
                 <tr style={{ backgroundColor: '#f9fafb', borderBottom: '2px solid #e5e7eb' }}>
-                    {['Fecha', 'Tipo', 'Categoría', 'Monto', 'Descripción', 'Método', 'Registrado por'].map((h, i) => (
+                    {['Fecha', 'Tipo', 'Categoría', 'Monto', 'Descripción', 'Método', 'Registrado por', 'Origen'].map((h, i) => (
                     <th
                       key={i}
                       style={{
@@ -566,7 +668,7 @@ export function AdminTransactions({ onNavigate }: AdminTransactionsProps) {
               <tbody>
                 {filteredTransactions.length === 0 ? (
                   <tr>
-                    <td colSpan={7} style={{ textAlign: 'center', padding: '48px', color: '#9ca3af' }}>
+                    <td colSpan={8} style={{ textAlign: 'center', padding: '48px', color: '#9ca3af' }}>
                       <div style={{ fontSize: '24px' }}>📭</div>
                       <p style={{ margin: '8px 0 0', fontSize: '14px' }}>No hay transacciones que mostrar</p>
                     </td>
@@ -614,6 +716,41 @@ export function AdminTransactions({ onNavigate }: AdminTransactionsProps) {
                       </td>
                       <td style={{ padding: '14px 16px', color: '#6b7280', fontSize: '13px' }}>
                         {t.creado_por_username ?? '—'}
+                      </td>
+                      <td style={{ padding: '14px 16px', fontSize: '13px', whiteSpace: 'nowrap' }}>
+                        {t.origen === 'pasarela' ? (
+                          <span style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}>
+                            <span style={{
+                              padding: '3px 10px', borderRadius: '6px',
+                              backgroundColor: '#ecfdf5', color: '#047857',
+                              fontWeight: '600', fontSize: '12px',
+                            }}>
+                              Pasarela
+                            </span>
+                            {t.pago_referencia && (
+                              <button
+                                type="button"
+                                onClick={() => void verDetallePago(t.pago_referencia as string)}
+                                disabled={cargandoPago}
+                                style={{
+                                  padding: '3px 10px', borderRadius: '6px',
+                                  border: '1px solid #d1d5db', backgroundColor: 'white',
+                                  color: '#374151', fontSize: '12px', cursor: 'pointer',
+                                }}
+                              >
+                                Ver detalle
+                              </button>
+                            )}
+                          </span>
+                        ) : (
+                          <span style={{
+                            padding: '3px 10px', borderRadius: '6px',
+                            backgroundColor: '#f3f4f6', color: '#6b7280',
+                            fontWeight: '500', fontSize: '12px',
+                          }}>
+                            Manual
+                          </span>
+                        )}
                       </td>
                     </tr>
                   ))

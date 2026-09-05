@@ -392,3 +392,74 @@ export function MonthlyClosePDF({ periodo, resumen, transacciones, systemData }:
     </Document>
   );
 }
+// ─── Comprobante de un pago de la pasarela ────────────────────────────────────
+// La pasarela devuelve JSON, no un PDF: el comprobante se construye aquí con la
+// referencia, el monto, el método, la fecha, el estado y el nombre del socio.
+
+export interface ComprobantePagoData {
+  referencia: string;
+  concepto: string | null;
+  monto: number;
+  moneda: string;
+  estado: string;
+  metodoPago: string | null;
+  fecha: string;
+  socio: string;
+  proveedorId?: string | null;
+}
+
+const ESTADOS_COMPROBANTE: Record<string, string> = {
+  APPROVED: 'Aprobado',
+  PENDING:  'Pendiente',
+  DECLINED: 'Rechazado',
+  VOIDED:   'Anulado',
+  ERROR:    'Con error',
+};
+
+export function ComprobantePagoPDF({ pago }: { pago: ComprobantePagoData }) {
+  const monto = `${pago.moneda} ${pago.monto.toLocaleString('es-CO')}`;
+  const estado = ESTADOS_COMPROBANTE[pago.estado] ?? pago.estado;
+  const aprobado = pago.estado === 'APPROVED';
+
+  const fila = (etiqueta: string, valor: string) => (
+    <View style={styles.summaryRow}>
+      <Text style={styles.summaryLabel}>{etiqueta}</Text>
+      <Text style={styles.summaryValue}>{valor}</Text>
+    </View>
+  );
+
+  return (
+    <Document>
+      <Page size="A4" style={styles.page}>
+        <View style={styles.header}>
+          <Text style={styles.clubName}>Ruta Contable</Text>
+          <Text style={styles.reportTitle}>Comprobante de pago</Text>
+          <Text style={styles.date}>Generado: {new Date().toLocaleString('es-CO')}</Text>
+        </View>
+
+        <View style={[styles.balanceCard, aprobado ? styles.balancePositive : styles.balanceNegative]}>
+          <Text style={styles.summaryValue}>Estado del pago: {estado}</Text>
+        </View>
+
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Datos del pago</Text>
+          {fila('Referencia', pago.referencia)}
+          {fila('Concepto', pago.concepto ?? '—')}
+          {fila('Monto', monto)}
+          {fila('Método de pago', pago.metodoPago ?? '—')}
+          {fila('Fecha', new Date(pago.fecha).toLocaleString('es-CO'))}
+          {pago.proveedorId ? fila('Identificador de la pasarela', pago.proveedorId) : null}
+        </View>
+
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Socio</Text>
+          {fila('Nombre', pago.socio)}
+        </View>
+
+        <Text style={styles.footer}>
+          Comprobante generado por Ruta Contable. Conserva la referencia para cualquier reclamación.
+        </Text>
+      </Page>
+    </Document>
+  );
+}

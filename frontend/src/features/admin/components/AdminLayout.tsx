@@ -1,13 +1,15 @@
 // src/features/admin/components/AdminLayout.tsx
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useAuth } from '../../auth/contexts/AuthContext';
 import { 
   Home, DollarSign, FileText, PieChart, Folder, Settings,
   Menu, X, LogOut, Building2, ClipboardList, CreditCard,
   Wallet, Shirt, Lock, ShoppingCart, Heart,
 } from 'lucide-react';
+import type { LucideIcon } from 'lucide-react';
 import { NotificationBell } from '../../../components/ui/NotificationBell';
 import clubLogo from '../../../images/logo/club-logo.png';
+import { UserRole } from '../../../types/index';
 
 const CLUB_GREEN = '#10b981';
 
@@ -15,29 +17,46 @@ export type AdminPage =
   | 'overview' | 'transactions' | 'members' | 'reports' | 'categories'
   | 'system' | 'monthly-payments' | 'cartera' | 'jersey'
   | 'proveedores' | 'compras' | 'inventario' | 'asistencia'
+  | 'my-payments' | 'settings'
 
-const adminMenuItems = [
-  { id: 'overview',         label: 'Resumen',          icon: Home,          section: 'resumen' },
-  { id: 'transactions',     label: 'Transacciones',    icon: DollarSign,    section: 'resumen' },
-  { id: 'members',          label: 'Socios',           icon: Folder,        section: 'socios'  },
-  { id: 'reports',          label: 'Reportes',         icon: FileText,      section: 'socios'  },
-  { id: 'categories',       label: 'Categorías',       icon: Folder,        section: 'socios'  },
-  { id: 'system',           label: 'Configuración del Sistema',    icon: Settings,      section: 'sistema' },
-  { id: 'monthly-payments', label: 'Mensualidades',    icon: CreditCard,    section: 'gestión' },
-  { id: 'cartera',          label: 'Cartera',          icon: Wallet,        section: 'gestión' },
-  { id: 'proveedores',      label: 'Proveedores',      icon: Building2,     section: 'gestión' },
-  { id: 'compras',          label: 'Compras',          icon: ShoppingCart,  section: 'gestión' },
-  { id: 'inventario',       label: 'Inventario',       icon: Shirt,         section: 'gestión' },
-  { id: 'jersey',           label: 'Jersey',           icon: Shirt,         section: 'gestión' },
-  { id: 'asistencia',       label: 'Asistencia',       icon: ClipboardList, section: 'gestión' },
-] as const;
+type MenuSectionKey = 'resumen' | 'socios' | 'sistema' | 'gestión';
 
-const menuSections = {
-  resumen: { title: 'RESUMEN',        items: adminMenuItems.filter(i => i.section === 'resumen') },
-  socios:  { title: 'SOCIOS',         items: adminMenuItems.filter(i => i.section === 'socios')  },
-  sistema: { title: 'SISTEMA',       items: adminMenuItems.filter(i => i.section === 'sistema')   },
-  gestión: { title: 'GESTIÓN',        items: adminMenuItems.filter(i => i.section === 'gestión') },
+interface MenuItem {
+  id:      AdminPage;
+  label:   string;
+  icon:    LucideIcon;
+  section: MenuSectionKey;
+  // Roles que ven el elemento. Ocultar aquí es sólo cosmético: la autorización
+  // real vive en el backend (requireAuth y el filtro por req.user.id).
+  roles:   UserRole[];
+}
+
+const MENU_ITEMS: MenuItem[] = [
+  { id: 'overview',         label: 'Resumen',          icon: Home,          section: 'resumen', roles: ['admin', 'user'] },
+  { id: 'transactions',     label: 'Transacciones',    icon: DollarSign,    section: 'resumen', roles: ['admin'] },
+  { id: 'members',          label: 'Socios',           icon: Folder,        section: 'socios',  roles: ['admin'] },
+  { id: 'reports',          label: 'Reportes',         icon: FileText,      section: 'socios',  roles: ['admin'] },
+  { id: 'categories',       label: 'Categorías',       icon: Folder,        section: 'socios',  roles: ['admin'] },
+  { id: 'system',           label: 'Configuración del Sistema',    icon: Settings,      section: 'sistema', roles: ['admin'] },
+  { id: 'settings',         label: 'Configuración',    icon: Settings,      section: 'sistema', roles: ['user'] },
+  { id: 'monthly-payments', label: 'Mensualidades',    icon: CreditCard,    section: 'gestión', roles: ['admin'] },
+  { id: 'cartera',          label: 'Cartera',          icon: Wallet,        section: 'gestión', roles: ['admin'] },
+  { id: 'proveedores',      label: 'Proveedores',      icon: Building2,     section: 'gestión', roles: ['admin'] },
+  { id: 'compras',          label: 'Compras',          icon: ShoppingCart,  section: 'gestión', roles: ['admin'] },
+  { id: 'inventario',       label: 'Inventario',       icon: Shirt,         section: 'gestión', roles: ['admin'] },
+  { id: 'jersey',           label: 'Jersey',           icon: Shirt,         section: 'gestión', roles: ['admin'] },
+  { id: 'asistencia',       label: 'Asistencia',       icon: ClipboardList, section: 'gestión', roles: ['admin'] },
+  { id: 'my-payments',      label: 'Mis Pagos',        icon: CreditCard,    section: 'gestión', roles: ['user'] },
+];
+
+const SECTION_TITLES: Record<MenuSectionKey, string> = {
+  resumen: 'RESUMEN',
+  socios:  'SOCIOS',
+  sistema: 'SISTEMA',
+  gestión: 'GESTIÓN',
 };
+
+const SECTION_ORDER: MenuSectionKey[] = ['resumen', 'socios', 'sistema', 'gestión'];
 
 interface AdminLayoutProps {
   children:    React.ReactNode;
@@ -61,6 +80,16 @@ export function AdminLayout({ children, currentPage, onNavigate }: AdminLayoutPr
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
   }, []);
+
+  // Menú filtrado por el rol de la sesión: el socio no ve los módulos del panel.
+  const visibleSections = useMemo(() => {
+    const role = currentUser?.role;
+    const visibleItems = role ? MENU_ITEMS.filter(item => item.roles.includes(role)) : [];
+
+    return SECTION_ORDER
+      .map(key => ({ key, title: SECTION_TITLES[key], items: visibleItems.filter(i => i.section === key) }))
+      .filter(section => section.items.length > 0);
+  }, [currentUser?.role]);
 
   const isDesktop  = windowWidth >= 1024;
   const isExpanded = isMobileMenuOpen || (isDesktop && sidebarOpen);
@@ -143,8 +172,8 @@ export function AdminLayout({ children, currentPage, onNavigate }: AdminLayoutPr
           flex: 1, overflowY: 'auto', overflowX: 'hidden', padding: '8px',
           scrollbarWidth: 'thin', scrollbarColor: '#d1d5db transparent',
         }}>
-          {Object.entries(menuSections).map(([key, section]) => (
-            <div key={key} style={{ marginBottom: 16 }}>
+          {visibleSections.map(section => (
+            <div key={section.key} style={{ marginBottom: 16 }}>
               {isExpanded && (
                 <p style={{
                   margin: '0 0 6px 12px', fontSize: 11, fontWeight: 600,

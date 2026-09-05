@@ -46,11 +46,19 @@ async function resolveCategoryByName(categoriaNombre, tipoNormalizado) {
   return result.rows[0] || null;
 }
 
+// El LEFT JOIN con pagos_pasarela distingue los movimientos que entraron por la
+// pasarela de los cargados a mano por el administrador.
 const SELECT_WITH_CATEGORY = `
-  SELECT t.*, c.name AS categoria_nombre, c.type AS categoria_tipo, u.username AS creado_por_username
+  SELECT t.*, c.name AS categoria_nombre, c.type AS categoria_tipo, u.username AS creado_por_username,
+         p.id           AS pago_id,
+         p.referencia   AS pago_referencia,
+         p.estado       AS pago_estado,
+         p.proveedor    AS pago_proveedor,
+         CASE WHEN p.id IS NULL THEN 'manual' ELSE 'pasarela' END AS origen
   FROM transactions t
   LEFT JOIN categories c ON c.id = t.categoria_id
   LEFT JOIN users u ON u.id = t.created_by
+  LEFT JOIN pagos_pasarela p ON p.transaction_id = t.id
 `;
 
 // GET /api/transactions

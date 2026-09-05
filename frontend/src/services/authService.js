@@ -19,15 +19,11 @@ export const authService = {
     }
   },
 
-  // Registrar usuario
+  // Registrar usuario. No inicia sesión: el backend responde 201 sin token y el
+  // usuario debe entrar después por el formulario de acceso.
   register: async (userData) => {
     try {
       const response = await api.post('/auth/register', userData);
-      if (response.data.success) {
-        localStorage.setItem('clubfinance_token', response.data.data.token);
-        localStorage.setItem('clubfinance_user', JSON.stringify(response.data.data.user));
-        return response.data;
-      }
       return response.data;
     } catch (error) {
       console.error('Register error:', error);

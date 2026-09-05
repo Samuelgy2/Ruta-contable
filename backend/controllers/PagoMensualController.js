@@ -148,13 +148,25 @@ async function update(req, res) {
     }
 
     const fechaVencimientoFinal = fechaVencimiento || actual.fecha_vencimiento;
-    if (fechaPagoFinal && new Date(fechaPagoFinal) > new Date(fechaVencimientoFinal)) {
-      diasMoraFinal = Math.floor(
-        (new Date(fechaPagoFinal).getTime() - new Date(fechaVencimientoFinal).getTime()) / (1000 * 60 * 60 * 24)
+    const MS_DIA = 1000 * 60 * 60 * 24;
+    if (fechaPagoFinal) {
+      // Con fecha de pago, la mora son los días de retraso (0 si pagó a tiempo).
+      diasMoraFinal = Math.max(
+        Math.floor((new Date(fechaPagoFinal).getTime() - new Date(fechaVencimientoFinal).getTime()) / MS_DIA),
+        0
       );
-      if (!estado) {
-        estadoFinal = 'moroso';
+      // Registrar una fecha de pago sin indicar estado equivale a marcar pagado.
+      if (!estado && ['pendiente', 'moroso'].includes(actual.estado)) {
+        estadoFinal = 'pagado';
       }
+    } else if (estadoFinal === 'moroso') {
+      // Sin fecha de pago, la mora corre desde el vencimiento hasta hoy.
+      const hoy = new Date();
+      hoy.setHours(0, 0, 0, 0);
+      diasMoraFinal = Math.max(
+        Math.floor((hoy.getTime() - new Date(fechaVencimientoFinal).getTime()) / MS_DIA),
+        0
+      );
     }
 
     const result = await pool.query(
@@ -179,7 +191,18 @@ async function update(req, res) {
       ]
     );
 
-    res.json({ success: true, data: result.rows[0], message: 'Pago mensual actualizado correctamente' });
+    const actualizado = result.rows[0];
+    // Los triggers de la BD pueden ajustar el estado; si el resultado no coincide
+    // con lo pedido, se informa en vez de reportar un éxito falso.
+    if (estado && actualizado.estado !== estado) {
+      return res.status(409).json({
+        success: false,
+        data:    actualizado,
+        message: `El pago quedó en estado '${actualizado.estado}', no en '${estado}'`,
+      });
+    }
+
+    res.json({ success: true, data: actualizado, message: 'Pago mensual actualizado correctamente' });
   } catch (error) {
     console.error('Error update pago mensual:', error);
     res.status(500).json({ success: false, message: 'Error al actualizar pago mensual' });

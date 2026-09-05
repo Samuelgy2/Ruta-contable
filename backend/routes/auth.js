@@ -6,6 +6,7 @@ const rateLimit = require('express-rate-limit');
 
 const pool = require('../db');                               // raíz/db.js
 const { validateInput, logFailedAttempt } = require('../utils/helpers'); // raíz/utils/helpers.js
+const authController = require('../controllers/AuthController');
 
 const loginLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
@@ -14,6 +15,17 @@ const loginLimiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
 });
+
+// Más estricto que el límite general: evita la creación masiva de cuentas.
+const registerLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 5,
+  message: { success: false, message: 'Demasiados registros desde esta dirección. Intenta de nuevo en 15 minutos.' },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+router.post('/register', registerLimiter, authController.register);
 
 router.post('/login', loginLimiter, async (req, res) => {
   try {

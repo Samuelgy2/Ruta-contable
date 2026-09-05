@@ -1,6 +1,6 @@
 import { Transaction, Member, Category, Fee, SystemData } from '../types';
 import { pdf } from '@react-pdf/renderer';
-import { TransactionReportPDF, MembersReportPDF } from './pdfDocuments';
+import { TransactionReportPDF, MembersReportPDF, ComprobantePagoPDF, ComprobantePagoData } from './pdfDocuments';
 
 export function exportToCSV(data: any[], filename: string) {
   if (data.length === 0) {
@@ -148,4 +148,22 @@ function downloadFile(content: string, filename: string, mimeType: string) {
   link.click();
   document.body.removeChild(link);
   URL.revokeObjectURL(url);
+}
+
+// Descarga el comprobante de un pago de la pasarela como PDF.
+export async function descargarComprobantePago(pago: ComprobantePagoData) {
+  try {
+    const blob = await pdf(<ComprobantePagoPDF pago={pago} />).toBlob();
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `comprobante-${pago.referencia}.pdf`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  } catch (error) {
+    console.error('Error al generar el comprobante:', error);
+    alert('No se pudo generar el comprobante en PDF');
+  }
 }

@@ -1,32 +1,67 @@
 import React from 'react';
+import { Logo } from '../../../shared/components/Logo';
+import { AppPage } from '../../../types/index';
+import { CLUB, ENLACES_SECCIONES } from '../data';
 
-export function Footer() {
+interface FooterProps {
+  // Opcional: las páginas de acceso lo usan sin navegación.
+  onNavigate?: (page: AppPage) => void;
+}
+
+export function Footer({ onNavigate }: FooterProps) {
   return (
-    <center>
     <footer className="footer">
       <div className="footer-container">
         <div className="footer-section">
-          <h3>Sobre Nosotros</h3>
-          <p>Sistema de gestión financiera diseñado específicamente para clubes y organizaciones.</p>
+          <div className="footer-brand">
+            <Logo size="small" />
+            <span className="footer-brand-name">{CLUB.nombre}</span>
+          </div>
+          <h3>Sobre el club</h3>
+          <p>
+            Club de BMX de {CLUB.ciudad}. Semillero, formación competitiva y alto
+            rendimiento, de la primera rodada al podio.
+          </p>
         </div>
 
         <div className="footer-section">
           <h3>Contacto</h3>
           <div className="footer-contact">
+            <p><strong>Correo:</strong> <a href={`mailto:${CLUB.correo}`} style={{ color: 'inherit' }}>{CLUB.correo}</a></p>
+            <p><strong>Dirección:</strong> {CLUB.direccion}</p>
             <p>
-              <strong>Email:</strong> Clubbmxriders@hotmail.com
-            </p>
-            <p>
-              <strong>Dirección:</strong> #66b- a, Cl. 30A #66b223, Medellín, Antioquia
+              <strong>Instagram:</strong>{' '}
+              <a href={CLUB.instagram} target="_blank" rel="noopener noreferrer" style={{ color: 'inherit' }}>
+                {CLUB.instagramUsuario}
+              </a>
             </p>
           </div>
+        </div>
+
+        <div className="footer-section">
+          <h3>Secciones</h3>
+          <ul className="footer-links">
+            {ENLACES_SECCIONES.map(enlace => (
+              <li key={enlace.id}>
+                <a href={`#${enlace.id}`}>{enlace.etiqueta}</a>
+              </li>
+            ))}
+          </ul>
         </div>
       </div>
 
       <div className="footer-bottom">
-        <p>&copy; {new Date().getFullYear()} ClubFinance. Todos los derechos reservados.</p>
+        <div className="footer-bottom-row">
+          <span>&copy; {new Date().getFullYear()} {CLUB.nombre}. Todos los derechos reservados.</span>
+          {onNavigate && (
+            <button type="button" className="footer-bottom-link" onClick={() => onNavigate('login')}>
+              Portal administrativo
+            </button>
+          )}
+        </div>
       </div>
     </footer>
-    </center>
   );
 }
+
+export default Footer;

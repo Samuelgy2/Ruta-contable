@@ -11,7 +11,7 @@ interface LoginProps {
 export function Login({ onNavigate }: LoginProps) {
   return (
     <div className="landing-page">
-      <Navbar onNavigate={onNavigate} />
+      <Navbar onNavigate={onNavigate} currentPage="login" />
       <div className="login-page" style={{ position: 'relative' }}>
         <LoginForm onNavigate={onNavigate} />
       </div>

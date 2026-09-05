@@ -1,40 +1,47 @@
 import React from 'react';
-import { ImageWithFallback } from '../../../shared/components/ImageWithFallback';
+import { MapPin } from 'lucide-react';
+import { AppPage } from '../../../types/index';
+import { Carousel } from './Carousel';
+import { CLUB, SLIDES } from '../data';
 
 interface HeroProps {
-  onNavigate: (page: 'home' | 'login' | 'register') => void;
+  onNavigate: (page: AppPage) => void;
 }
 
-export function Hero({ onNavigate }: HeroProps) {
+export function Hero(_props: HeroProps) {
   return (
-    <section className="hero">
+    <section className="hero" id="inicio">
       <div className="hero-content">
-        <h1>Gestión Financiera para tu Club</h1>
+        <span className="hero-tag">
+          <MapPin size={14} />
+          {CLUB.ciudad} · {CLUB.departamento} · {CLUB.pais}
+        </span>
+        <h1>Formamos riders, <span>construimos campeones</span></h1>
         <p>
-          Administra transacciones, miembros y cuotas de manera simple y eficiente.
-          Todo lo que necesitas en un solo lugar.
+          Semillero desde los 4 años, formación competitiva y alto rendimiento.
+          Acompañamos a cada rider desde su primer contacto con la bici hasta el podio.
         </p>
         <div className="hero-buttons">
-          <button 
-            className="btn btn-primary btn-large"
-            onClick={() => onNavigate('register')}
+          <a className="btn btn-large" href="#contacto">
+            Inscribe a tu rider
+          </a>
+          <a
+            className="btn btn-secondary btn-large"
+            href={CLUB.instagram}
+            target="_blank"
+            rel="noopener noreferrer"
           >
-            Comenzar Ahora
-          </button>
-          <button 
-            className="btn btn-outline btn-large"
-            onClick={() => onNavigate('login')}
-          >
-            Iniciar Sesión
-          </button>
+            Síguenos en Instagram
+          </a>
         </div>
       </div>
-      <div className="hero-image">
-        <ImageWithFallback
-          src="https://images.unsplash.com/photo-1600880292089-90a7e086ee0c?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHx0ZWFtd29yayUyMGNvbGxhYm9yYXRpb258ZW58MXx8fHwxNzYxMzM0MTcxfDA&ixlib=rb-4.1.0&q=80&w=1080&utm_source=figma&utm_medium=referral"
-          alt="Trabajo en equipo"
-        />
+
+      {/* En móvil el carrusel sube por encima del texto (.hero-carousel, order:-1). */}
+      <div className="hero-carousel">
+        <Carousel slides={SLIDES} />
       </div>
     </section>
   );
 }
+
+export default Hero;
