@@ -1,15 +1,27 @@
 const pool = require('../db');
 
+// El vínculo con la cuenta de acceso vive en socio_perfil.id_socio. Se expone
+// como usuarioVinculado: { id, username, email } | null en cada socio.
+const SELECT_CON_USUARIO = `
+  SELECT s.*,
+         CASE WHEN u.id IS NULL THEN NULL
+              ELSE json_build_object('id', u.id, 'username', u.username, 'email', u.email)
+         END AS "usuarioVinculado"
+  FROM socio s
+  LEFT JOIN socio_perfil sp ON sp.id_socio = s.id_socio
+  LEFT JOIN users u ON u.id = sp.user_id
+`;
+
 // GET /api/socios
 async function getAll(req, res) {
   try {
     const { search = '' } = req.query;
 
     const query = search
-      ? `SELECT * FROM socio
-         WHERE nombre ILIKE $1 OR email ILIKE $1 OR documento ILIKE $1
-         ORDER BY created_at DESC`
-      : `SELECT * FROM socio ORDER BY created_at DESC`;
+      ? `${SELECT_CON_USUARIO}
+         WHERE s.nombre ILIKE $1 OR s.email ILIKE $1 OR s.documento ILIKE $1
+         ORDER BY s.created_at DESC`
+      : `${SELECT_CON_USUARIO} ORDER BY s.created_at DESC`;
 
     const params = search ? [`%${search}%`] : [];
     const result = await pool.query(query, params);
@@ -25,7 +37,7 @@ async function getAll(req, res) {
 async function getById(req, res) {
   try {
     const { id } = req.params;
-    const result = await pool.query('SELECT * FROM socio WHERE id_socio = $1', [id]);
+    const result = await pool.query(`${SELECT_CON_USUARIO} WHERE s.id_socio = $1`, [id]);
 
     if (result.rows.length === 0) {
       return res.status(404).json({ success: false, message: 'Socio no encontrado' });
@@ -182,4 +194,87 @@ async function remove(req, res) {
   }
 }
 
-module.exports = { getAll, getById, create, update, remove };
+// PUT /api/socios/:id/vincular — body { userId }. Enlaza la cuenta de acceso
+// (users, rol 'user') con la ficha de socio escribiendo socio_perfil.id_socio.
+// La BD garantiza un solo usuario por socio (UNIQUE) y exige desvincular antes
+// de reasignar (trigger); aquí esos fallos se traducen a 409.
+async function vincular(req, res) {
+  try {
+    const { id } = req.params;
+    const userId = parseInt(req.body?.userId, 10);
+
+    if (isNaN(userId)) {
+      return res.status(400).json({ success: false, message: 'userId es obligatorio y debe ser numérico' });
+    }
+
+    const socio = await pool.query('SELECT id_socio FROM socio WHERE id_socio = $1', [id]);
+    if (socio.rows.length === 0) {
+      return res.status(404).json({ success: false, message: 'Socio no encontrado' });
+    }
+
+    const usuario = await pool.query('SELECT id, role FROM users WHERE id = $1', [userId]);
+    if (usuario.rows.length === 0) {
+      return res.status(404).json({ success: false, message: 'Usuario no encontrado' });
+    }
+    if (usuario.rows[0].role !== 'user') {
+      return res.status(400).json({ success: false, message: 'Solo se pueden vincular cuentas con rol de socio (user)' });
+    }
+
+    const result = await pool.query(
+      `UPDATE socio_perfil SET id_socio = $1, updated_at = NOW()
+        WHERE user_id = $2
+        RETURNING user_id, id_socio`,
+      [id, userId]
+    );
+    if (result.rows.length === 0) {
+      return res.status(404).json({ success: false, message: 'El usuario no tiene perfil de socio' });
+    }
+
+    res.json({
+      success: true,
+      data: { idSocio: result.rows[0].id_socio, userId: result.rows[0].user_id },
+      message: 'Usuario vinculado al socio correctamente',
+    });
+  } catch (error) {
+    // 23505: UNIQUE (id_socio) → el socio ya tiene otro usuario.
+    // 23514: check_violation → lo lanza el trigger tr_socio_perfil_cambio_socio
+    //        cuando el usuario ya tenía otro socio asignado.
+    if (error.code === '23505') {
+      return res.status(409).json({ success: false, message: 'Ese socio ya está vinculado a otro usuario' });
+    }
+    if (error.code === '23514') {
+      return res.status(409).json({ success: false, message: error.message || 'Desvincule el socio actual antes de asignar otro' });
+    }
+    console.error('Error vincular socio:', error);
+    res.status(500).json({ success: false, message: 'Error al vincular el usuario' });
+  }
+}
+
+// DELETE /api/socios/:id/vincular — deja en NULL el id_socio del perfil que
+// apunte a este socio.
+async function desvincular(req, res) {
+  try {
+    const { id } = req.params;
+
+    const result = await pool.query(
+      `UPDATE socio_perfil SET id_socio = NULL, updated_at = NOW()
+        WHERE id_socio = $1
+        RETURNING user_id`,
+      [id]
+    );
+    if (result.rows.length === 0) {
+      return res.status(404).json({ success: false, message: 'El socio no tiene un usuario vinculado' });
+    }
+
+    res.json({
+      success: true,
+      data: { idSocio: parseInt(id, 10), userId: result.rows[0].user_id },
+      message: 'Usuario desvinculado del socio',
+    });
+  } catch (error) {
+    console.error('Error desvincular socio:', error);
+    res.status(500).json({ success: false, message: 'Error al desvincular el usuario' });
+  }
+}
+
+module.exports = { getAll, getById, create, update, remove, vincular, desvincular };

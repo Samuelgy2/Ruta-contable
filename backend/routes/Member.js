@@ -11,4 +11,8 @@ router.post('/',      socioController.create);    // POST   /api/socios
 router.put('/:id',    socioController.update);    // PUT    /api/socios/:id
 router.delete('/:id', socioController.remove);    // DELETE /api/socios/:id
 
+// Vínculo con la cuenta de acceso (socio_perfil.id_socio)
+router.put('/:id/vincular',    socioController.vincular);    // PUT    /api/socios/:id/vincular  { userId }
+router.delete('/:id/vincular', socioController.desvincular); // DELETE /api/socios/:id/vincular
+
 module.exports = router;

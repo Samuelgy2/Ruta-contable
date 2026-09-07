@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { usePaginacion } from '../../hooks/usePaginacion';
 import { Paginacion } from '../../components/ui/Paginacion';
 import { useSocios } from '../../hooks/useSocios';
+import { userService } from '../../services/userService';
 
 // ─── Tipos ────────────────────────────────────────────────────────────────────
 interface Socio {
@@ -19,6 +20,15 @@ interface Socio {
   estado: 'activo' | 'inactivo' | 'suspendido';
   foto: string | null;
   observaciones: string | null;
+  usuarioVinculado: { id: number; username: string; email: string } | null;
+}
+
+// Cuenta de acceso (rol 'user') que todavía no tiene ficha de socio.
+interface UsuarioSinSocio {
+  id: number;
+  username: string;
+  email: string;
+  fullName: string;
 }
 
 interface AdminMembersProps {
@@ -201,7 +211,10 @@ type FormState = typeof emptyForm;
 
 // ─── Componente principal ─────────────────────────────────────────────────────
 export function AdminMembers({ onNavigate }: AdminMembersProps) {
-  const { socios, loading, error, fetchSocios, createSocio, updateSocio, deleteSocio } = useSocios();
+  const {
+    socios, loading, error, fetchSocios, createSocio, updateSocio, deleteSocio,
+    vincularUsuario, desvincularUsuario,
+  } = useSocios();
   const pagSocios = usePaginacion(socios);
   const [searchTerm, setSearchTerm] = useState<string>('');
   const [showForm, setShowForm] = useState<boolean>(false);
@@ -210,6 +223,66 @@ export function AdminMembers({ onNavigate }: AdminMembersProps) {
   const [confirmDelete, setConfirmDelete] = useState<number | null>(null);
   const [submitting, setSubmitting] = useState<boolean>(false);
   const { toasts, show: showToast } = useToast();
+
+  // ── Vínculo usuario ↔ socio ────────────────────────────────────────────────
+  // Una sola fila abre el desplegable a la vez; los errores (409 de la BD) se
+  // muestran en línea debajo del control, no con alert.
+  const [usuariosSinSocio, setUsuariosSinSocio] = useState<UsuarioSinSocio[]>([]);
+  const [vinculandoId, setVinculandoId] = useState<number | null>(null);
+  const [usuarioSeleccionado, setUsuarioSeleccionado] = useState<string>('');
+  const [vinculoError, setVinculoError] = useState<Record<number, string>>({});
+  const [vinculoBusy, setVinculoBusy] = useState<number | null>(null);
+
+  const cargarUsuariosSinSocio = useCallback(async () => {
+    try {
+      const respuesta = await userService.getSinSocio();
+      setUsuariosSinSocio(respuesta?.success ? (respuesta.data as UsuarioSinSocio[]) : []);
+    } catch {
+      setUsuariosSinSocio([]);
+    }
+  }, []);
+
+  const abrirVinculo = (idSocio: number) => {
+    setVinculandoId(idSocio);
+    setUsuarioSeleccionado('');
+    setVinculoError(prev => ({ ...prev, [idSocio]: '' }));
+    void cargarUsuariosSinSocio();
+  };
+
+  const cerrarVinculo = () => {
+    setVinculandoId(null);
+    setUsuarioSeleccionado('');
+  };
+
+  const handleVincular = async (idSocio: number) => {
+    const userId = parseInt(usuarioSeleccionado, 10);
+    if (isNaN(userId)) {
+      setVinculoError(prev => ({ ...prev, [idSocio]: 'Selecciona un usuario' }));
+      return;
+    }
+    setVinculoBusy(idSocio);
+    const result = await vincularUsuario(idSocio, userId);
+    setVinculoBusy(null);
+    if (result.success) {
+      showToast(result.message, 'success');
+      cerrarVinculo();
+      await Promise.all([fetchSocios(searchTerm), cargarUsuariosSinSocio()]);
+    } else {
+      setVinculoError(prev => ({ ...prev, [idSocio]: result.message }));
+    }
+  };
+
+  const handleDesvincular = async (idSocio: number) => {
+    setVinculoBusy(idSocio);
+    const result = await desvincularUsuario(idSocio);
+    setVinculoBusy(null);
+    if (result.success) {
+      showToast(result.message, 'warning');
+      await Promise.all([fetchSocios(searchTerm), cargarUsuariosSinSocio()]);
+    } else {
+      setVinculoError(prev => ({ ...prev, [idSocio]: result.message }));
+    }
+  };
 
   // Búsqueda con debounce 400ms
   useEffect(() => {
@@ -572,11 +645,11 @@ export function AdminMembers({ onNavigate }: AdminMembersProps) {
           <table style={{ width: '100%', borderCollapse: 'collapse' }}>
             <thead>
               <tr style={{ backgroundColor: '#f9fafb', borderBottom: '2px solid #e5e7eb' }}>
-                {['Documento', 'Nombre', 'Email', 'Teléfono', 'Membresía', 'Nivel', 'Estado', ''].map((h, i) => (
+                {['Documento', 'Nombre', 'Email', 'Teléfono', 'Membresía', 'Nivel', 'Estado', 'Usuario', ''].map((h, i) => (
                   <th
                     key={i}
                     style={{
-                      textAlign: i === 7 ? 'right' : 'left',
+                      textAlign: i === 8 ? 'right' : 'left',
                       padding: '14px 16px', color: '#6b7280',
                       fontWeight: '600', fontSize: '13px', whiteSpace: 'nowrap',
                     }}
@@ -587,14 +660,14 @@ export function AdminMembers({ onNavigate }: AdminMembersProps) {
             <tbody>
               {loading ? (
                 <tr>
-                  <td colSpan={8} style={{ textAlign: 'center', padding: '48px', color: '#9ca3af' }}>
+                  <td colSpan={9} style={{ textAlign: 'center', padding: '48px', color: '#9ca3af' }}>
                     <div style={{ fontSize: '24px' }}>⏳</div>
                     <p style={{ margin: '8px 0 0', fontSize: '14px' }}>Cargando socios...</p>
                   </td>
                 </tr>
               ) : socios.length === 0 ? (
                 <tr>
-                  <td colSpan={8} style={{ textAlign: 'center', padding: '48px', color: '#9ca3af', fontSize: '15px' }}>
+                  <td colSpan={9} style={{ textAlign: 'center', padding: '48px', color: '#9ca3af', fontSize: '15px' }}>
                     No hay socios que mostrar
                   </td>
                 </tr>
@@ -641,6 +714,90 @@ export function AdminMembers({ onNavigate }: AdminMembersProps) {
                     </td>
                     <td style={{ padding: '14px 16px' }}>
                       {estadoBadge(socio.estado)}
+                    </td>
+                    <td style={{ padding: '14px 16px', fontSize: '13px', minWidth: '220px' }}>
+                      {socio.usuarioVinculado ? (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                          <span
+                            title={socio.usuarioVinculado.email}
+                            style={{
+                              padding: '3px 10px', borderRadius: '6px',
+                              backgroundColor: '#ecfdf5', color: '#047857',
+                              fontWeight: '600', fontFamily: 'monospace',
+                            }}
+                          >
+                            @{socio.usuarioVinculado.username}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => { void handleDesvincular(socio.id_socio); }}
+                            disabled={vinculoBusy === socio.id_socio}
+                            style={{
+                              padding: '6px 10px', borderRadius: '8px', border: '1px solid #e5e7eb',
+                              backgroundColor: 'white', color: '#b91c1c', fontSize: '12px',
+                              fontWeight: '500', cursor: vinculoBusy === socio.id_socio ? 'not-allowed' : 'pointer',
+                            }}
+                          >
+                            {vinculoBusy === socio.id_socio ? '...' : 'Desvincular'}
+                          </button>
+                        </div>
+                      ) : vinculandoId === socio.id_socio ? (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+                          <select
+                            value={usuarioSeleccionado}
+                            onChange={e => setUsuarioSeleccionado(e.target.value)}
+                            style={{ ...inputStyle, width: 'auto', minWidth: '160px', padding: '6px 10px', fontSize: '13px' }}
+                          >
+                            <option value="">
+                              {usuariosSinSocio.length === 0 ? 'Sin usuarios disponibles' : 'Seleccionar usuario...'}
+                            </option>
+                            {usuariosSinSocio.map(u => (
+                              <option key={u.id} value={u.id}>
+                                {u.username} · {u.fullName}
+                              </option>
+                            ))}
+                          </select>
+                          <button
+                            type="button"
+                            onClick={() => { void handleVincular(socio.id_socio); }}
+                            disabled={vinculoBusy === socio.id_socio || !usuarioSeleccionado}
+                            style={{
+                              padding: '6px 12px', borderRadius: '8px', border: 'none',
+                              backgroundColor: !usuarioSeleccionado ? '#6ee7b7' : CLUB_GREEN,
+                              color: 'white', fontSize: '12px', fontWeight: '600',
+                              cursor: !usuarioSeleccionado ? 'not-allowed' : 'pointer',
+                            }}
+                          >
+                            {vinculoBusy === socio.id_socio ? '...' : 'Asignar'}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={cerrarVinculo}
+                            title="Cancelar"
+                            style={{
+                              background: '#f3f4f6', border: 'none', borderRadius: '8px',
+                              width: '28px', height: '28px', cursor: 'pointer', color: '#6b7280',
+                            }}
+                          >×</button>
+                        </div>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => abrirVinculo(socio.id_socio)}
+                          style={{
+                            padding: '6px 12px', borderRadius: '8px', border: '1px solid #d1d5db',
+                            backgroundColor: 'white', color: '#374151', fontSize: '12px',
+                            fontWeight: '500', cursor: 'pointer',
+                          }}
+                        >
+                          Vincular usuario
+                        </button>
+                      )}
+                      {vinculoError[socio.id_socio] && (
+                        <div style={{ marginTop: '6px', color: '#b91c1c', fontSize: '12px' }}>
+                          {vinculoError[socio.id_socio]}
+                        </div>
+                      )}
                     </td>
                     <td style={{ padding: '14px 16px', textAlign: 'right' }}>
                       <button

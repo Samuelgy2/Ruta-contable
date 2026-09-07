@@ -16,16 +16,22 @@ interface Socio {
   estado: 'activo' | 'inactivo' | 'suspendido';
   foto: string | null;
   observaciones: string | null;
+  // Cuenta de acceso enlazada por socio_perfil.id_socio; null si no hay.
+  usuarioVinculado: { id: number; username: string; email: string } | null;
 }
+
+type Resultado = { success: boolean; message: string; status?: number };
 
 interface UseSociosResult {
   socios: Socio[];
   loading: boolean;
   error: string | null;
   fetchSocios: (search?: string) => Promise<void>;
-  createSocio: (socioData: Partial<Socio>) => Promise<{ success: boolean; message: string }>;
-  updateSocio: (id: number, socioData: Partial<Socio>) => Promise<{ success: boolean; message: string }>;
-  deleteSocio: (id: number) => Promise<{ success: boolean; message: string }>;
+  createSocio: (socioData: Partial<Socio>) => Promise<Resultado>;
+  updateSocio: (id: number, socioData: Partial<Socio>) => Promise<Resultado>;
+  deleteSocio: (id: number) => Promise<Resultado>;
+  vincularUsuario: (idSocio: number, userId: number) => Promise<Resultado>;
+  desvincularUsuario: (idSocio: number) => Promise<Resultado>;
 }
 
 export function useSocios(): UseSociosResult {
@@ -94,6 +100,34 @@ export function useSocios(): UseSociosResult {
     }
   };
 
+  // No recargan la lista: la vista decide cuándo refrescar (también debe
+  // refrescar el desplegable de usuarios sin socio).
+  const vincularUsuario = async (idSocio: number, userId: number): Promise<Resultado> => {
+    try {
+      const response = await socioService.vincularUsuario(idSocio, userId);
+      return { success: !!response.success, message: response.message || 'Usuario vinculado' };
+    } catch (err: any) {
+      return {
+        success: false,
+        status: err.response?.status,
+        message: err.response?.data?.message || err.message || 'Error al vincular usuario',
+      };
+    }
+  };
+
+  const desvincularUsuario = async (idSocio: number): Promise<Resultado> => {
+    try {
+      const response = await socioService.desvincularUsuario(idSocio);
+      return { success: !!response.success, message: response.message || 'Usuario desvinculado' };
+    } catch (err: any) {
+      return {
+        success: false,
+        status: err.response?.status,
+        message: err.response?.data?.message || err.message || 'Error al desvincular usuario',
+      };
+    }
+  };
+
   return {
     socios,
     loading,
@@ -102,5 +136,7 @@ export function useSocios(): UseSociosResult {
     createSocio,
     updateSocio,
     deleteSocio,
+    vincularUsuario,
+    desvincularUsuario,
   };
 }

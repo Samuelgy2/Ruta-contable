@@ -31,6 +31,29 @@ router.get('/', requireAdmin, async (req, res) => {
   }
 });
 
+// GET /api/users/sin-socio — usuarios con rol 'user', activos, sin ficha de
+// socio vinculada (vista_usuarios_sin_socio). Va antes de /:id para que la
+// ruta con parámetro no capture "sin-socio" como un id.
+router.get('/sin-socio', requireAdmin, async (req, res) => {
+  try {
+    const result = await pool.query(
+      'SELECT id, username, email, full_name FROM vista_usuarios_sin_socio ORDER BY username'
+    );
+
+    const users = result.rows.map(user => ({
+      id: user.id,
+      username: user.username,
+      email: user.email,
+      fullName: user.full_name,
+    }));
+
+    res.json({ success: true, data: users });
+  } catch (error) {
+    console.error('Error al obtener usuarios sin socio:', error);
+    res.status(500).json({ success: false, message: 'Error al obtener usuarios sin socio' });
+  }
+});
+
 router.get('/:id', requireAdmin, async (req, res) => {
   try {
     const { id } = req.params;
@@ -105,6 +128,15 @@ router.post('/', requireAdmin, async (req, res) => {
     );
 
     const user = result.rows[0];
+
+    // El trigger crear_perfil_por_rol ya creó admin_perfil; se registra quién lo creó.
+    if (user.role === 'admin') {
+      await pool.query(
+        'UPDATE admin_perfil SET creado_por = $1 WHERE user_id = $2',
+        [req.user.id, user.id]
+      );
+    }
+
     res.status(201).json({
       success: true,
       message: 'Usuario creado correctamente',

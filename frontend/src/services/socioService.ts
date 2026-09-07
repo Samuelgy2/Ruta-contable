@@ -26,4 +26,15 @@ export const socioService = {
     const response = await api.delete(`/socios/${id}`);
     return response.data;
   },
+
+  // Vínculo socio ↔ cuenta de acceso (socio_perfil.id_socio).
+  vincularUsuario: async (idSocio: string | number, userId: number) => {
+    const response = await api.put(`/socios/${idSocio}/vincular`, { userId });
+    return response.data;
+  },
+
+  desvincularUsuario: async (idSocio: string | number) => {
+    const response = await api.delete(`/socios/${idSocio}/vincular`);
+    return response.data;
+  },
 };
