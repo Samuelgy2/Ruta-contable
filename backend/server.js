@@ -37,6 +37,7 @@ const dns = require('dns').promises;
   const clubDataRoutes     = require('./routes/clubData');
   const portalRoutes       = require('./routes/portal');
   const pagoRoutes         = require('./routes/pagos');
+  const jerseyRoutes       = require('./routes/jersey');
 
   // ── Variables de entorno de PayPal ────────────────────────────────────
   // Se validan al arranque para fallar rápido y no descubrir el problema con
@@ -108,6 +109,7 @@ const dns = require('dns').promises;
   app.use('/api/club-data',       clubDataRoutes);
   app.use('/api/portal',          portalRoutes);
   app.use('/api/pagos',           pagoRoutes);
+  app.use('/api/jersey',          jerseyRoutes);
   app.get('/health', (_req, res) => res.json({ status: 'OK', message: 'Servidor funcionando' }));
 
   // ─── Setup DB ─────────────────────────────────────────────────────────

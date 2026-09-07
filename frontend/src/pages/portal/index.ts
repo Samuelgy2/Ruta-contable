@@ -4,3 +4,4 @@
 export { PortalOverview } from './PortalOverview';
 export { PortalPayments } from './PortalPayments';
 export { PortalSettings } from './PortalSettings';
+export { PortalJersey } from './PortalJersey';

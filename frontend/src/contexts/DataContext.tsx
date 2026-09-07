@@ -13,7 +13,6 @@ import {
   PagoMensual,
   Cartera,
   Attendance,
-  JerseyOrder,
   InventarioJersey,
   Locker,
   HealthPolicy,
@@ -75,10 +74,10 @@ interface DataContextType extends AppData {
   addAttendance: (attendance: Omit<Attendance, 'id'>) => void;
   updateAttendance: (id: string, attendance: Partial<Attendance>) => void;
   deleteAttendance: (id: string) => void;
-  // Jersey Orders
-  addJerseyOrder: (order: Omit<JerseyOrder, 'id'>) => void;
-  updateJerseyOrder: (id: string, order: Partial<JerseyOrder>) => void;
-  deleteJerseyOrder: (id: string) => void;
+  // Jersey Orders: los pedidos ahora viven en la BD (/api/jersey). Se quitaron
+  // addJerseyOrder/updateJerseyOrder/deleteJerseyOrder.
+  // TODO: data.jerseyOrders sigue en AppData porque utils/initialData.ts lo
+  // rellena; retirarlo cuando se limpie el dato semilla.
   // Jersey Inventory
   addInventarioJersey: (inventario: Omit<InventarioJersey, 'id'>) => void;
   updateInventarioJersey: (id: string, inventario: Partial<InventarioJersey>) => void;
@@ -391,18 +390,6 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
     setData(prev => ({ ...prev, asistencia: prev.asistencia.filter(a => a.id !== id) }));
   };
 
-  // Jersey Order operations
-  const addJerseyOrder = (order: Omit<JerseyOrder, 'id'>) => {
-    const newOrder: JerseyOrder = { ...order, id: generateId() };
-    setData(prev => ({ ...prev, jerseyOrders: [...prev.jerseyOrders, newOrder] }));
-  };
-  const updateJerseyOrder = (id: string, updated: Partial<JerseyOrder>) => {
-    setData(prev => ({ ...prev, jerseyOrders: prev.jerseyOrders.map(o => o.id === id ? { ...o, ...updated } : o) }));
-  };
-  const deleteJerseyOrder = (id: string) => {
-    setData(prev => ({ ...prev, jerseyOrders: prev.jerseyOrders.filter(o => o.id !== id) }));
-  };
-
   // Jersey Inventory operations
   const addInventarioJersey = (inventario: Omit<InventarioJersey, 'id'>) => {
     const newInventario: InventarioJersey = { ...inventario, id: generateId() };
@@ -519,9 +506,6 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
     addAttendance,
     updateAttendance,
     deleteAttendance,
-    addJerseyOrder,
-    updateJerseyOrder,
-    deleteJerseyOrder,
     addInventarioJersey,
     updateInventarioJersey,
     deleteInventarioJersey,

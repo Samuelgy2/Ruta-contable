@@ -11,7 +11,7 @@ import {
   AdminProveedores, AdminCompras, AdminInventario, AdminAsistencia,
 } from './pages/admin';
 import { SystemTab } from './pages/admin/AdminSystem';
-import { PortalOverview, PortalPayments, PortalSettings } from './pages/portal';
+import { PortalOverview, PortalPayments, PortalSettings, PortalJersey } from './pages/portal';
 import { AdminLayout, AdminPage as AdminPageType } from './features/admin/components/AdminLayout';
 import { AppPage } from './types/index';
 
@@ -19,7 +19,7 @@ type Page = AppPage;
 type AdminPage = AdminPageType;
 
 // Vistas que ve el socio dentro del mismo AdminLayout, filtrado por rol.
-type PortalPage = Extract<AdminPageType, 'overview' | 'my-payments' | 'settings'>;
+type PortalPage = Extract<AdminPageType, 'overview' | 'my-payments' | 'settings' | 'jersey'>;
 
 function AppContent() {
   const { isAuthenticated, currentUser, register } = useAuth();
@@ -112,9 +112,9 @@ function AppContent() {
     if (page) setCurrentAdminPage(page);
   };
 
-  // Navegación del portal del socio: sólo acepta sus tres vistas.
+  // Navegación del portal del socio: sólo acepta sus cuatro vistas.
   const handlePortalNavigate = (pageOrTab: string) => {
-    const validPages: PortalPage[] = ['overview', 'my-payments', 'settings'];
+    const validPages: PortalPage[] = ['overview', 'my-payments', 'settings', 'jersey'];
 
     if (validPages.includes(pageOrTab as PortalPage)) {
       setCurrentPortalPage(pageOrTab as PortalPage);
@@ -163,6 +163,7 @@ function AppContent() {
         case 'overview':    return <PortalOverview onNavigate={handlePortalNavigate} />;
         case 'my-payments': return <PortalPayments onNavigate={handlePortalNavigate} />;
         case 'settings':    return <PortalSettings onNavigate={handlePortalNavigate} />;
+        case 'jersey':      return <PortalJersey   onNavigate={handlePortalNavigate} />;
       }
     };
 

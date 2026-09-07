@@ -8,6 +8,7 @@ import {
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { NotificationBell } from '../../../components/ui/NotificationBell';
+import { usePortalJersey } from '../../../hooks/usePortalJersey';
 import clubLogo from '../../../images/logo/club-logo.png';
 import { UserRole } from '../../../types/index';
 
@@ -44,7 +45,7 @@ const MENU_ITEMS: MenuItem[] = [
   { id: 'proveedores',      label: 'Proveedores',      icon: Building2,     section: 'gestión', roles: ['admin'] },
   { id: 'compras',          label: 'Compras',          icon: ShoppingCart,  section: 'gestión', roles: ['admin'] },
   { id: 'inventario',       label: 'Inventario',       icon: Shirt,         section: 'gestión', roles: ['admin'] },
-  { id: 'jersey',           label: 'Jersey',           icon: Shirt,         section: 'gestión', roles: ['admin'] },
+  { id: 'jersey',           label: 'Jersey',           icon: Shirt,         section: 'gestión', roles: ['admin', 'user'] },
   { id: 'asistencia',       label: 'Asistencia',       icon: ClipboardList, section: 'gestión', roles: ['admin'] },
   { id: 'my-payments',      label: 'Mis Pagos',        icon: CreditCard,    section: 'gestión', roles: ['user'] },
 ];
@@ -66,6 +67,9 @@ interface AdminLayoutProps {
 
 export function AdminLayout({ children, currentPage, onNavigate }: AdminLayoutProps) {
   const { logout, currentUser } = useAuth();
+  // Punto junto a "Jersey" en el menú del socio: campañas activas sin pedido.
+  // Para el administrador no se consulta (no tiene ficha de socio).
+  const { pendientes: jerseyPendientes } = usePortalJersey(currentUser?.role === 'user');
   const [sidebarOpen,      setSidebarOpen]      = useState(true);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [windowWidth,      setWindowWidth]      = useState(
@@ -189,6 +193,7 @@ export function AdminLayout({ children, currentPage, onNavigate }: AdminLayoutPr
                 {section.items.map(item => {
                   const isActive = currentPage === item.id;
                   const Icon     = item.icon;
+                  const aviso    = item.id === 'jersey' && currentUser?.role === 'user' ? jerseyPendientes : 0;
                   return (
                     <li key={item.id}>
                       <button
@@ -209,10 +214,33 @@ export function AdminLayout({ children, currentPage, onNavigate }: AdminLayoutPr
                           transition:      'background-color 150ms',
                         }}
                       >
-                        <Icon size={isExpanded ? 20 : 17} style={{ flexShrink: 0 }} />
+                        <span style={{ position: 'relative', display: 'inline-flex', flexShrink: 0 }}>
+                          <Icon size={isExpanded ? 20 : 17} style={{ flexShrink: 0 }} />
+                          {aviso > 0 && !isExpanded && (
+                            <span style={{
+                              position: 'absolute', top: -3, right: -3, width: 8, height: 8,
+                              borderRadius: '50%', backgroundColor: '#ef4444',
+                              border: '1.5px solid white',
+                            }} />
+                          )}
+                        </span>
                         {isExpanded && (
                           <span style={{ fontSize: 13, fontWeight: isActive ? 600 : 400, whiteSpace: 'nowrap' }}>
                             {item.label}
+                          </span>
+                        )}
+                        {aviso > 0 && isExpanded && (
+                          <span
+                            title={`${aviso} campaña(s) de jersey sin pedido`}
+                            style={{
+                              marginLeft: 'auto', minWidth: 18, height: 18, padding: '0 6px',
+                              borderRadius: 9999, fontSize: 11, fontWeight: 700, lineHeight: '18px',
+                              textAlign: 'center',
+                              backgroundColor: isActive ? 'white' : '#ef4444',
+                              color: isActive ? CLUB_GREEN : 'white',
+                            }}
+                          >
+                            {aviso}
                           </span>
                         )}
                       </button>

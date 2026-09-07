@@ -186,6 +186,9 @@ export interface Attendance {
 // =====================================================
 // JERSEY ORDERS (PEDIDO_JERSEY)
 // =====================================================
+// TODO: el módulo Jersey ya usa la API (services/jerseyService.ts). Este tipo
+// sólo sobrevive porque AppData.jerseyOrders y utils/initialData.ts lo usan
+// como dato semilla local; retirar ambos juntos.
 
 export interface JerseyOrder {
   id: string;

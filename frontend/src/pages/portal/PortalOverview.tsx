@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { portalService } from '../../services/portalService';
 import { useAuth } from '../../features/auth/contexts/AuthContext';
+import { usePortalJersey } from '../../hooks/usePortalJersey';
 import { formatCurrency, formatDateShort } from '../../utils/format';
 
 interface PortalOverviewProps {
@@ -30,6 +31,9 @@ interface Resumen {
 
 export function PortalOverview({ onNavigate }: PortalOverviewProps) {
   const { currentUser } = useAuth();
+  // Campañas de jersey en las que el socio aún no ha pedido (consulta compartida
+  // con el menú y la página Jersey).
+  const { campanasSinPedido } = usePortalJersey();
   const [resumen, setResumen] = useState<Resumen | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -41,7 +45,6 @@ export function PortalOverview({ onNavigate }: PortalOverviewProps) {
       setLoading(true);
       try {
         const respuesta = await portalService.getResumen();
-
         if (cancelado) return;
 
         if (respuesta?.success) {
@@ -102,6 +105,31 @@ export function PortalOverview({ onNavigate }: PortalOverviewProps) {
             vincularla para que puedas ver tus mensualidades, tu cartera y tu asistencia.
             Mientras tanto verás todos los valores en cero.
           </p>
+        </div>
+      )}
+
+      {/* Nuevo jersey: campaña activa sin pedido del socio */}
+      {resumen.vinculado && campanasSinPedido.length > 0 && (
+        <div className="card" style={{ borderLeft: '4px solid #10b981', backgroundColor: '#f0fdf4' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '16px', flexWrap: 'wrap' }}>
+            <div>
+              <h3 style={{ marginBottom: '6px' }}>👕 Nuevo jersey disponible</h3>
+              <p style={{ margin: 0, color: '#065f46', fontSize: '14px' }}>
+                {campanasSinPedido.length === 1
+                  ? <>La campaña <strong>{campanasSinPedido[0].titulo}</strong> está abierta. Elige talla y cantidad y envía tu pedido.</>
+                  : <>Hay {campanasSinPedido.length} campañas abiertas en las que todavía no has pedido.</>}
+              </p>
+            </div>
+            {onNavigate && (
+              <button
+                type="button"
+                className="btn btn-primary"
+                onClick={() => onNavigate('jersey')}
+              >
+                Pedir mi jersey
+              </button>
+            )}
+          </div>
         </div>
       )}
 
