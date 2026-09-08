@@ -50,6 +50,7 @@ async function resolveCategoryByName(categoriaNombre, tipoNormalizado) {
 // pasarela de los cargados a mano por el administrador.
 const SELECT_WITH_CATEGORY = `
   SELECT t.*, c.name AS categoria_nombre, c.type AS categoria_tipo, u.username AS creado_por_username,
+         s.nombre       AS socio_nombre,
          p.id           AS pago_id,
          p.referencia   AS pago_referencia,
          p.estado       AS pago_estado,
@@ -58,8 +59,20 @@ const SELECT_WITH_CATEGORY = `
   FROM transactions t
   LEFT JOIN categories c ON c.id = t.categoria_id
   LEFT JOIN users u ON u.id = t.created_by
+  LEFT JOIN socio s ON s.id_socio = t.id_socio
   LEFT JOIN pagos_pasarela p ON p.transaction_id = t.id
 `;
+
+// memberId opcional desde el frontend → transactions.id_socio.
+// Devuelve { idSocio } o { error } si el id no es válido o el socio no existe.
+async function resolveMemberId(memberId) {
+  if (memberId === undefined || memberId === null || memberId === '') return { idSocio: null };
+  const idSocio = parseInt(memberId, 10);
+  if (isNaN(idSocio)) return { error: 'memberId debe ser numérico.' };
+  const socio = await pool.query('SELECT id_socio FROM socio WHERE id_socio = $1', [idSocio]);
+  if (socio.rows.length === 0) return { error: 'El socio indicado no existe.' };
+  return { idSocio };
+}
 
 // GET /api/transactions
 async function getAll(req, res) {
@@ -129,7 +142,7 @@ async function getById(req, res) {
 // POST /api/transactions
 async function create(req, res) {
   try {
-    const { tipo, monto, fecha, descripcion, categoriaId, categoria, metodoPago, referencia } = req.body;
+    const { tipo, monto, fecha, descripcion, categoriaId, categoria, metodoPago, referencia, memberId } = req.body;
 
     // RN-001: monto numérico positivo mayor a cero
     const montoNum = parseFloat(monto);
@@ -196,10 +209,15 @@ async function create(req, res) {
     // RN-004: usuario responsable desde el token (inyectado por requireAdmin)
     const responsableId = req.user?.id ?? null;
 
+    const socio = await resolveMemberId(memberId);
+    if (socio.error) {
+      return res.status(400).json({ success: false, message: socio.error });
+    }
+
     const result = await pool.query(
       `INSERT INTO transactions
-        (tipo, monto, fecha, descripcion, categoria_id, metodo_pago, created_by, referencia)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+        (tipo, monto, fecha, descripcion, categoria_id, metodo_pago, created_by, referencia, id_socio)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
        RETURNING *`,
       [
         tipoNormalizado,
@@ -210,6 +228,7 @@ async function create(req, res) {
         metodoPago  || null,
         responsableId,
         referencia  || null,
+        socio.idSocio,
       ]
     );
 
@@ -228,7 +247,7 @@ async function create(req, res) {
 async function update(req, res) {
   try {
     const { id } = req.params;
-    const { tipo, monto, fecha, descripcion, categoriaId, categoria, metodoPago, referencia } = req.body;
+    const { tipo, monto, fecha, descripcion, categoriaId, categoria, metodoPago, referencia, memberId } = req.body;
 
     const existing = await pool.query('SELECT * FROM transactions WHERE id = $1', [id]);
     if (existing.rows.length === 0) {
@@ -270,6 +289,11 @@ async function update(req, res) {
       });
     }
 
+    const socio = await resolveMemberId(memberId);
+    if (socio.error) {
+      return res.status(400).json({ success: false, message: socio.error });
+    }
+
     const result = await pool.query(
       `UPDATE transactions SET
         tipo        = COALESCE($1, tipo),
@@ -278,8 +302,9 @@ async function update(req, res) {
         descripcion = COALESCE($4, descripcion),
         categoria_id= COALESCE($5, categoria_id),
         metodo_pago = COALESCE($6, metodo_pago),
-        referencia  = COALESCE($7, referencia)
-       WHERE id = $8
+        referencia  = COALESCE($7, referencia),
+        id_socio    = COALESCE($8, id_socio)
+       WHERE id = $9
        RETURNING *`,
       [
         tipo        ? tipoNormalizado     : null,
@@ -289,6 +314,7 @@ async function update(req, res) {
         categoryRow ? categoryRow.id      : null,
         metodoPago  || null,
         referencia  || null,
+        socio.idSocio,
         id,
       ]
     );

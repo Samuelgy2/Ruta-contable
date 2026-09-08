@@ -1,5 +1,8 @@
 const pool = require('../db');
 
+// Vocabulario de transactions.metodo_pago (CHECK en la BD).
+const METODOS_PAGO_VALIDOS = ['efectivo', 'transferencia', 'tarjeta', 'cheque'];
+
 const SELECT_WITH_SOCIO = `
   SELECT c.*, s.nombre AS socio_nombre, s.documento AS socio_documento
   FROM cartera c
@@ -97,7 +100,7 @@ async function create(req, res) {
 async function update(req, res) {
   try {
     const { id } = req.params;
-    const { concepto, valor, observaciones, estado } = req.body;
+    const { concepto, valor, observaciones, estado, metodoPago, referencia } = req.body;
 
     const existing = await pool.query('SELECT estado FROM cartera WHERE id_cartera = $1', [id]);
     if (existing.rows.length === 0) {
@@ -109,22 +112,60 @@ async function update(req, res) {
     if (estado && !['pendiente', 'pagado', 'anulado'].includes(estado)) {
       return res.status(400).json({ success: false, message: "estado debe ser 'pendiente', 'pagado' o 'anulado'" });
     }
+    if (metodoPago && !METODOS_PAGO_VALIDOS.includes(metodoPago)) {
+      return res.status(400).json({ success: false, message: `metodoPago debe ser uno de: ${METODOS_PAGO_VALIDOS.join(', ')}` });
+    }
 
-    const fechaPago = estado === 'pagado' ? new Date().toISOString().slice(0, 10) : null;
+    let actualizado;
 
-    const result = await pool.query(
-      `UPDATE cartera SET
-        concepto      = COALESCE($1, concepto),
-        valor         = COALESCE($2, valor),
-        observaciones = COALESCE($3, observaciones),
-        estado        = COALESCE($4, estado),
-        fecha_pago    = COALESCE($5, fecha_pago)
-       WHERE id_cartera = $6
-       RETURNING *`,
-      [concepto, valor ? parseFloat(valor) : null, observaciones, estado, fechaPago, id]
-    );
+    if (estado === 'pagado' && existing.rows[0].estado !== 'pagado') {
+      // Cobrar un recargo crea el asiento en transactions y enlaza id_transaccion
+      // en la misma transacción SQL (registrar_pago_cartera). El CHECK
+      // cartera_pagado_con_transaccion rechaza un UPDATE directo a 'pagado'.
+      const client = await pool.connect();
+      try {
+        await client.query('BEGIN');
 
-    res.json({ success: true, data: result.rows[0], message: 'Registro de cartera actualizado correctamente' });
+        if (concepto || valor || observaciones !== undefined) {
+          await client.query(
+            `UPDATE cartera SET
+              concepto      = COALESCE($1, concepto),
+              valor         = COALESCE($2, valor),
+              observaciones = COALESCE($3, observaciones)
+             WHERE id_cartera = $4`,
+            [concepto, valor ? parseFloat(valor) : null, observaciones, id]
+          );
+        }
+
+        await client.query(
+          'SELECT registrar_pago_cartera($1, $2, $3, $4, CURRENT_DATE)',
+          [id, metodoPago || null, referencia || null, req.user?.id ?? null]
+        );
+
+        const refrescado = await client.query('SELECT * FROM cartera WHERE id_cartera = $1', [id]);
+        await client.query('COMMIT');
+        actualizado = refrescado.rows[0];
+      } catch (error) {
+        await client.query('ROLLBACK').catch(() => {});
+        throw error;
+      } finally {
+        client.release();
+      }
+    } else {
+      const result = await pool.query(
+        `UPDATE cartera SET
+          concepto      = COALESCE($1, concepto),
+          valor         = COALESCE($2, valor),
+          observaciones = COALESCE($3, observaciones),
+          estado        = COALESCE($4, estado)
+         WHERE id_cartera = $5
+         RETURNING *`,
+        [concepto, valor ? parseFloat(valor) : null, observaciones, estado, id]
+      );
+      actualizado = result.rows[0];
+    }
+
+    res.json({ success: true, data: actualizado, message: 'Registro de cartera actualizado correctamente' });
   } catch (error) {
     console.error('Error update cartera:', error);
     res.status(500).json({ success: false, message: 'Error al actualizar registro de cartera' });

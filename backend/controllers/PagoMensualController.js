@@ -10,6 +10,9 @@ const SELECT_WITH_JOIN = `
 
 const ESTADOS_VALIDOS = ['pendiente', 'pagado', 'moroso', 'exento', 'cancelado'];
 
+// Vocabulario de transactions.metodo_pago (CHECK en la BD).
+const METODOS_PAGO_VALIDOS = ['efectivo', 'transferencia', 'tarjeta', 'cheque'];
+
 const TRANSICIONES_VALIDAS = {
   pendiente: ['pendiente', 'pagado', 'moroso', 'exento', 'cancelado'],
   moroso:    ['moroso', 'pagado', 'cancelado'],
@@ -121,7 +124,7 @@ async function create(req, res) {
 async function update(req, res) {
   try {
     const { id } = req.params;
-    const { valor, fechaVencimiento, observaciones, estado, fechaPago } = req.body;
+    const { valor, fechaVencimiento, observaciones, estado, fechaPago, metodoPago, referencia } = req.body;
 
     const existing = await pool.query('SELECT * FROM pago_mensual WHERE id_pago = $1', [id]);
     if (existing.rows.length === 0) {
@@ -131,6 +134,9 @@ async function update(req, res) {
 
     if (estado && !ESTADOS_VALIDOS.includes(estado)) {
       return res.status(400).json({ success: false, message: `estado debe ser uno de: ${ESTADOS_VALIDOS.join(', ')}` });
+    }
+    if (metodoPago && !METODOS_PAGO_VALIDOS.includes(metodoPago)) {
+      return res.status(400).json({ success: false, message: `metodoPago debe ser uno de: ${METODOS_PAGO_VALIDOS.join(', ')}` });
     }
     if (estado && !TRANSICIONES_VALIDAS[actual.estado].includes(estado)) {
       return res.status(409).json({
@@ -169,29 +175,70 @@ async function update(req, res) {
       );
     }
 
-    const result = await pool.query(
-      `UPDATE pago_mensual SET
-        valor              = COALESCE($1, valor),
-        fecha_vencimiento  = COALESCE($2, fecha_vencimiento),
-        observaciones      = COALESCE($3, observaciones),
-        estado             = $4,
-        fecha_pago         = $5,
-        dias_mora          = $6,
-        updated_at         = CURRENT_TIMESTAMP
-       WHERE id_pago = $7
-       RETURNING *`,
-      [
-        valor ? parseFloat(valor) : null,
-        fechaVencimiento || null,
-        observaciones,
-        estadoFinal,
-        fechaPagoFinal || null,
-        diasMoraFinal,
-        id,
-      ]
-    );
+    let actualizado;
 
-    const actualizado = result.rows[0];
+    if (estadoFinal === 'pagado' && actual.estado !== 'pagado') {
+      // Pasar a 'pagado' crea el asiento en transactions y enlaza id_transaccion
+      // en la misma transacción SQL (registrar_pago_mensual). El CHECK
+      // pago_mensual_pagado_con_transaccion rechaza un UPDATE directo a 'pagado'.
+      const client = await pool.connect();
+      try {
+        await client.query('BEGIN');
+
+        if (valor || fechaVencimiento || observaciones !== undefined) {
+          // Campos editables que no dependen del pago. fecha_pago se deja en NULL
+          // a propósito: tr_actualizar_mora auto-marca 'pagado' cuando hay
+          // fecha_pago sin cambio de estado, y eso violaría el CHECK antes de
+          // que exista el asiento. La función fija la fecha_pago definitiva.
+          await client.query(
+            `UPDATE pago_mensual SET
+              valor              = COALESCE($1, valor),
+              fecha_vencimiento  = COALESCE($2, fecha_vencimiento),
+              observaciones      = COALESCE($3, observaciones),
+              fecha_pago         = NULL
+             WHERE id_pago = $4`,
+            [valor ? parseFloat(valor) : null, fechaVencimiento || null, observaciones, id]
+          );
+        }
+
+        await client.query(
+          'SELECT registrar_pago_mensual($1, $2, $3, $4, $5)',
+          [id, metodoPago || null, referencia || null, req.user?.id ?? null, fechaPagoFinal]
+        );
+
+        const refrescado = await client.query('SELECT * FROM pago_mensual WHERE id_pago = $1', [id]);
+        await client.query('COMMIT');
+        actualizado = refrescado.rows[0];
+      } catch (error) {
+        await client.query('ROLLBACK').catch(() => {});
+        throw error;
+      } finally {
+        client.release();
+      }
+    } else {
+      const result = await pool.query(
+        `UPDATE pago_mensual SET
+          valor              = COALESCE($1, valor),
+          fecha_vencimiento  = COALESCE($2, fecha_vencimiento),
+          observaciones      = COALESCE($3, observaciones),
+          estado             = $4,
+          fecha_pago         = $5,
+          dias_mora          = $6,
+          updated_at         = CURRENT_TIMESTAMP
+         WHERE id_pago = $7
+         RETURNING *`,
+        [
+          valor ? parseFloat(valor) : null,
+          fechaVencimiento || null,
+          observaciones,
+          estadoFinal,
+          fechaPagoFinal || null,
+          diasMoraFinal,
+          id,
+        ]
+      );
+      actualizado = result.rows[0];
+    }
     // Los triggers de la BD pueden ajustar el estado; si el resultado no coincide
     // con lo pedido, se informa en vez de reportar un éxito falso.
     if (estado && actualizado.estado !== estado) {

@@ -20,7 +20,6 @@ function resumenVacio() {
 async function getResumen(req, res) {
   try {
     const userId = req.user.id;
-
     // El vínculo con la ficha del club no está en users, sino en
     // socio_perfil.id_socio. vista_socios ya resuelve ese JOIN.
     const perfil = await pool.query(
@@ -37,7 +36,7 @@ async function getResumen(req, res) {
       return res.json({
         success: true,
         message: 'Tu cuenta aún no está vinculada a una ficha de socio',
-        data: resumenVacio(),
+        data: resumenVacio()
       });
     }
 

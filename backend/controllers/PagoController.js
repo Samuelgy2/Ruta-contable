@@ -61,6 +61,16 @@ async function checkout(req, res) {
     );
     const idSocio = perfil.rows[0]?.id_socio ?? null;
 
+    // Sin socio vinculado el pago no podría imputarse a nadie. Se corta antes
+    // de crear la orden en PayPal (el trigger de pagos_pasarela también lo
+    // rechazaría, pero ya con la orden a medio crear).
+    if (idSocio === null) {
+      return res.status(409).json({
+        success: false,
+        message: 'Tu cuenta aún no está vinculada a un socio. Contacta al administrador.',
+      });
+    }
+
     const monto = definicion.monto;
     const amountInCents = Math.round(monto * 100);
     const referencia = generarReferencia(userId);
@@ -231,8 +241,8 @@ async function aplicarResultado(client, pago, { estadoPropio, estadoProveedor, o
 
       const asiento = await client.query(
         `INSERT INTO transactions
-           (tipo, monto, fecha, descripcion, categoria_id, metodo_pago, referencia, created_by)
-         VALUES ('ingreso', $1, CURRENT_DATE, $2, $3, $4, $5, $6)
+           (tipo, monto, fecha, descripcion, categoria_id, metodo_pago, referencia, created_by, id_socio)
+         VALUES ('ingreso', $1, CURRENT_DATE, $2, $3, $4, $5, $6, $7)
          RETURNING id`,
         [
           montoValido ?? pago.monto,
@@ -241,6 +251,7 @@ async function aplicarResultado(client, pago, { estadoPropio, estadoProveedor, o
           METODO_CONTABLE,
           pago.referencia,
           pago.user_id,
+          pago.id_socio ?? null,
         ]
       );
 
@@ -251,9 +262,47 @@ async function aplicarResultado(client, pago, { estadoPropio, estadoProveedor, o
       'UPDATE pagos_pasarela SET transaction_id = $1, updated_at = NOW() WHERE id = $2',
       [transactionId, pago.id]
     );
+
+    await vincularMensualidad(client, pago, transactionId, montoValido ?? pago.monto);
   }
 
   return transactionId;
+}
+
+// Tras un pago APPROVED de mensualidad, busca la cuota más antigua del socio en
+// 'pendiente' o 'moroso' con el mismo valor y la marca pagada enlazando el
+// asiento ya creado (registrar_pago_mensual con p_id_transaccion, no duplica
+// la transacción). Si nada coincide, el asiento queda como ingreso general.
+async function vincularMensualidad(client, pago, transactionId, monto) {
+  if (pago.concepto !== CONCEPTOS.mensualidad.descripcion) return null;
+
+  if (!pago.id_socio) {
+    console.warn(`⚠️  Pago ${pago.referencia} sin socio vinculado: la transacción ${transactionId} queda como ingreso general`);
+    return null;
+  }
+
+  const cuota = await client.query(
+    `SELECT id_pago
+       FROM pago_mensual
+      WHERE id_socio = $1
+        AND estado IN ('pendiente', 'moroso')
+        AND valor = $2
+      ORDER BY fecha_vencimiento ASC, id_pago ASC
+      LIMIT 1`,
+    [pago.id_socio, monto]
+  );
+
+  if (cuota.rows.length === 0) {
+    console.warn(`⚠️  Pago ${pago.referencia}: ningún pago mensual pendiente del socio ${pago.id_socio} coincide con ${monto}; la transacción ${transactionId} queda como ingreso general`);
+    return null;
+  }
+
+  const idPago = cuota.rows[0].id_pago;
+  await client.query(
+    'SELECT registrar_pago_mensual($1, $2, $3, $4, CURRENT_DATE, $5)',
+    [idPago, METODO_CONTABLE, pago.referencia, pago.user_id, transactionId]
+  );
+  return idPago;
 }
 
 // Traducción del estado de una captura de PayPal al vocabulario propio.
@@ -277,7 +326,7 @@ async function capturar(req, res) {
     await client.query('BEGIN');
 
     const existente = await client.query(
-      `SELECT id, referencia, user_id, estado, transaction_id, finalized_at, concepto, orden_id, proveedor_id, monto
+      `SELECT id, referencia, user_id, id_socio, estado, transaction_id, finalized_at, concepto, orden_id, proveedor_id, monto
          FROM pagos_pasarela
         WHERE referencia = $1
         FOR UPDATE`,
@@ -414,7 +463,7 @@ async function webhook(req, res) {
 
     // FOR UPDATE serializa los reintentos de PayPal sobre la misma fila.
     const existente = await client.query(
-      `SELECT id, referencia, user_id, estado, transaction_id, finalized_at, concepto, orden_id, proveedor_id
+      `SELECT id, referencia, user_id, id_socio, estado, transaction_id, finalized_at, concepto, orden_id, proveedor_id, monto
          FROM pagos_pasarela
         WHERE referencia = $1 OR orden_id = $2 OR proveedor_id = $3
         LIMIT 1
