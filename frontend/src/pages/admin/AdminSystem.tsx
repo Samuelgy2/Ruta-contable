@@ -1,12 +1,13 @@
-// Configuración del Sistema — unifica "Datos del Club" y "Usuarios" en una sola
-// vista con barra de navegación interna.
+// Configuración del Sistema — unifica "Datos del Club", "Usuarios" y "Landing page"
+// en una sola vista con barra de navegación interna.
 import React, { useState } from 'react';
-import { Building2, Users } from 'lucide-react';
+import { Building2, Users, Globe } from 'lucide-react';
 import { CLUB_GREEN, ToastContainer, useToast } from './system/shared';
 import { ClubDataPanel } from './system/ClubDataPanel';
 import { UsersPanel } from './system/UsersPanel';
+import { LandingPanel } from './system/LandingPanel';
 
-export type SystemTab = 'club-data' | 'users';
+export type SystemTab = 'club-data' | 'users' | 'landing';
 
 interface AdminSystemProps {
   onNavigate?: (tab: string) => void;
@@ -16,6 +17,7 @@ interface AdminSystemProps {
 const tabs = [
   { id: 'club-data' as const, label: 'Datos del Club', icon: Building2, hint: 'Información general y parámetros de cobro' },
   { id: 'users'     as const, label: 'Usuarios',       icon: Users,     hint: 'Cuentas con acceso al sistema' },
+  { id: 'landing'   as const, label: 'Landing page',   icon: Globe,     hint: 'Contenido de la página pública del club' },
 ];
 
 export function AdminSystem({ onNavigate, initialTab = 'club-data' }: AdminSystemProps) {
@@ -31,7 +33,7 @@ export function AdminSystem({ onNavigate, initialTab = 'club-data' }: AdminSyste
         <div style={{ marginBottom: '20px' }}>
           <h2 style={{ margin: 0, fontSize: '20px', fontWeight: '700', color: '#1f2937' }}>Configuración del Sistema</h2>
           <p style={{ margin: '4px 0 0', fontSize: '13px', color: '#6b7280' }}>
-            Datos del club y usuarios con acceso, en un solo lugar
+            Datos del club, usuarios con acceso y página pública, en un solo lugar
           </p>
         </div>
 
@@ -72,9 +74,9 @@ export function AdminSystem({ onNavigate, initialTab = 'club-data' }: AdminSyste
           })}
         </nav>
 
-        {activeTab === 'club-data'
-          ? <ClubDataPanel showToast={showToast} />
-          : <UsersPanel showToast={showToast} />}
+        {activeTab === 'club-data' && <ClubDataPanel showToast={showToast} />}
+        {activeTab === 'users'     && <UsersPanel showToast={showToast} />}
+        {activeTab === 'landing'   && <LandingPanel showToast={showToast} />}
       </div>
     </div>
   );

@@ -1,6 +1,6 @@
 import React from 'react';
 import { Instagram } from 'lucide-react';
-import { ENTRENADORES } from '../data';
+import { ENTRENADORES, seccionPorDefecto, SeccionLanding } from '../data';
 
 // Iniciales para el avatar: primera letra de las dos primeras palabras.
 function iniciales(nombre: string): string {
@@ -12,14 +12,12 @@ function iniciales(nombre: string): string {
     .join('');
 }
 
-export function Entrenadores() {
+export function Entrenadores({ seccion = seccionPorDefecto('entrenadores') }: { seccion?: SeccionLanding }) {
   return (
     <section className="landing-section landing-section-alt" id="entrenadores">
       <div className="landing-container">
-        <h2 className="centered">Entrenadores</h2>
-        <p className="landing-section-subtitle centered">
-          El equipo que acompaña a cada rider en la pista.
-        </p>
+        <h2 className="centered">{seccion.titulo}</h2>
+        {seccion.texto && <p className="landing-section-subtitle centered">{seccion.texto}</p>}
 
         <div className="coaches-grid">
           {ENTRENADORES.map(entrenador => (

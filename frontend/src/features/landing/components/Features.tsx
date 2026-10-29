@@ -1,5 +1,6 @@
 import React from 'react';
 import { Sprout, Flag, Trophy } from 'lucide-react';
+import { seccionPorDefecto, SeccionLanding } from '../data';
 
 // Sección "Escuela": los tres niveles de formación del club.
 // Reutiliza .features, .features-grid y .feature-card de index.css.
@@ -24,14 +25,12 @@ const NIVELES = [
   },
 ];
 
-export function Features() {
+export function Features({ seccion = seccionPorDefecto('escuela') }: { seccion?: SeccionLanding }) {
   return (
     <section className="features" id="escuela">
       <div className="features-container">
-        <h2>Escuela</h2>
-        <p className="features-subtitle">
-          Tres niveles, un mismo camino: de la primera rodada al podio.
-        </p>
+        <h2>{seccion.titulo}</h2>
+        {seccion.texto && <p className="features-subtitle">{seccion.texto}</p>}
 
         <div className="features-grid">
           {NIVELES.map(nivel => {

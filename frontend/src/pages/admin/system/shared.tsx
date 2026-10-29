@@ -60,16 +60,16 @@ export function Modal({ children, onClose }: { children: React.ReactNode; onClos
   );
 }
 
-export function ConfirmDialog({ title, message, onConfirm, onCancel }: { title: string; message: string; onConfirm: () => void; onCancel: () => void }) {
+export function ConfirmDialog({ title, message, onConfirm, onCancel, icon = '🗑️', confirmLabel = 'Eliminar', confirmColor = '#ef4444' }: { title: string; message: string; onConfirm: () => void; onCancel: () => void; icon?: string; confirmLabel?: string; confirmColor?: string }) {
   return (
-    <div style={{ position: 'fixed', inset: 0, zIndex: 2000, backgroundColor: 'rgba(0,0,0,0.45)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px' }}>
+    <div role="alertdialog" aria-modal="true" aria-label={title} style={{ position: 'fixed', inset: 0, zIndex: 2000, backgroundColor: 'rgba(0,0,0,0.45)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px' }}>
       <div style={{ backgroundColor: 'white', borderRadius: '16px', padding: '28px 32px', width: '100%', maxWidth: '380px', boxShadow: '0 20px 60px rgba(0,0,0,0.25)', textAlign: 'center' }}>
-        <div style={{ fontSize: '36px', marginBottom: '12px' }}>🗑️</div>
+        <div style={{ fontSize: '36px', marginBottom: '12px' }} aria-hidden="true">{icon}</div>
         <h3 style={{ margin: '0 0 8px', color: '#1f2937', fontSize: '17px' }}>{title}</h3>
         <p style={{ margin: '0 0 24px', color: '#6b7280', fontSize: '14px' }}>{message}</p>
         <div style={{ display: 'flex', gap: '12px', justifyContent: 'center' }}>
           <button onClick={onCancel} style={{ padding: '10px 24px', borderRadius: '8px', border: '1px solid #d1d5db', backgroundColor: 'white', color: '#374151', fontSize: '14px', fontWeight: '500', cursor: 'pointer' }}>Cancelar</button>
-          <button onClick={onConfirm} style={{ padding: '10px 24px', borderRadius: '8px', border: 'none', backgroundColor: '#ef4444', color: 'white', fontSize: '14px', fontWeight: '500', cursor: 'pointer' }}>Eliminar</button>
+          <button onClick={onConfirm} style={{ padding: '10px 24px', borderRadius: '8px', border: 'none', backgroundColor: confirmColor, color: 'white', fontSize: '14px', fontWeight: '500', cursor: 'pointer' }}>{confirmLabel}</button>
         </div>
       </div>
     </div>

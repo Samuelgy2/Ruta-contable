@@ -9,9 +9,10 @@ interface NavbarProps {
   // Página actual: en 'home' se muestran los anclas a las secciones y se oculta
   // el botón que lleva a la página en la que ya estás.
   currentPage?: AppPage;
+  enlaces?: { id: string; etiqueta: string }[];
 }
 
-export function Navbar({ onNavigate, currentPage }: NavbarProps) {
+export function Navbar({ onNavigate, currentPage, enlaces = ENLACES_SECCIONES }: NavbarProps) {
   const [abierto, setAbierto] = useState(false);
   const enHome = !currentPage || currentPage === 'home';
 
@@ -31,7 +32,7 @@ export function Navbar({ onNavigate, currentPage }: NavbarProps) {
         </div>
 
         <ul className={`navbar-links ${abierto ? 'is-open' : ''}`.trim()}>
-          {enHome && ENLACES_SECCIONES.map(enlace => (
+          {enHome && enlaces.map(enlace => (
             <li key={enlace.id}>
               <a href={`#${enlace.id}`} onClick={cerrar}>{enlace.etiqueta}</a>
             </li>

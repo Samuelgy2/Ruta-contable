@@ -38,6 +38,8 @@ const dns = require('dns').promises;
   const portalRoutes       = require('./routes/portal');
   const pagoRoutes         = require('./routes/pagos');
   const jerseyRoutes       = require('./routes/jersey');
+  const landingRoutes      = require('./routes/landing');
+  const landingAdminRoutes = require('./routes/landingAdmin');
 
   // ── Variables de entorno de PayPal ────────────────────────────────────
   // Se validan al arranque para fallar rápido y no descubrir el problema con
@@ -96,7 +98,9 @@ const dns = require('dns').promises;
   app.use('/api/users',        usersRoutes);
   app.use('/api/auth',         forgotPasswordRoutes);
   app.use('/api/socios',       socioRoutes);
+  app.use('/api/admin/landing', landingAdminRoutes);
   app.use('/api/admin',        adminRoutes);
+  app.use('/api/landing',      landingRoutes);
   app.use('/api/transactions', transactionRoutes);
   app.use('/api/proveedores',  proveedorRoutes);
   app.use('/api/compras',      compraRoutes);

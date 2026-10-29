@@ -1,15 +1,13 @@
 import React from 'react';
 import { MapPin, Plane } from 'lucide-react';
-import { SEDES } from '../data';
+import { SEDES, seccionPorDefecto, SeccionLanding } from '../data';
 
-export function Sedes() {
+export function Sedes({ seccion = seccionPorDefecto('sedes') }: { seccion?: SeccionLanding }) {
   return (
     <section className="landing-section" id="sedes">
       <div className="landing-container">
-        <h2>Sedes y frentes</h2>
-        <p className="landing-section-subtitle">
-          Entrenamos en Medellín y competimos donde esté el calendario.
-        </p>
+        <h2>{seccion.titulo}</h2>
+        {seccion.texto && <p className="landing-section-subtitle">{seccion.texto}</p>}
 
         <div className="sedes-grid">
           {SEDES.map(sede => {

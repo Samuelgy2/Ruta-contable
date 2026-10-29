@@ -1,5 +1,6 @@
 import React from 'react';
 import { CheckCircle2 } from 'lucide-react';
+import { seccionPorDefecto, SeccionLanding } from '../data';
 
 const BENEFICIOS = [
   'Acompañamiento desde el primer contacto con la bici hasta la competencia.',
@@ -8,21 +9,14 @@ const BENEFICIOS = [
   'Proyección internacional: giras y competencias en Estados Unidos.',
 ];
 
-export function Club() {
+// El texto se divide en párrafos por líneas en blanco.
+export function Club({ seccion = seccionPorDefecto('club') }: { seccion?: SeccionLanding }) {
   return (
     <section className="landing-section" id="club">
       <div className="landing-container club-grid">
         <div className="club-text">
-          <h2>El club</h2>
-          <p>
-            Riders es un club de BMX de Medellín. Formamos deportistas desde el semillero,
-            con un proceso que acompaña a cada rider desde su primer contacto con la bici
-            hasta la competencia.
-          </p>
-          <p>
-            Competimos en las válidas departamentales y nacionales, y proyectamos a nuestros
-            riders de alto rendimiento hacia el calendario internacional.
-          </p>
+          <h2>{seccion.titulo}</h2>
+          {seccion.texto.split(/\n\s*\n/).filter(Boolean).map((parrafo, i) => <p key={i}>{parrafo}</p>)}
           <ul className="club-benefits">
             {BENEFICIOS.map(beneficio => (
               <li key={beneficio}>

@@ -779,3 +779,9 @@ html {
     bottom: 76px;
   }
 }
+
+/* En móvil la tarjeta de "Escuela" desbordaba el ancho de la pantalla. */
+.landing-page .feature-card {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}

@@ -1,7 +1,7 @@
 // Landing pública de Riders - Club de BMX
 // Página de aterrizaje y los componentes que la componen.
 
-export { Home } from './pages/Home';
+export { Home, LandingVista } from './pages/Home';
 
 export { Navbar } from './components/Navbar';
 export { Hero } from './components/Hero';

@@ -1,40 +1,56 @@
 import React from 'react';
 import clubLogo from '@/images/logo/club-logo.png';
 import { ImageWithFallback } from '../../../shared/components/ImageWithFallback';
-import { CLUB, GALERIA } from '../data';
+import { CLUB, GALERIA, seccionPorDefecto, SeccionLanding } from '../data';
 
-// Las fotos reales van en frontend/src/images/gallery/ y se asignan en el campo
-// `imagen` de cada entrada de GALERIA (data.ts). Mientras no haya, cada tarjeta
-// muestra el logo como marca de agua y enlaza al Instagram del club.
-export function Galeria() {
+interface GaleriaProps {
+  seccion?: SeccionLanding;
+  // Fotos subidas desde el panel. Sin fotos, cada tarjeta muestra el logo como
+  // marca de agua con los títulos por defecto de GALERIA (data.ts).
+  imagenes?: { src: string; alt: string }[];
+  instagram?: string | null;
+}
+
+export function Galeria({ seccion = seccionPorDefecto('galeria'), imagenes = [], instagram = CLUB.instagram }: GaleriaProps) {
+  const fotos = imagenes.length
+    ? imagenes.map(i => ({ titulo: i.alt, imagen: i.src as string | undefined }))
+    : GALERIA;
+
   return (
     <section className="landing-section" id="galeria">
       <div className="landing-container">
-        <h2 className="centered">Galería</h2>
-        <p className="landing-section-subtitle centered">
-          Podios, partidas y semillero. Todo el día a día del club está en {CLUB.instagramUsuario}.
-        </p>
+        <h2 className="centered">{seccion.titulo}</h2>
+        {seccion.texto && <p className="landing-section-subtitle centered">{seccion.texto}</p>}
 
         <div className="gallery-grid">
-          {GALERIA.map(foto => (
-            <a
-              className="gallery-item"
-              key={foto.titulo}
-              href={CLUB.instagram}
-              target="_blank"
-              rel="noopener noreferrer"
-              aria-label={`${foto.titulo} — ver en Instagram`}
-            >
-              {foto.imagen ? (
-                <ImageWithFallback src={foto.imagen} alt={foto.titulo} />
-              ) : (
-                <div className="gallery-placeholder" aria-hidden="true">
-                  <ImageWithFallback src={clubLogo} alt="" />
-                </div>
-              )}
-              <span className="gallery-caption">{foto.titulo}</span>
-            </a>
-          ))}
+          {fotos.map((foto, i) => {
+            const contenido = (
+              <>
+                {foto.imagen ? (
+                  <ImageWithFallback src={foto.imagen} alt={foto.titulo} loading="lazy" decoding="async" />
+                ) : (
+                  <div className="gallery-placeholder" aria-hidden="true">
+                    <ImageWithFallback src={clubLogo} alt="" />
+                  </div>
+                )}
+                <span className="gallery-caption">{foto.titulo}</span>
+              </>
+            );
+            return instagram ? (
+              <a
+                className="gallery-item"
+                key={i}
+                href={instagram}
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label={`${foto.titulo} — ver en Instagram`}
+              >
+                {contenido}
+              </a>
+            ) : (
+              <div className="gallery-item" key={i}>{contenido}</div>
+            );
+          })}
         </div>
       </div>
     </section>

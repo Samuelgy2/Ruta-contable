@@ -74,6 +74,7 @@ function AppContent() {
       'club-data': 'club-data',
       data:        'club-data',
       users:       'users',
+      landing:     'landing',
     };
 
     if (pageOrTab in systemAliases) {

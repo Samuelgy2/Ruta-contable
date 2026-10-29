@@ -62,13 +62,13 @@ export function Carousel({ slides, autoplayMs = 5000, className = '' }: Carousel
           {slides.map((slide, i) => (
             <div
               className="carousel-slide"
-              key={slide.titulo}
+              key={i}
               role="group"
               aria-roledescription="slide"
               aria-label={`${i + 1} de ${slides.length}: ${slide.titulo}`}
             >
               {slide.imagen ? (
-                <ImageWithFallback src={slide.imagen} alt={slide.titulo} className="carousel-photo" />
+                <ImageWithFallback src={slide.imagen} alt={slide.titulo} className="carousel-photo" loading={i === 0 ? 'eager' : 'lazy'} decoding="async" />
               ) : (
                 // Sin foto: el logo del club como marca de agua.
                 <div className="carousel-watermark" aria-hidden="true">
@@ -77,7 +77,7 @@ export function Carousel({ slides, autoplayMs = 5000, className = '' }: Carousel
               )}
               <div className="carousel-caption">
                 <h3>{slide.titulo}</h3>
-                <p>{slide.descripcion}</p>
+                {slide.descripcion && <p>{slide.descripcion}</p>}
               </div>
             </div>
           ))}
@@ -104,7 +104,7 @@ export function Carousel({ slides, autoplayMs = 5000, className = '' }: Carousel
       <div className="carousel-dots" role="tablist" aria-label="Elegir slide">
         {slides.map((slide, i) => (
           <button
-            key={slide.titulo}
+            key={i}
             type="button"
             role="tab"
             className={`carousel-dot ${i === indice ? 'is-active' : ''}`.trim()}

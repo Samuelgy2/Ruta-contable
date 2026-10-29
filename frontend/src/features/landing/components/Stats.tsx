@@ -1,9 +1,13 @@
 import React from 'react';
 import { CIFRAS } from '../data';
 
-export function Stats() {
+interface StatsProps {
+  titulo?: string;
+}
+
+export function Stats({ titulo = 'Cifras del club' }: StatsProps) {
   return (
-    <section className="stats" aria-label="Cifras del club">
+    <section className="stats" aria-label={titulo}>
       <div className="stats-row">
         {CIFRAS.map(cifra => (
           <div className="stat-item" key={cifra.etiqueta}>
