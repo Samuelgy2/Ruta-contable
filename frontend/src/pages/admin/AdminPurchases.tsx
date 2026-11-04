@@ -58,9 +58,21 @@ export function AdminPurchases({ onNavigate }: AdminPurchasesProps) {
     setShowForm(true);
   };
 
+  const handleApprove = (compra: Compra) => {
+    if (!window.confirm(`¿Confirmas la aprobación de la compra "${compra.concepto}"?`)) {
+      return;
+    }
+
+    updateCompra(compra.id, { estadoAprobacion: 'aprobada' });
+  };
+
+  const handleUndoApproval = (compra: Compra) => {
+    updateCompra(compra.id, { estadoAprobacion: 'pendiente' });
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!form.concepto || !form.valorUnitario || !form.fecha) {
+    if (!form.concepto.trim() || !form.valorUnitario || !form.fecha) {
       alert('Por favor completa los campos requeridos');
       return;
     }
@@ -135,7 +147,7 @@ export function AdminPurchases({ onNavigate }: AdminPurchasesProps) {
         {showForm && (
           <div className="card" style={{ marginBottom: '24px', padding: '24px' }}>
             <h4>{editingCompraId ? 'Editar Compra' : 'Registrar Compra'}</h4>
-            <form onSubmit={handleSubmit}>
+            <form onSubmit={handleSubmit} noValidate>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px', marginBottom: '16px' }}>
                 <div>
                   <label style={{ display: 'block', marginBottom: '4px', fontWeight: '500' }}>Concepto *</label>
@@ -269,13 +281,14 @@ export function AdminPurchases({ onNavigate }: AdminPurchasesProps) {
                 <th>Proveedor</th>
                 <th>Factura</th>
                 <th>Categoría</th>
+                <th>Estado</th>
                 <th>Acciones</th>
               </tr>
             </thead>
             <tbody>
               {filteredCompras.length === 0 ? (
                 <tr>
-                  <td colSpan={10} style={{ textAlign: 'center', padding: '32px' }}>
+                  <td colSpan={11} style={{ textAlign: 'center', padding: '32px' }}>
                     No hay compras registradas
                   </td>
                 </tr>
@@ -292,13 +305,37 @@ export function AdminPurchases({ onNavigate }: AdminPurchasesProps) {
                     <td>{compra.factura || '-'}</td>
                     <td>{getCategoryName(compra.categoriaId)}</td>
                     <td>
-                      <button
-                        type="button"
-                        className="btn btn-secondary"
-                        onClick={() => handleEdit(compra)}
-                      >
-                        Editar
-                      </button>
+                      <span className={compra.estadoAprobacion === 'aprobada' ? 'badge-success' : 'badge-warning'}>
+                        {compra.estadoAprobacion === 'aprobada' ? 'Aprobada' : 'Pendiente'}
+                      </span>
+                    </td>
+                    <td>
+                      <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                        <button
+                          type="button"
+                          className="btn btn-secondary"
+                          onClick={() => handleEdit(compra)}
+                        >
+                          Editar
+                        </button>
+                        {compra.estadoAprobacion === 'aprobada' ? (
+                          <button
+                            type="button"
+                            className="btn btn-secondary"
+                            onClick={() => handleUndoApproval(compra)}
+                          >
+                            Deshacer aprobación
+                          </button>
+                        ) : (
+                          <button
+                            type="button"
+                            className="btn btn-primary"
+                            onClick={() => handleApprove(compra)}
+                          >
+                            Aprobar
+                          </button>
+                        )}
+                      </div>
                     </td>
                   </tr>
                 ))

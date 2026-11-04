@@ -251,6 +251,8 @@ export interface HealthPolicy {
 // PURCHASES (COMPRA)
 // =====================================================
 
+export type EstadoAprobacionCompra = 'pendiente' | 'aprobada';
+
 export interface Compra {
   id: string;
   concepto: string;
@@ -265,6 +267,7 @@ export interface Compra {
   idTransaccion?: string;
   observaciones?: string;
   createdBy?: string;
+  estadoAprobacion?: EstadoAprobacionCompra;
 }
 
 // =====================================================

@@ -454,7 +454,11 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
   // Compra operations
   const addCompra = (compra: Omit<Compra, 'id'>) => {
     validateCompraCantidad(compra.cantidad);
-    const newCompra: Compra = { ...compra, id: generateId() };
+    const newCompra: Compra = {
+      ...compra,
+      estadoAprobacion: 'pendiente',
+      id: generateId(),
+    };
     setData(prev => ({ ...prev, compras: [...prev.compras, newCompra] }));
   };
   const updateCompra = (id: string, updated: Partial<Compra>) => {
