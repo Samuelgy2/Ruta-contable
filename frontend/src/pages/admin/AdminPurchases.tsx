@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useData } from '../../contexts/DataContext';
+import { Compra } from '../../types';
 import { formatCurrency, formatDateShort } from '../../utils/format';
 
 interface AdminPurchasesProps {
@@ -10,10 +11,11 @@ export function AdminPurchases({ onNavigate }: AdminPurchasesProps) {
   const { compras, categories, addCompra, updateCompra, deleteCompra } = useData();
   const [searchTerm, setSearchTerm] = useState('');
   const [showForm, setShowForm] = useState(false);
-  const [form, setForm] = useState({
+  const [editingCompraId, setEditingCompraId] = useState<string | null>(null);
+  const createEmptyForm = () => ({
     concepto: '',
     tipo: '',
-    cantidad: 1,
+    cantidad: '1',
     valorUnitario: '',
     fecha: new Date().toISOString().split('T')[0],
     proveedor: '',
@@ -21,6 +23,7 @@ export function AdminPurchases({ onNavigate }: AdminPurchasesProps) {
     categoriaId: '',
     observaciones: '',
   });
+  const [form, setForm] = useState(createEmptyForm);
 
   const filteredCompras = compras
     .filter(c => c.concepto.toLowerCase().includes(searchTerm.toLowerCase()) || 
@@ -33,6 +36,28 @@ export function AdminPurchases({ onNavigate }: AdminPurchasesProps) {
     return category?.name || '-';
   };
 
+  const resetForm = () => {
+    setForm(createEmptyForm());
+    setEditingCompraId(null);
+    setShowForm(false);
+  };
+
+  const handleEdit = (compra: Compra) => {
+    setForm({
+      concepto: compra.concepto,
+      tipo: compra.tipo || '',
+      cantidad: String(compra.cantidad),
+      valorUnitario: String(compra.valorUnitario),
+      fecha: compra.fecha,
+      proveedor: compra.proveedor || '',
+      factura: compra.factura || '',
+      categoriaId: compra.categoriaId || '',
+      observaciones: compra.observaciones || '',
+    });
+    setEditingCompraId(compra.id);
+    setShowForm(true);
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!form.concepto || !form.valorUnitario || !form.fecha) {
@@ -40,11 +65,15 @@ export function AdminPurchases({ onNavigate }: AdminPurchasesProps) {
       return;
     }
 
-    const valorUnitario = parseFloat(form.valorUnitario);
-    const cantidad = form.cantidad || 1;
-    const valorTotal = valorUnitario * cantidad;
+    const cantidad = Number(form.cantidad);
+    if (!Number.isInteger(cantidad) || cantidad < 1) {
+      alert('La cantidad debe ser un número entero mayor que cero');
+      return;
+    }
 
-    addCompra({
+    const valorUnitario = parseFloat(form.valorUnitario);
+    const valorTotal = valorUnitario * cantidad;
+    const compraData = {
       concepto: form.concepto,
       tipo: form.tipo,
       cantidad,
@@ -55,22 +84,17 @@ export function AdminPurchases({ onNavigate }: AdminPurchasesProps) {
       factura: form.factura || undefined,
       categoriaId: form.categoriaId || undefined,
       observaciones: form.observaciones,
-      createdBy: 'admin',
-    });
+    };
 
-    setForm({
-      concepto: '',
-      tipo: '',
-      cantidad: 1,
-      valorUnitario: '',
-      fecha: new Date().toISOString().split('T')[0],
-      proveedor: '',
-      factura: '',
-      categoriaId: '',
-      observaciones: '',
-    });
-    setShowForm(false);
-    alert('Compra registrada correctamente');
+    if (editingCompraId) {
+      updateCompra(editingCompraId, compraData);
+      alert('Compra actualizada correctamente');
+    } else {
+      addCompra({ ...compraData, createdBy: 'admin' });
+      alert('Compra registrada correctamente');
+    }
+
+    resetForm();
   };
 
   // Statistics
@@ -89,7 +113,7 @@ export function AdminPurchases({ onNavigate }: AdminPurchasesProps) {
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
           <h3 style={{ margin: 0 }}>Gestión de Compras</h3>
           <button 
-            onClick={() => setShowForm(!showForm)}
+            onClick={() => showForm ? resetForm() : setShowForm(true)}
             className="btn btn-primary"
           >
             {showForm ? 'Cancelar' : '+ Nueva Compra'}
@@ -110,7 +134,7 @@ export function AdminPurchases({ onNavigate }: AdminPurchasesProps) {
 
         {showForm && (
           <div className="card" style={{ marginBottom: '24px', padding: '24px' }}>
-            <h4>Registrar Compra</h4>
+            <h4>{editingCompraId ? 'Editar Compra' : 'Registrar Compra'}</h4>
             <form onSubmit={handleSubmit}>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px', marginBottom: '16px' }}>
                 <div>
@@ -143,9 +167,11 @@ export function AdminPurchases({ onNavigate }: AdminPurchasesProps) {
                   <input 
                     type="number" 
                     value={form.cantidad}
-                    onChange={(e) => setForm({...form, cantidad: parseInt(e.target.value)})}
+                    onChange={(e) => setForm({...form, cantidad: e.target.value})}
                     className="input"
+                    required
                     min="1"
+                    step="1"
                   />
                 </div>
                 <div>
@@ -212,7 +238,9 @@ export function AdminPurchases({ onNavigate }: AdminPurchasesProps) {
                   rows={2}
                 />
               </div>
-              <button type="submit" className="btn btn-primary">Guardar Compra</button>
+              <button type="submit" className="btn btn-primary">
+                {editingCompraId ? 'Actualizar Compra' : 'Guardar Compra'}
+              </button>
             </form>
           </div>
         )}
@@ -241,12 +269,13 @@ export function AdminPurchases({ onNavigate }: AdminPurchasesProps) {
                 <th>Proveedor</th>
                 <th>Factura</th>
                 <th>Categoría</th>
+                <th>Acciones</th>
               </tr>
             </thead>
             <tbody>
               {filteredCompras.length === 0 ? (
                 <tr>
-                  <td colSpan={9} style={{ textAlign: 'center', padding: '32px' }}>
+                  <td colSpan={10} style={{ textAlign: 'center', padding: '32px' }}>
                     No hay compras registradas
                   </td>
                 </tr>
@@ -262,6 +291,15 @@ export function AdminPurchases({ onNavigate }: AdminPurchasesProps) {
                     <td>{compra.proveedor || '-'}</td>
                     <td>{compra.factura || '-'}</td>
                     <td>{getCategoryName(compra.categoriaId)}</td>
+                    <td>
+                      <button
+                        type="button"
+                        className="btn btn-secondary"
+                        onClick={() => handleEdit(compra)}
+                      >
+                        Editar
+                      </button>
+                    </td>
                   </tr>
                 ))
               )}

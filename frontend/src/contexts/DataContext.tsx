@@ -134,6 +134,12 @@ const generateId = () => {
   return Date.now().toString(36) + Math.random().toString(36).substring(2);
 };
 
+const validateCompraCantidad = (cantidad: unknown) => {
+  if (typeof cantidad !== 'number' || !Number.isInteger(cantidad) || cantidad < 1) {
+    throw new Error('La cantidad de la compra debe ser un número entero mayor que cero');
+  }
+};
+
 const getDefaultAppData = (): AppData => ({
   users: [],
   members: [],
@@ -287,6 +293,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
 
   // Generic CRUD operations (for simplified CRUD components)
   const create = (entity: keyof AppData, item: Record<string, unknown>) => {
+    if (entity === 'compras') validateCompraCantidad(item.cantidad);
     const newItem = { ...item, id: generateId() };
     setData(prev => {
       const entityData = prev[entity] as unknown[];
@@ -298,6 +305,11 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
   };
 
   const update = (entity: keyof AppData, id: string, item: Record<string, unknown>) => {
+    if (entity === 'compras') {
+      const currentCompra = data.compras.find(compra => compra.id === id);
+      const cantidad = 'cantidad' in item ? item.cantidad : currentCompra?.cantidad;
+      if ('cantidad' in item || cantidad !== undefined) validateCompraCantidad(cantidad);
+    }
     setData(prev => {
       const entityData = prev[entity] as { id: string }[];
       return {
@@ -441,10 +453,14 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
 
   // Compra operations
   const addCompra = (compra: Omit<Compra, 'id'>) => {
+    validateCompraCantidad(compra.cantidad);
     const newCompra: Compra = { ...compra, id: generateId() };
     setData(prev => ({ ...prev, compras: [...prev.compras, newCompra] }));
   };
   const updateCompra = (id: string, updated: Partial<Compra>) => {
+    if (Object.prototype.hasOwnProperty.call(updated, 'cantidad')) {
+      validateCompraCantidad(updated.cantidad);
+    }
     setData(prev => ({ ...prev, compras: prev.compras.map(c => c.id === id ? { ...c, ...updated } : c) }));
   };
   const deleteCompra = (id: string) => {
