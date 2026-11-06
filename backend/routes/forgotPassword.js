@@ -105,11 +105,12 @@ router.post('/forgot-password', otpLimiter, async (req, res) => {
     const otp    = generateOTP();
     const hashed = await bcrypt.hash(otp, 10);
 
-    // Guardar OTP hasheado + expiración (usando LOCALTIMESTAMP de la BD) + resetear intentos fallidos
+    // Guardar OTP hasheado + expiración (usando LOCALTIMESTAMP de la BD) + resetear intentos del OTP.
+    // failed_attempts (bloqueo del login) NO se toca aquí: si no, pedir un código evitaría el bloqueo.
     await pool.query(
       `UPDATE users
        SET reset_token = $1, reset_token_expires = LOCALTIMESTAMP + INTERVAL '10 minutes',
-           failed_attempts = 0, otp_attempts = 0
+           otp_attempts = 0
        WHERE id = $2`,
       [hashed, user.id]
     );

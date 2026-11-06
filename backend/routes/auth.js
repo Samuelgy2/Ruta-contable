@@ -25,6 +25,9 @@ const registerLimiter = rateLimit({
   legacyHeaders: false,
 });
 
+// Hash bcrypt (coste 12) de una clave aleatoria descartada: no corresponde a ninguna cuenta.
+const HASH_FICTICIO = bcrypt.hashSync(require('crypto').randomBytes(16).toString('hex'), 12);
+
 router.post('/register', registerLimiter, authController.register);
 
 router.post('/login', loginLimiter, async (req, res) => {
@@ -38,24 +41,39 @@ router.post('/login', loginLimiter, async (req, res) => {
       return res.status(400).json({ success: false, message: 'Error de validación', errors });
     }
 
-    // El bloqueo se calcula en la base (LOCALTIMESTAMP), con el mismo reloj con
-    // el que se escribe locked_until, para no depender de la zona horaria del servidor.
     const result = await pool.query(
-      `SELECT *,
-              (locked_until IS NOT NULL AND locked_until >  LOCALTIMESTAMP) AS bloqueado,
-              (locked_until IS NOT NULL AND locked_until <= LOCALTIMESTAMP) AS bloqueo_vencido
-         FROM users WHERE username = $1 OR email = $1`,
+      'SELECT * FROM users WHERE username = $1 OR email = $1',
       [username]
     );
 
     if (result.rows.length === 0) {
+      // Mismo coste que una clave real, para que el tiempo no delate si el usuario existe.
+      await bcrypt.compare(password, HASH_FICTICIO);
       logFailedAttempt(username, clientIp, 'Usuario no encontrado');
       return res.status(401).json({ success: false, message: 'Usuario o contraseña incorrectos' });
     }
 
     const user = result.rows[0];
 
-    if (user.bloqueado) {
+    // El intento se cuenta ANTES de comprobar la clave y en un solo UPDATE atómico:
+    // peticiones en paralelo no pueden leer el mismo contador. Si la cuenta está
+    // bloqueada (locked_until vigente) el UPDATE no toca ninguna fila. Un bloqueo
+    // vencido reinicia el contador en 1. Todo con LOCALTIMESTAMP, el mismo reloj
+    // con el que se escribe locked_until.
+    const intento = await pool.query(
+      `UPDATE users
+          SET failed_attempts = CASE WHEN locked_until IS NOT NULL THEN 1
+                                     ELSE COALESCE(failed_attempts, 0) + 1 END,
+              locked_until = CASE WHEN (CASE WHEN locked_until IS NOT NULL THEN 1
+                                             ELSE COALESCE(failed_attempts, 0) + 1 END) >= 5
+                                  THEN LOCALTIMESTAMP + INTERVAL '15 minutes'
+                                  ELSE NULL END
+        WHERE id = $1 AND (locked_until IS NULL OR locked_until <= LOCALTIMESTAMP)
+        RETURNING failed_attempts`,
+      [user.id]
+    );
+
+    if (intento.rowCount === 0) {
       logFailedAttempt(username, clientIp, 'Cuenta bloqueada por intentos fallidos');
       return res.status(429).json({
         success: false,
@@ -66,20 +84,7 @@ router.post('/login', loginLimiter, async (req, res) => {
     const isValid = await bcrypt.compare(password, user.password);
 
     if (!isValid) {
-      // Si el bloqueo ya venció, la cuenta empieza de cero; si no, un solo fallo
-      // más la volvería a bloquear al instante.
-      const intentosPrevios = user.bloqueo_vencido ? 0 : (user.failed_attempts || 0);
-      const newAttempts = intentosPrevios + 1;
-
-      await pool.query(
-        `UPDATE users
-            SET failed_attempts = $1,
-                locked_until = CASE WHEN $1 >= 5 THEN LOCALTIMESTAMP + INTERVAL '15 minutes' ELSE NULL END
-          WHERE id = $2`,
-        [newAttempts, user.id]
-      );
-
-      logFailedAttempt(username, clientIp, `Contraseña incorrecta (intento ${newAttempts}/5)`);
+      logFailedAttempt(username, clientIp, `Contraseña incorrecta (intento ${intento.rows[0].failed_attempts}/5)`);
       return res.status(401).json({ success: false, message: 'Usuario o contraseña incorrectos' });
     }
 

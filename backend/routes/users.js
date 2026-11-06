@@ -246,6 +246,27 @@ router.put('/:id', requireAdmin, async (req, res) => {
   }
 });
 
+// Quita el bloqueo por intentos fallidos de una cuenta (el login la bloquea 15 minutos tras 5 fallos).
+router.put('/:id/desbloquear', requireAdmin, async (req, res) => {
+  try {
+    const id = Number(req.params.id);
+    if (!Number.isInteger(id)) {
+      return res.status(400).json({ success: false, message: 'Id inválido' });
+    }
+    const result = await pool.query(
+      'UPDATE users SET failed_attempts = 0, locked_until = NULL WHERE id = $1 RETURNING id, username',
+      [id]
+    );
+    if (result.rows.length === 0) {
+      return res.status(404).json({ success: false, message: 'Usuario no encontrado' });
+    }
+    res.json({ success: true, message: 'Cuenta desbloqueada', data: result.rows[0] });
+  } catch (error) {
+    console.error('Error al desbloquear usuario:', error);
+    res.status(500).json({ success: false, message: 'Error interno del servidor' });
+  }
+});
+
 router.delete('/:id', requireAdmin, async (req, res) => {
   try {
     const { id } = req.params;

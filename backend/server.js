@@ -80,7 +80,12 @@ const dns = require('dns').promises;
   // Detrás de Render, Vercel o nginx la IP real llega en X-Forwarded-For. Sin esto
   // todos los clientes comparten la IP del proxy y los limitadores cuentan juntos.
   // TRUST_PROXY = número de proxies de confianza (0 para desactivar en local).
-  app.set('trust proxy', Number(process.env.TRUST_PROXY ?? 1));
+  const saltosProxy = Number(process.env.TRUST_PROXY ?? 1);
+  if (!Number.isInteger(saltosProxy) || saltosProxy < 0) {
+    console.error('❌ TRUST_PROXY debe ser un entero >= 0 (número de proxies de confianza).');
+    process.exit(1);
+  }
+  app.set('trust proxy', saltosProxy);
 
   const allowedOrigins = (process.env.CORS_ORIGIN || 'http://localhost:5173')
     .split(',')
@@ -145,7 +150,8 @@ const dns = require('dns').promises;
   // ─── Manejo global de errores ─────────────────────────────────────────
   // Express 5 envía aquí los errores de rutas async. No se filtra el detalle al cliente.
   app.use((err, req, res, _next) => {
-    console.error(`❌ ${new Date().toISOString()} ${req.method} ${req.originalUrl}:`, err);
+    // Solo el stack: el objeto completo puede traer err.body (cuerpo crudo con claves).
+    console.error(`❌ ${new Date().toISOString()} ${req.method} ${req.originalUrl}:`, err.stack || err.message);
     if (res.headersSent) return;
     const status = Number.isInteger(err.status) && err.status >= 400 && err.status < 600 ? err.status : 500;
     res.status(status).json({
@@ -302,7 +308,11 @@ const dns = require('dns').promises;
   // ─── Inicio del servidor ─────────────────────────────────────────────
   async function start() {
     await verificarEsquema();
-    app.listen(port, () => {
+    app.listen(port, (err) => {
+      if (err) {
+        console.error('❌ No se pudo abrir el puerto:', err.message);
+        process.exit(1);
+      }
       console.log(`🚀 Servidor corriendo en http://localhost:${port}`);
     });
   }

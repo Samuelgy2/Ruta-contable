@@ -20,10 +20,13 @@ if (!habilitado) {
   test('landing: omitido (define TEST_ESQUEMA_TEMPORAL=1 para correrlo en un esquema temporal)', { skip: true }, () => {});
   return;
 }
-if (!process.env.DB_HOST && !require('dotenv').config().parsed?.DB_HOST) {
+// Se carga .env ANTES de comprobar nada (db.js también lo haría, pero más tarde):
+// así la comprobación del puerto ve el mismo valor que usará la conexión.
+require('dotenv').config();
+if (!process.env.DB_HOST) {
   throw new Error('Faltan las variables DB_* (entorno o backend/.env).');
 }
-if (String(process.env.DB_PORT) === '6543') {
+if (Number(process.env.DB_PORT) === 6543) {
   throw new Error('El pooler en modo transacción (6543) no conserva search_path: usa el puerto 5432.');
 }
 
@@ -50,6 +53,11 @@ async function verificarAislamiento() {
   const { rows } = await pool.query('SELECT current_schemas(false) AS s');
   assert.deepEqual(rows[0].s, [ESQUEMA], 'search_path debe apuntar solo al esquema temporal');
 }
+
+// Los scripts de migración (DDL, incluido el DROP del rollback) viajan en el MISMO
+// mensaje que el SET search_path: un solo mensaje Query llega a un solo backend,
+// así que no dependen de que la sesión conserve el valor entre consultas.
+const enEsquema = (sql) => pool.query(`SET search_path TO ${ESQUEMA}, pg_temp; ${sql}`);
 
 const migracion = (sufijo) => fs.readFileSync(path.join(__dirname, '..', 'migrations', `20261028_landing.${sufijo}.sql`), 'utf8');
 const PNG = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==', 'base64');
@@ -80,12 +88,12 @@ before(async () => {
       id SERIAL PRIMARY KEY, username VARCHAR(50) UNIQUE NOT NULL, password VARCHAR(255) NOT NULL,
       email VARCHAR(100) UNIQUE NOT NULL, full_name VARCHAR(100) NOT NULL,
       role VARCHAR(20) DEFAULT 'user', active BOOLEAN DEFAULT true)`);
-  await pool.query(migracion('up'));
-  await pool.query(migracion('seed'));
+  await enEsquema(migracion('up'));
+  await enEsquema(migracion('seed'));
   await verificarAislamiento();
 
   const crear = async (usuario, rol) => (await pool.query(
-    `INSERT INTO users (username, password, email, full_name, role) VALUES ($1, 'x', $2, $3, $4)
+    `INSERT INTO ${ESQUEMA}.users (username, password, email, full_name, role) VALUES ($1, 'x', $2, $3, $4)
      ON CONFLICT (username) DO UPDATE SET role = EXCLUDED.role, active = true RETURNING id`,
     [usuario, `${usuario}@prueba.test`, `Usuario ${usuario}`, rol])).rows[0].id;
   tokenAdmin = firmar({ id: await crear('admin_prueba', 'admin') });
@@ -104,7 +112,7 @@ after(async () => {
   try {
     await verificarAislamiento();
     // El rollback de la migración debe borrar las tablas de landing del esquema temporal.
-    await pool.query(migracion('down'));
+    await enEsquema(migracion('down'));
     const quedan = await pool.query(`SELECT to_regclass('landing_version') AS t`);
     assert.equal(quedan.rows[0].t, null, 'el rollback debe borrar las tablas');
   } finally {

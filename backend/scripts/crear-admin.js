@@ -14,9 +14,15 @@ function preguntar(rl, texto, { oculto = false } = {}) {
   return new Promise((resolve) => {
     if (oculto) {
       const escribir = rl._writeToOutput;
+      let preguntaMostrada = false;
       rl._writeToOutput = (cadena) => {
-        // Deja pasar la pregunta y silencia lo que escribe quien teclea.
-        if (cadena.startsWith(texto)) escribir.call(rl, cadena);
+        // Solo deja pasar la pregunta, una vez y exacta. Un refresco de línea de
+        // readline (retroceso, edición a mitad) llega como pregunta + lo tecleado,
+        // y ese texto no debe verse.
+        if (!preguntaMostrada && cadena === texto) {
+          preguntaMostrada = true;
+          escribir.call(rl, cadena);
+        }
       };
       rl.question(texto, (respuesta) => {
         rl._writeToOutput = escribir;
