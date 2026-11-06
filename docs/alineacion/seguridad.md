@@ -33,3 +33,29 @@ Estados: **FALLA** (control ausente o roto), **PARCIAL**, **OK**, **NO VERIFICAD
 ## Estado del loop L3
 
 12 de 12 controles procesados en una pasada (tope 15). Pendientes de decisión de Samuel: controles 1 (rotación), 8 y 12 (implementar o limitación). Pendientes de acceso: control 10 (paneles).
+
+---
+
+## Actualización fase 2 (T3, 6 nov 2026) — rama `entrega/t3-codigo`
+
+Cambios revisados por un subagente Opus con contexto limpio (12 hallazgos: 1 alto, 5 medios, 6 bajos; todos atendidos salvo lo indicado). Comprobadores: `cd backend && npm test` → 6 pruebas pasan (`tests/jwt.test.js`), 1 se omite (`landing.test.js`, requiere `TEST_ESQUEMA_TEMPORAL=1`); arranque sin BD sale con código 1 y mensaje claro.
+
+| # | Control | Estado ahora | Qué cambió / qué falta |
+|---|---|---|---|
+| 1 | Secretos versionados | **PARCIAL (riesgo aceptado)** | Los 5 archivos salieron del índice (commit 9987c587). Sin rotación ni limpieza de historial por decisión de Samuel. `backend/node_modules` también salió del índice (5bb016e0). |
+| 2 | JWT | **OK (código)** | `utils/jwt.js` único: HS256 + issuer + audience en firma y verificación; `JWT_SECRET` obligatorio al arrancar (aviso si <32). Fortaleza del secreto: NO VERIFICADO. |
+| 3 | Limitador de login | **PARCIAL** | `trust proxy` configurable (`TRUST_PROXY`, entero ≥ 0, validado); nginx reenvía `X-Forwarded-*`; limitador en `reset-password`. Saltos reales en Render: NO VERIFICADO. |
+| 4 | CORS | **PARCIAL** | Sin cambio. Valor de `CORS_ORIGIN` en Render: NO VERIFICADO. |
+| 5 | Validación | **PARCIAL** | OTP con `crypto.randomInt`; nombre escapado en el correo. Mínimo de clave sigue 6 en `reset-password` vs 8 en registro (decisión pendiente: frontend y planes de prueba usan 6). Barrido completo de SQL: NO VERIFICADO. |
+| 6 | Bloqueo de cuenta | **OK (código), NO VERIFICADO contra BD** | Intento contado con UPDATE atómico antes de bcrypt; 429 si `locked_until` vigente; bloqueo vencido reinicia el contador; usuario inactivo → 403; `/forgot-password` ya no reinicia `failed_attempts`; `PUT /api/users/:id/desbloquear` (admin). Sin enumeración por tiempo (hash ficticio). Sigue visible el 429 "cuenta bloqueada" para cuentas existentes (aceptado: mejor mensaje al usuario). Sin UI de desbloqueo. |
+| 7 | Logs (RNF-007) | **PARCIAL** | Accesos con morgan a stdout (`/health` excluido); errores con stack; `security.log` (intentos fallidos) sigue en archivo local ya no versionado. Persistencia en Render: NO VERIFICADO. |
+| 8 | Errores y caídas (RNF-009) | **PARCIAL** | Manejador global de errores, handlers `unhandledRejection`/`uncaughtException` (sale con 1), `/health` consulta la BD (503 si falla), fallo de `listen` detiene el proceso. **No hay notificación a administradores**: declarar limitación o implementar (decisión de Samuel). |
+| 9 | Headers y HTTPS | **PARCIAL** | Cabeceras en `vercel.json` (raíz y `frontend/`). TLS de BD y SMTP sigue sin validar certificado (`rejectUnauthorized:false`): limitación documentada. |
+| 10 | Variables de entorno | **NO VERIFICADO (paneles)** | `backend/.env.example` completo: `DB_SSL`, `TRUST_PROXY`, `PAYPAL_*`. Falta solo `FISCAL_YEAR` (opcional). |
+| 11 | Dockerfile producción | **OK (código), NO VERIFICADO construido** | `npm ci`, usuario `node`, healthcheck; compose sin Postgres, puerto del backend solo en `127.0.0.1`, `TRUST_PROXY=0`. No se corrió `docker compose`. |
+| 12 | CSRF / refresh | **Decisión pendiente** | Sin cambio. Recomendación: limitación v1.0 (token en cabecera, CSRF no aplica). |
+
+### Hallazgos de la revisión que quedan como limitación
+- Bloqueo por cuenta (no por cuenta+IP): quien conozca un usuario puede mantenerlo bloqueado; mitigación: desbloqueo por admin (API). Sin UI.
+- `landing.test.js` solo es seguro con conexión en modo sesión/directa (puerto 5432); rechaza 6543. Todavía NO se ha ejecutado contra ninguna base.
+- Tras fusionar este commit en una rama que aún versiona `backend/node_modules`, git borrará esos archivos del disco: ejecutar `npm ci` en `backend/`.
