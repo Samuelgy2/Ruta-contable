@@ -16,7 +16,6 @@ const dns = require('dns').promises;
   const express   = require('express');
   const cors      = require('cors');
   const helmet    = require('helmet');
-  const bcrypt    = require('bcryptjs');
   const rateLimit = require('express-rate-limit');
 
   const pool           = require('./db');
@@ -65,8 +64,22 @@ const dns = require('dns').promises;
     process.exit(1);
   }
 
+  // El JWT no puede firmarse sin secreto: mejor detenerse aquí que fallar en el primer login.
+  if (!process.env.JWT_SECRET) {
+    console.error('❌ Falta la variable de entorno JWT_SECRET.');
+    process.exit(1);
+  }
+  if (process.env.JWT_SECRET.length < 32) {
+    console.warn('⚠️  JWT_SECRET tiene menos de 32 caracteres: usa un secreto largo y aleatorio.');
+  }
+
   const app  = express();
   const port = process.env.PORT || 3001;
+
+  // Detrás de Render, Vercel o nginx la IP real llega en X-Forwarded-For. Sin esto
+  // todos los clientes comparten la IP del proxy y los limitadores cuentan juntos.
+  // TRUST_PROXY = número de proxies de confianza (0 para desactivar en local).
+  app.set('trust proxy', Number(process.env.TRUST_PROXY ?? 1));
 
   const allowedOrigins = (process.env.CORS_ORIGIN || 'http://localhost:5173')
     .split(',')
@@ -114,98 +127,86 @@ const dns = require('dns').promises;
   app.use('/api/portal',          portalRoutes);
   app.use('/api/pagos',           pagoRoutes);
   app.use('/api/jersey',          jerseyRoutes);
-  app.get('/health', (_req, res) => res.json({ status: 'OK', message: 'Servidor funcionando' }));
+  app.get('/health', async (_req, res) => {
+    try {
+      await pool.query('SELECT 1');
+      res.json({ status: 'OK', message: 'Servidor funcionando', db: 'OK' });
+    } catch (err) {
+      console.error('❌ /health: la base de datos no responde:', err.message);
+      res.status(503).json({ status: 'ERROR', message: 'Base de datos no disponible', db: 'ERROR' });
+    }
+  });
 
-  // ─── Setup DB ─────────────────────────────────────────────────────────
-  async function setupDatabase() {
-    // ── users ──────────────────────────────────────────────────────────
-    await pool.query(`
-      CREATE TABLE IF NOT EXISTS users (
-        id              SERIAL PRIMARY KEY,
-        username        VARCHAR(50)  UNIQUE NOT NULL,
-        password        VARCHAR(255) NOT NULL,
-        email           VARCHAR(100) UNIQUE NOT NULL,
-        full_name       VARCHAR(100) NOT NULL,
-        role            VARCHAR(20)  DEFAULT 'user',
-        active          BOOLEAN      DEFAULT true,
-        failed_attempts INTEGER      DEFAULT 0,
-        locked_until    TIMESTAMP,
-        created_at      TIMESTAMP    DEFAULT CURRENT_TIMESTAMP
-      )
-    `);
-    await pool.query(`
-      ALTER TABLE users
-        ADD COLUMN IF NOT EXISTS reset_token         VARCHAR(255),
-        ADD COLUMN IF NOT EXISTS reset_token_expires TIMESTAMP,
-        ADD COLUMN IF NOT EXISTS last_login          TIMESTAMP,
-        ADD COLUMN IF NOT EXISTS updated_at          TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        ADD COLUMN IF NOT EXISTS otp_attempts        INTEGER DEFAULT 0
-    `);
+  // ─── Manejo global de errores ─────────────────────────────────────────
+  // Express 5 envía aquí los errores de rutas async. No se filtra el detalle al cliente.
+  app.use((err, req, res, _next) => {
+    console.error(`❌ ${new Date().toISOString()} ${req.method} ${req.originalUrl}:`, err);
+    if (res.headersSent) return;
+    const status = Number.isInteger(err.status) && err.status >= 400 && err.status < 600 ? err.status : 500;
+    res.status(status).json({
+      success: false,
+      message: status === 500 ? 'Error interno del servidor' : (err.message || 'Error en la solicitud'),
+    });
+  });
 
-    // Admin por defecto
-    const adminExists = await pool.query(
-      'SELECT id FROM users WHERE username = $1', ['admin']
+  process.on('unhandledRejection', (motivo) => {
+    console.error(`❌ ${new Date().toISOString()} unhandledRejection:`, motivo);
+  });
+  process.on('uncaughtException', (err) => {
+    console.error(`❌ ${new Date().toISOString()} uncaughtException:`, err);
+    process.exit(1); // estado indefinido: que el orquestador (Render, Docker) reinicie el proceso
+  });
+
+  // ─── Verificación del esquema ─────────────────────────────────────────
+  // El esquema vive en Supabase y se cambia solo con migraciones versionadas
+  // (backend/migrations). El arranque ya no crea ni altera tablas ni siembra
+  // usuarios: solo comprueba que lo que el código usa exista y, si no, se detiene.
+  // El primer administrador se crea con `npm run crear-admin`.
+  const ESQUEMA_REQUERIDO = {
+    users:         ['id', 'username', 'password', 'email', 'full_name', 'role', 'active',
+                    'failed_attempts', 'locked_until', 'reset_token', 'reset_token_expires',
+                    'last_login', 'updated_at', 'otp_attempts'],
+    socio:         ['id_socio', 'nombre', 'documento'],
+    transactions:  ['id', 'tipo', 'monto', 'fecha'],
+    categories:    ['id'],
+    meses_periodo: ['anio', 'mes', 'total_ingresos', 'total_gastos', 'balance', 'cerrado'],
+    compra:        ['id_compra'],
+    cartera:       ['id_cartera'],
+    asistencia:    ['id_asistencia'],
+    pagos_pasarela: ['referencia'],
+    auditoria:     ['id'],
+    jersey_campana: ['id'],
+    landing_version: ['numero'],
+  };
+
+  async function verificarEsquema() {
+    const { rows } = await pool.query(
+      `SELECT table_name, column_name
+         FROM information_schema.columns
+        WHERE table_schema = 'public' AND table_name = ANY($1)`,
+      [Object.keys(ESQUEMA_REQUERIDO)]
     );
-    if (adminExists.rows.length === 0) {
-      const hashedPassword = await bcrypt.hash('admin123', 12);
-      await pool.query(
-        'INSERT INTO users (username, password, email, full_name, role, active) VALUES ($1,$2,$3,$4,$5,$6)',
-        ['admin', hashedPassword, 'admin@rutacontable.com', 'Administrador', 'admin', true]
-      );
-      console.log('✅ Usuario admin creado');
+
+    const existentes = {};
+    for (const { table_name, column_name } of rows) {
+      (existentes[table_name] ||= new Set()).add(column_name);
     }
 
-    // ── socio ──────────────────────────────────────────────────────────
-    await pool.query(`
-      CREATE TABLE IF NOT EXISTS socio (
-        id_socio         SERIAL PRIMARY KEY,
-        nombre           VARCHAR(200) NOT NULL,
-        documento        VARCHAR(50)  UNIQUE NOT NULL,
-        tipo_documento   VARCHAR(10)  DEFAULT 'CC',
-        email            VARCHAR(100),
-        telefono         VARCHAR(30),
-        direccion        TEXT,
-        fecha_nacimiento DATE,
-        fecha_ingreso    DATE NOT NULL,
-        tipo_membresia   VARCHAR(50)  DEFAULT 'Media',
-        nivel_aprendizaje VARCHAR(50),
-        estado           VARCHAR(20)  DEFAULT 'activo',
-        foto             TEXT,
-        observaciones    TEXT,
-        created_by       INTEGER REFERENCES users(id),
-        created_at       TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        updated_at       TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-      )
-    `);
-    await pool.query(`CREATE INDEX IF NOT EXISTS idx_socio_documento ON socio(documento)`);
-    await pool.query(`CREATE INDEX IF NOT EXISTS idx_socio_nombre    ON socio(nombre)`);
-    console.log('✅ Tabla socio lista');
+    const faltas = [];
+    for (const [tabla, columnas] of Object.entries(ESQUEMA_REQUERIDO)) {
+      if (!existentes[tabla]) { faltas.push(`tabla ${tabla}`); continue; }
+      for (const col of columnas) {
+        if (!existentes[tabla].has(col)) faltas.push(`columna ${tabla}.${col}`);
+      }
+    }
 
-    // ── transactions ───────────────────────────────────────────────────
-    await pool.query(`
-      CREATE TABLE IF NOT EXISTS transactions (
-        id          SERIAL PRIMARY KEY,
-        tipo        VARCHAR(20)     NOT NULL,
-        monto       DECIMAL(15,2)   NOT NULL,
-        fecha       DATE            NOT NULL,
-        descripcion TEXT,
-        categoria_id INTEGER REFERENCES categories(id),
-        metodo_pago VARCHAR(50),
-        referencia  VARCHAR(100),
-        created_by  INTEGER REFERENCES users(id),
-        created_at  TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-      )
-    `);
-    console.log('✅ Tabla transactions lista');
-
-    // ── meses_periodo (reemplaza a la extinta tabla periodos) ────────────
-    await pool.query(`
-      ALTER TABLE meses_periodo
-        ADD COLUMN IF NOT EXISTS total_ingresos NUMERIC DEFAULT 0.00,
-        ADD COLUMN IF NOT EXISTS total_gastos   NUMERIC DEFAULT 0.00,
-        ADD COLUMN IF NOT EXISTS balance        NUMERIC DEFAULT 0.00
-    `);
-    console.log('✅ Tabla meses_periodo lista y verificada');
+    if (faltas.length > 0) {
+      console.error('❌ El esquema de la base de datos está incompleto:');
+      faltas.forEach((f) => console.error(`   - falta ${f}`));
+      console.error('   Aplica las migraciones de backend/migrations (empieza por 0000_baseline.sql).');
+      process.exit(1);
+    }
+    console.log('✅ Esquema de la base de datos verificado');
   }
 
   // ─── Cron cierre mensual automático ──────────────────────────────────
@@ -295,11 +296,14 @@ const dns = require('dns').promises;
 
   // ─── Inicio del servidor ─────────────────────────────────────────────
   async function start() {
-    await setupDatabase();
+    await verificarEsquema();
     app.listen(port, () => {
       console.log(`🚀 Servidor corriendo en http://localhost:${port}`);
     });
   }
 
-  start();
+  start().catch((err) => {
+    console.error('❌ No se pudo iniciar el servidor:', err.message);
+    process.exit(1);
+  });
 })();
