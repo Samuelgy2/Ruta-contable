@@ -10,8 +10,9 @@ T2 escribe solo en `backend/migrations/**` y `docs/bd/**`. Lo de abajo lo encont
    - recrea `idx_socio_documento` (`:178`).
 
    Si T2 renombra tablas (D4) o borra ese índice antes de que se quite este DDL (plan §9.1.2), el siguiente arranque recrea los objetos, incluidas las tablas vacías con el admin por defecto. **Orden obligatorio: primero T3 quita el DDL y lo despliega; después T2 migra.**
-2. `transactions_metodo_pago_check` solo admite `efectivo/transferencia/tarjeta/cheque`. Revisar qué `metodo_pago` manda `controllers/PagoController.js` cuando una pasarela aprueba un pago. NO VERIFICADO.
-3. `users.reset_token`: confirmar si se guarda en claro o con hash (`routes/forgotPassword.js`). NO VERIFICADO.
+2. **Bloqueo de la fase 2 de proveedores** (`backend/migrations/20261105_proveedores_fase2_eliminar.up.sql`). Al 6 nov, el retiro de proveedores del backend (`ProveedorController.js` y `routes/proveedores.js` borrados; cambios en `server.js` y `CompraController.js`) está sin commitear, y `origin/main` todavía referencia `proveedores`. Pasos: commitear, integrar y desplegar en Render, y avisar a T2. Recién entonces T2 aplica la fase 2, que ya está ensayada en local. Decisión de Samuel (6 nov): esperar el despliegue.
+3. `transactions_metodo_pago_check` solo admite `efectivo/transferencia/tarjeta/cheque`. Revisar qué `metodo_pago` manda `controllers/PagoController.js` cuando una pasarela aprueba un pago. NO VERIFICADO.
+4. `users.reset_token`: confirmar si se guarda en claro o con hash (`routes/forgotPassword.js`). NO VERIFICADO.
 
 ## Para T1 (brechas.csv)
 
