@@ -16,5 +16,6 @@ export { AdminProveedores } from './AdminProveedores';
 export { AdminCompras } from './AdminCompras';
 export { AdminInventario } from './AdminInventario';
 export { AdminAsistencia } from './AdminAsistencia';
+export { AdminFacturas } from './AdminFacturas';
 
 

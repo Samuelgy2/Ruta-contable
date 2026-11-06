@@ -17,7 +17,7 @@ const CLUB_GREEN = '#10b981';
 export type AdminPage =
   | 'overview' | 'transactions' | 'members' | 'reports' | 'categories'
   | 'system' | 'monthly-payments' | 'cartera' | 'jersey'
-  | 'proveedores' | 'compras' | 'inventario' | 'asistencia'
+  | 'proveedores' | 'compras' | 'inventario' | 'asistencia' | 'facturas'
   | 'my-payments' | 'settings'
 
 type MenuSectionKey = 'resumen' | 'socios' | 'sistema' | 'gestión';
@@ -44,6 +44,7 @@ const MENU_ITEMS: MenuItem[] = [
   { id: 'cartera',          label: 'Cartera',          icon: Wallet,        section: 'gestión', roles: ['admin'] },
   { id: 'proveedores',      label: 'Proveedores',      icon: Building2,     section: 'gestión', roles: ['admin'] },
   { id: 'compras',          label: 'Compras',          icon: ShoppingCart,  section: 'gestión', roles: ['admin'] },
+  { id: 'facturas',         label: 'Facturación',      icon: FileText,      section: 'gestión', roles: ['admin'] },
   { id: 'inventario',       label: 'Inventario',       icon: Shirt,         section: 'gestión', roles: ['admin'] },
   { id: 'jersey',           label: 'Jersey',           icon: Shirt,         section: 'gestión', roles: ['admin', 'user'] },
   { id: 'asistencia',       label: 'Asistencia',       icon: ClipboardList, section: 'gestión', roles: ['admin'] },
