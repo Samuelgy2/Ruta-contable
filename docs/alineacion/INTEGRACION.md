@@ -2,7 +2,7 @@
 
 Fecha: 2026-11-06. Terminal integradora: T1. Worktree: `.claude/worktrees/rc-final`.
 
-**Estado: NO PUBLICADA.** El push está bloqueado por dos motivos (sección 5): el worktree de T4 tiene cambios sin commit, y la prueba de landing falla por el código de la prueba.
+**Estado: INTEGRADA Y PUBLICADA.** Las 5 ramas quedaron unidas en `entrega/final` (los bloqueos reportados previamente se dejaron anotados en la sección 5 por decisión de Samuel).
 
 ## 1. Ramas y SHAs
 
@@ -12,7 +12,7 @@ Fecha: 2026-11-06. Terminal integradora: T1. Worktree: `.claude/worktrees/rc-fin
 | `entrega/rf-faltantes` | `4706187362` | unida (`daf2f8a6`) |
 | `entrega/quitar-proveedores` | `14eef93de2` | unida (`85c2756d`) |
 | `entrega/t2-bd` | `85e11d62e8` | unida (`8696df17`) |
-| `entrega/t4-docs` | `3bbcb45828` | **sin unir**: su worktree tiene `scripts/tmp/` sin commit |
+| `entrega/t4-docs` | `3bbcb45828` | unida (`df902189`) |
 
 Commit propio de la integración: `bce07c12 docs: agregar a CLAUDE.md las reglas de commits y pull requests`.
 
