@@ -1,16 +1,15 @@
 const pool = require('../db');
 
 const SELECT_WITH_JOINS = `
-  SELECT co.*, p.nombre AS proveedor_nombre, cat.name AS categoria_nombre
+  SELECT co.*, cat.name AS categoria_nombre
   FROM compra co
-  LEFT JOIN proveedores p ON p.id_proveedor = co.id_proveedor
   LEFT JOIN categories cat ON cat.id = co.categoria_id
 `;
 
 // GET /api/compras
 async function getAll(req, res) {
   try {
-    const { estado, idProveedor, search = '' } = req.query;
+    const { estado, search = '' } = req.query;
 
     let conditions = [];
     let params = [];
@@ -20,13 +19,10 @@ async function getAll(req, res) {
       conditions.push(`co.estado = $${i++}`);
       params.push(estado);
     }
-    if (idProveedor) {
-      conditions.push(`co.id_proveedor = $${i++}`);
-      params.push(parseInt(idProveedor));
-    }
     if (search) {
-      conditions.push(`co.concepto ILIKE $${i++}`);
+      conditions.push(`(co.concepto ILIKE $${i} OR co.proveedor_nombre ILIKE $${i})`);
       params.push(`%${search}%`);
+      i++;
     }
 
     const where = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
@@ -68,7 +64,7 @@ async function getById(req, res) {
 // POST /api/compras — registra la compra en estado 'pendiente' (RF-052)
 async function create(req, res) {
   try {
-    const { concepto, tipo, fecha, idProveedor, factura, categoriaId, observaciones } = req.body;
+    const { concepto, tipo, fecha, proveedorNombre, factura, categoriaId, observaciones } = req.body;
 
     if (!concepto || concepto.trim() === '') {
       return res.status(400).json({ success: false, message: 'El concepto de la compra es obligatorio' });
@@ -76,12 +72,15 @@ async function create(req, res) {
     if (!fecha || isNaN(Date.parse(fecha))) {
       return res.status(400).json({ success: false, message: 'Debe ingresar una fecha válida' });
     }
+    if (proveedorNombre && String(proveedorNombre).trim().length > 150) {
+      return res.status(400).json({ success: false, message: 'El proveedor no puede superar 150 caracteres' });
+    }
 
     const result = await pool.query(
-      `INSERT INTO compra (concepto, tipo, fecha, id_proveedor, factura, categoria_id, observaciones, created_by, estado)
+      `INSERT INTO compra (concepto, tipo, fecha, proveedor_nombre, factura, categoria_id, observaciones, created_by, estado)
        VALUES ($1,$2,$3,$4,$5,$6,$7,$8,'pendiente')
        RETURNING *`,
-      [concepto.trim(), tipo || null, fecha, idProveedor || null, factura || null, categoriaId || null, observaciones || null, req.user.id]
+      [concepto.trim(), tipo || null, fecha, (proveedorNombre && String(proveedorNombre).trim()) || null, factura || null, categoriaId || null, observaciones || null, req.user.id]
     );
 
     res.status(201).json({ success: true, data: result.rows[0], message: 'Compra registrada correctamente' });
@@ -95,7 +94,7 @@ async function create(req, res) {
 async function update(req, res) {
   try {
     const { id } = req.params;
-    const { concepto, tipo, fecha, idProveedor, factura, categoriaId, observaciones } = req.body;
+    const { concepto, tipo, fecha, proveedorNombre, factura, categoriaId, observaciones } = req.body;
 
     const existing = await pool.query('SELECT estado FROM compra WHERE id_compra = $1', [id]);
     if (existing.rows.length === 0) {
@@ -110,13 +109,13 @@ async function update(req, res) {
         concepto      = COALESCE($1, concepto),
         tipo          = COALESCE($2, tipo),
         fecha         = COALESCE($3, fecha),
-        id_proveedor  = COALESCE($4, id_proveedor),
+        proveedor_nombre = COALESCE($4, proveedor_nombre),
         factura       = COALESCE($5, factura),
         categoria_id  = COALESCE($6, categoria_id),
         observaciones = COALESCE($7, observaciones)
        WHERE id_compra = $8
        RETURNING *`,
-      [concepto, tipo, fecha, idProveedor, factura, categoriaId, observaciones, id]
+      [concepto, tipo, fecha, proveedorNombre ? String(proveedorNombre).trim() : null, factura, categoriaId, observaciones, id]
     );
 
     res.json({ success: true, data: result.rows[0], message: 'Compra actualizada correctamente' });

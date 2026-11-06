@@ -7,7 +7,7 @@
 
 export type DataResource =
   | 'pagos-mensuales' | 'transactions' | 'socios' | 'members' | 'cartera'
-  | 'categories' | 'club-data' | 'users' | 'periodos' | 'proveedores'
+  | 'categories' | 'club-data' | 'users' | 'periodos'
   | 'compras' | 'inventario' | 'asistencia' | 'jersey' | 'portal' | 'facturas' | 'unknown';
 
 type Listener = (resource: DataResource) => void;

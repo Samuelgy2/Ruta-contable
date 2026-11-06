@@ -3,7 +3,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { useAuth } from '../../auth/contexts/AuthContext';
 import { 
   Home, DollarSign, FileText, PieChart, Folder, Settings,
-  Menu, X, LogOut, Building2, ClipboardList, CreditCard,
+  Menu, X, LogOut, ClipboardList, CreditCard,
   Wallet, Shirt, Lock, ShoppingCart, Heart,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
@@ -17,7 +17,7 @@ const CLUB_GREEN = '#10b981';
 export type AdminPage =
   | 'overview' | 'transactions' | 'members' | 'reports' | 'categories'
   | 'system' | 'monthly-payments' | 'cartera' | 'jersey'
-  | 'proveedores' | 'compras' | 'inventario' | 'asistencia' | 'facturas'
+  | 'compras' | 'inventario' | 'asistencia' | 'facturas'
   | 'my-payments' | 'settings'
 
 type MenuSectionKey = 'resumen' | 'socios' | 'sistema' | 'gestión';
@@ -42,7 +42,6 @@ const MENU_ITEMS: MenuItem[] = [
   { id: 'settings',         label: 'Configuración',    icon: Settings,      section: 'sistema', roles: ['user'] },
   { id: 'monthly-payments', label: 'Mensualidades',    icon: CreditCard,    section: 'gestión', roles: ['admin'] },
   { id: 'cartera',          label: 'Cartera',          icon: Wallet,        section: 'gestión', roles: ['admin'] },
-  { id: 'proveedores',      label: 'Proveedores',      icon: Building2,     section: 'gestión', roles: ['admin'] },
   { id: 'compras',          label: 'Compras',          icon: ShoppingCart,  section: 'gestión', roles: ['admin'] },
   { id: 'facturas',         label: 'Facturación',      icon: FileText,      section: 'gestión', roles: ['admin'] },
   { id: 'inventario',       label: 'Inventario',       icon: Shirt,         section: 'gestión', roles: ['admin'] },
