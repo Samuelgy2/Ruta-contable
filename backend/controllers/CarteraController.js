@@ -123,6 +123,9 @@ async function update(req, res) {
     let actualizado;
 
     if (estado === 'pagado' && existing.rows[0].estado !== 'pagado') {
+      if (!metodoPago || !METODOS_PAGO_VALIDOS.includes(metodoPago)) {
+        return res.status(400).json({ success: false, message: `El m?todo de pago es obligatorio (${METODOS_PAGO_VALIDOS.join(', ')})` });
+      }
       // Cobrar un recargo crea el asiento en transactions y enlaza id_transaccion
       // en la misma transacción SQL (registrar_pago_cartera). El CHECK
       // cartera_pagado_con_transaccion rechaza un UPDATE directo a 'pagado'.

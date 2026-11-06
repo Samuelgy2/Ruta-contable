@@ -338,7 +338,7 @@ export function AdminOverview({ onNavigate, adminName = '' }: AdminOverviewProps
                   Estadísticas Generales
                 </h3>
               </div>
-              <InfoRow label="Total transacciones" value={data.stats.totalTransactions} />
+              <InfoRow label="Transacciones del mes" value={data.stats.totalTransactions} />
               <InfoRow label="Total socios"         value={data.stats.totalMembers} />
               <InfoRow
                 label="Cuotas pagadas"
@@ -372,7 +372,7 @@ export function AdminOverview({ onNavigate, adminName = '' }: AdminOverviewProps
               <InfoRow label="Club"            value={data.system.clubName || 'Sin nombre'} />
               <InfoRow label="Año fiscal"      value={data.system.fiscalYear} />
               <InfoRow label="Moneda"          value={data.system.currency} />
-              <InfoRow label="Usuarios activos" value={`${data.stats.activeMembers} de ${data.stats.totalMembers}`} />
+              <InfoRow label="Socios activos"   value={`${data.stats.activeMembers} de ${data.stats.totalMembers}`} />
             </div>
 
           </div>

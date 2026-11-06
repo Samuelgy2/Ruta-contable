@@ -179,14 +179,66 @@ export function AdminCartera({ onNavigate }: AdminCarteraProps) {
     }
   };
 
-  const handlePagar = async (id: number) => {
-    const result = await updateCartera(id, { estado: 'pagado' });
-    showToast(result.message, result.success ? 'success' : 'error');
+  const [pagoModalId, setPagoModalId] = useState<number | null>(null);
+  const [metodoPagoSel, setMetodoPagoSel] = useState<string>('efectivo');
+  const [referenciaPago, setReferenciaPago] = useState<string>('');
+
+  const handlePagar = (id: number) => {
+    setPagoModalId(id);
+    setMetodoPagoSel('efectivo');
+    setReferenciaPago('');
+  };
+
+  const confirmarPago = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (pagoModalId === null) return;
+    setSubmitting(true);
+    try {
+      const result = await updateCartera(pagoModalId, {
+        estado: 'pagado',
+        metodoPago: metodoPagoSel,
+        referencia: referenciaPago.trim() || undefined,
+      } as any);
+      showToast(result.message, result.success ? 'success' : 'error');
+      if (result.success) setPagoModalId(null);
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
     <div className="app">
       <ToastContainer toasts={toasts} />
+
+      {pagoModalId !== null && (
+        <Modal onClose={() => setPagoModalId(null)}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px' }}>
+            <h3 style={{ margin: 0, fontSize: '18px', fontWeight: '700', color: '#1f2937' }}>?? Confirmar m?todo de pago</h3>
+            <button onClick={() => setPagoModalId(null)} style={{ background: '#f3f4f6', border: 'none', borderRadius: '8px', width: '34px', height: '34px', cursor: 'pointer', fontSize: '18px', color: '#6b7280' }}>?</button>
+          </div>
+          <form onSubmit={(e) => { void confirmarPago(e); }}>
+            <div style={{ display: 'grid', gap: '16px', marginBottom: '20px' }}>
+              {f('M?todo de Pago', (
+                <select value={metodoPagoSel} onChange={e => setMetodoPagoSel(e.target.value)} style={inputStyle} required>
+                  <option value="efectivo">Efectivo</option>
+                  <option value="transferencia">Transferencia</option>
+                  <option value="tarjeta">Tarjeta</option>
+                  <option value="cheque">Cheque</option>
+                </select>
+              ), true)}
+              {f('Referencia / Comprobante (opcional)', (
+                <input value={referenciaPago} onChange={e => setReferenciaPago(e.target.value)} style={inputStyle} placeholder="Nro. comprobante..." />
+              ))}
+            </div>
+            <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
+              <button type="button" onClick={() => setPagoModalId(null)} disabled={submitting} style={{ padding: '10px 20px', borderRadius: '8px', border: '1.5px solid #e5e7eb', backgroundColor: 'white', color: '#374151', fontSize: '14px', cursor: 'pointer' }}>Cancelar</button>
+              <button type="submit" disabled={submitting} style={{ padding: '10px 24px', borderRadius: '8px', border: 'none', backgroundColor: CLUB_GREEN, color: 'white', fontSize: '14px', fontWeight: '600', cursor: 'pointer' }}>
+                {submitting ? ' Procesando...' : 'Confirmar Pago'}
+              </button>
+            </div>
+          </form>
+        </Modal>
+      )}
 
       {showForm && (
         <Modal onClose={closeForm}>

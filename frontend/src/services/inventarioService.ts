@@ -15,12 +15,12 @@ export const inventarioService = {
     return response.data;
   },
 
-  createProduct: async (data) => {
+  createProduct: async (data: any) => {
     const response = await api.post('/inventario/productos', data);
     return response.data;
   },
 
-  updateProduct: async (id: string | number, data) => {
+  updateProduct: async (id: string | number, data: any) => {
     const response = await api.put(`/inventario/productos/${id}`, data);
     return response.data;
   },
@@ -30,12 +30,25 @@ export const inventarioService = {
     return response.data;
   },
 
+  getMovimientos: async (params: { idProducto?: string | number } = {}) => {
+    const qs = new URLSearchParams();
+    if (params.idProducto) qs.set('idProducto', String(params.idProducto));
+    const query = qs.toString() ? `?${qs.toString()}` : '';
+    const response = await api.get(`/inventario/movimientos${query}`);
+    return response.data;
+  },
+
+  createMovimiento: async (data: { idProducto: number; tipo: 'entrada' | 'salida' | 'ajuste'; cantidad: number; motivo: string; idCompra?: number }) => {
+    const response = await api.post('/inventario/movimientos', data);
+    return response.data;
+  },
+
   getCategorias: async () => {
     const response = await api.get('/inventario/categorias');
     return response.data;
   },
 
-  createCategoria: async (data) => {
+  createCategoria: async (data: any) => {
     const response = await api.post('/inventario/categorias', data);
     return response.data;
   },

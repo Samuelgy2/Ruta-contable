@@ -43,7 +43,16 @@ export function UsersPanel({ showToast }: UsersPanelProps) {
   const [confirmDelete, setConfirmDelete] = useState<number | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
-  const visibleUsers = users.filter((u: any) => u.username !== 'admin');
+  const [searchTerm, setSearchTerm] = useState('');
+  const allVisibleUsers = users.filter((u: any) => u.username !== 'admin');
+  const q = searchTerm.trim().toLowerCase();
+  const visibleUsers = q
+    ? allVisibleUsers.filter((u: any) =>
+        (u.username || '').toLowerCase().includes(q) ||
+        (u.fullName || '').toLowerCase().includes(q) ||
+        (u.email || '').toLowerCase().includes(q)
+      )
+    : allVisibleUsers;
   const pagUsuarios = usePaginacion(visibleUsers);
   const inactivos = visibleUsers.filter((u: any) => !u.active);
   const admins = visibleUsers.filter((u: any) => u.role === 'admin');
@@ -148,6 +157,16 @@ export function UsersPanel({ showToast }: UsersPanelProps) {
           <span style={{ fontSize: '13px', color: '#92400e', fontWeight: '600' }}>{inactivos.length} usuario{inactivos.length !== 1 ? 's' : ''} inactivo{inactivos.length !== 1 ? 's' : ''}</span>
         </div>
       )}
+
+      <div style={{ marginBottom: '20px' }}>
+        <input
+          type="text"
+          placeholder="Buscar por usuario, nombre o correo..."
+          value={searchTerm}
+          onChange={e => setSearchTerm(e.target.value)}
+          style={{ ...inputStyle, maxWidth: '360px' }}
+        />
+      </div>
 
       <div style={{ backgroundColor: 'white', borderRadius: '14px', border: '1px solid #e5e7eb', overflow: 'hidden' }}>
         <table style={{ width: '100%', borderCollapse: 'collapse' }}>

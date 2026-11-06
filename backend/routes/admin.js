@@ -47,7 +47,18 @@ router.get('/overview', requireAdmin, async (req, res) => {
       rows: [{ paidFees: 0, pendingFees: 0, overdueFees: 0, paidFeesAmount: 0, pendingFeesAmount: 0 }]
     }));
 
-    const currency = process.env.CURRENCY || 'COP';
+    // Datos del club configurados por el administrador (RF-011 / RF-013), con respaldo en variables de entorno.
+    const clubRow = await pool.query(`
+      SELECT
+        NULLIF(TRIM(club_nombre), '') AS "clubName",
+        NULLIF(TRIM(moneda), '')      AS currency
+      FROM system_data
+      WHERE id = 1
+    `).catch(() => ({ rows: [] }));
+
+    const club     = clubRow.rows[0] || {};
+    const currency = club.currency || process.env.CURRENCY || 'COP';
+    const clubName = club.clubName || process.env.CLUB_NAME || 'Mi Club';
     const paidFeesAmount    = Number(feeStats.rows[0].paidFeesAmount);
     const pendingFeesAmount = Number(feeStats.rows[0].pendingFeesAmount);
     const income   = Number(txStats.rows[0].monthlyIncome);
@@ -74,7 +85,7 @@ router.get('/overview', requireAdmin, async (req, res) => {
           pendingFeesAmount: { raw: pendingFeesAmount, formatted: formatCurrency(pendingFeesAmount, currency) },
         },
         system: {
-          clubName:   process.env.CLUB_NAME   || 'Mi Club',
+          clubName,
           fiscalYear: Number(process.env.FISCAL_YEAR) || year,
           currency,
         },
@@ -96,9 +107,40 @@ const MONTH_NAMES = ['enero','febrero','marzo','abril','mayo','junio','julio','a
 
 router.post('/cierre-mensual', requireAdmin, async (req, res) => {
   try {
-    const { anio, mes, observaciones } = req.body;
-    const year = parseInt(anio) || new Date().getFullYear();
-    const month = parseInt(mes) || new Date().getMonth() + 1;
+    const { anio, mes, observaciones } = req.body || {};
+    const now = new Date();
+    const currentYear = now.getFullYear();
+    const currentMonth = now.getMonth() + 1;
+
+    const defaultMonth = currentMonth === 1 ? 12 : currentMonth - 1;
+    const defaultYear  = currentMonth === 1 ? currentYear - 1 : currentYear;
+
+    const year  = anio !== undefined && anio !== '' ? parseInt(anio, 10) : defaultYear;
+    const month = mes !== undefined && mes !== ''   ? parseInt(mes, 10)  : defaultMonth;
+
+    if (!Number.isInteger(year) || !Number.isInteger(month) || month < 1 || month > 12) {
+      return res.status(400).json({ success: false, error: 'Año o mes inválido' });
+    }
+
+    // RF-034: Solo se puede cerrar un mes completado anterior al mes en curso
+    if (year > currentYear || (year === currentYear && month >= currentMonth)) {
+      return res.status(400).json({
+        success: false,
+        error: 'Solo se puede cerrar un mes completado anterior al mes en curso',
+      });
+    }
+
+    // RF-034: No sobrescribir un periodo ya cerrado
+    const existing = await pool.query(
+      'SELECT cerrado FROM meses_periodo WHERE anio = $1 AND mes = $2',
+      [year, month]
+    );
+    if (existing.rows.length > 0 && existing.rows[0].cerrado === true) {
+      return res.status(409).json({
+        success: false,
+        error: `El periodo de ${MONTH_NAMES[month - 1]} ${year} ya se encuentra cerrado y no puede sobrescribirse`,
+      });
+    }
 
     const incomeResult = await pool.query(
       `SELECT COALESCE(SUM(monto), 0) as total FROM transactions WHERE tipo = 'ingreso' AND EXTRACT(MONTH FROM fecha) = $1 AND EXTRACT(YEAR FROM fecha) = $2`,
@@ -133,6 +175,7 @@ router.post('/cierre-mensual', requireAdmin, async (req, res) => {
          balance = EXCLUDED.balance,
          observaciones = EXCLUDED.observaciones,
          cerrado_by = EXCLUDED.cerrado_by
+       WHERE meses_periodo.cerrado = false
        RETURNING *`,
       [year, month, MONTH_NAMES[month - 1], fechaInicio, fechaFin, ingresos, gastos, balance, observaciones || 'Cierre manual desde panel de reportes', cerradoPorId]
     );
@@ -176,10 +219,39 @@ router.get('/periodos', requireAdmin, async (req, res) => {
   }
 });
 
+// ─── ALERTAS DEL SISTEMA (RNF-009) ────────────────────────────────────────
+router.get('/alertas-sistema', requireAdmin, async (req, res) => {
+  try {
+    const result = await pool.query(
+      `SELECT id, tipo, mensaje, detalle, leida, created_at
+         FROM alerta_sistema
+        WHERE leida = false
+        ORDER BY created_at DESC
+        LIMIT 20`
+    );
+    res.json({ success: true, data: result.rows });
+  } catch (err) {
+    res.status(500).json({ success: false, error: 'Error al obtener alertas del sistema' });
+  }
+});
+
+router.put('/alertas-sistema/:id/leida', requireAdmin, async (req, res) => {
+  try {
+    const id = parseInt(req.params.id, 10);
+    if (!Number.isInteger(id) || id <= 0) {
+      return res.status(400).json({ success: false, error: 'ID inválido' });
+    }
+    await pool.query('UPDATE alerta_sistema SET leida = true WHERE id = $1', [id]);
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ success: false, error: 'Error al actualizar alerta del sistema' });
+  }
+});
+
 // ─── EXPORTAR REPORTE MENSUAL A EXCEL (.XLSX) ──────────────────────────────
 router.get('/periodos/:id/exportar-excel', requireAdmin, async (req, res) => {
   try {
-           const { id } = req.params;
+    const { id } = req.params;
 
     // 1. Validar existencia del periodo contable
     // "ultimo" (o cualquier id no numérico) resuelve al periodo cerrado más reciente.
@@ -199,6 +271,11 @@ router.get('/periodos/:id/exportar-excel', requireAdmin, async (req, res) => {
            ORDER BY mp.fecha_cierre DESC
            LIMIT 1`
         );
+
+    if (periodoQuery.rows.length === 0) {
+      return res.status(404).json({ success: false, error: 'Periodo contable no encontrado' });
+    }
+    const p = periodoQuery.rows[0];
 
     // 2. Extraer el histórico de transacciones cruzando mes y año
     const txQuery = await pool.query(

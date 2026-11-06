@@ -3,13 +3,15 @@ const dns = require('dns').promises;
 
 (async () => {
   // ── Resolver IP de Supabase antes de cualquier require de BD ──────────
-  try {
-    const result = await dns.lookup(process.env.DB_HOST, { family: 4 });
-    process.env.DB_HOST_IP = result.address;
-    console.log(`✅ IP de BD resuelta: ${process.env.DB_HOST_IP}`);
-  } catch (e) {
-    console.error('❌ No se pudo resolver IP, usando hostname original', e.message);
-    process.env.DB_HOST_IP = process.env.DB_HOST;
+  if (process.env.DB_HOST) {
+    try {
+      const result = await dns.lookup(process.env.DB_HOST, { family: 4 });
+      process.env.DB_HOST_IP = result.address;
+      console.log(`✅ IP de BD resuelta: ${process.env.DB_HOST_IP}`);
+    } catch (e) {
+      console.error('❌ No se pudo resolver IP, usando hostname original', e.message);
+      process.env.DB_HOST_IP = process.env.DB_HOST;
+    }
   }
 
   // ── Ahora cargar el resto del servidor ─────────────────────────────────
@@ -147,13 +149,23 @@ const dns = require('dns').promises;
     }
   });
 
-  // ─── Manejo global de errores ─────────────────────────────────────────
+  // ─── Manejo global de errores (RNF-009) ───────────────────────────────
   // Express 5 envía aquí los errores de rutas async. No se filtra el detalle al cliente.
   app.use((err, req, res, _next) => {
     // Solo el stack: el objeto completo puede traer err.body (cuerpo crudo con claves).
     console.error(`❌ ${new Date().toISOString()} ${req.method} ${req.originalUrl}:`, err.stack || err.message);
-    if (res.headersSent) return;
     const status = Number.isInteger(err.status) && err.status >= 400 && err.status < 600 ? err.status : 500;
+    if (status >= 500) {
+      pool.query(
+        'INSERT INTO alerta_sistema (tipo, mensaje, detalle) VALUES ($1, $2, $3)',
+        [
+          'error_sistema',
+          `Error en ${req.method} ${req.originalUrl}: ${err.message || 'Error interno del servidor'}`,
+          JSON.stringify({ method: req.method, url: req.originalUrl, status }),
+        ]
+      ).catch(() => {});
+    }
+    if (res.headersSent) return;
     res.status(status).json({
       success: false,
       message: status === 500 ? 'Error interno del servidor' : (err.message || 'Error en la solicitud'),
@@ -162,6 +174,10 @@ const dns = require('dns').promises;
 
   process.on('unhandledRejection', (motivo) => {
     console.error(`❌ ${new Date().toISOString()} unhandledRejection:`, motivo);
+    pool.query(
+      'INSERT INTO alerta_sistema (tipo, mensaje, detalle) VALUES ($1, $2, $3)',
+      ['error_sistema', `Promesa rechazada no manejada: ${motivo?.message || String(motivo)}`, null]
+    ).catch(() => {});
   });
   process.on('uncaughtException', (err) => {
     console.error(`❌ ${new Date().toISOString()} uncaughtException:`, err);
@@ -270,7 +286,8 @@ const dns = require('dns').promises;
            ON CONFLICT (anio, mes) DO UPDATE SET
              cerrado = true, fecha_cierre = NOW(),
              total_ingresos = $6, total_gastos = $7, balance = $8,
-             observaciones = $9, cerrado_by = $10`,
+             observaciones = $9, cerrado_by = $10
+           WHERE meses_periodo.cerrado = false`,
           [
             yearNum, monthNum, monthName, fechaInicio, fechaFin,
             totalIngresos, totalGastos, balance,

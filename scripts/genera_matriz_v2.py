@@ -78,6 +78,14 @@ RF = {
                "Rn3: Solo el administrador puede visualizar los socios activos del club.",
                f"Se quita la nota editorial de la RN1 ({BR}: RF-009)."),
     },
+    "RF-011": {
+        "ri": ("Nombre del club, año fiscal, moneda del sistema y cantidad de socios activos.",
+               "Unificación de término 'Socios activos' en AdminOverview.tsx:375."),
+        "rn": ("RN1: El nombre del club y la moneda se leen de Datos del Club (system_data) con respaldo en la configuración del servidor.\n"
+               "RN2: El año fiscal corresponde al configurado en el servidor o al año en curso.\n"
+               "RN3: Se muestra la cantidad de socios activos frente al total de socios.",
+               "Implementado en backend/routes/admin.js:50-60 y AdminOverview.tsx:375."),
+    },
     "RF-013": {
         "descripcion": ("El sistema permitirá consultar las transacciones contables.", "Unificación de descripciones duplicadas RF-013/RF-022 (instrucción de G1)."),
         "ri": ("Fecha, tipo, categoría, monto, descripción, método de pago, registrado por y origen (manual o pasarela).",
@@ -301,8 +309,14 @@ RF = {
                "Instrucción de G1: RN-001 pasa a 'el proveedor es un texto libre opcional' (D7)."),
         "ri": ("Proveedor (texto libre, opcional), estado de la compra y datos generales de la compra.", "Decisión D7."),
     },
-    "RF-072": {"estado_v2": ("Fuera de alcance v1.0",
-                             f"{G1}: el stock se ajusta a mano (RF-074) y movimiento_inventario no tiene lógica en la aplicación; automatizar entradas y salidas queda para una versión posterior.")},
+    "RF-072": {
+        "ri": ("Producto, tipo de movimiento (entrada, salida o ajuste), cantidad, stock anterior, stock nuevo y motivo.",
+               "Implementado en InventarioController.js, CompraController.js y AdminInventario.tsx."),
+        "rn": ("RN-001: El stock se actualiza mediante entradas, salidas, ajustes manuales y detalles de compras aprobadas.\n"
+               "RN-002: El sistema no permite movimientos que dejen el stock en un valor negativo.\n"
+               "RN-003: Todo cambio de stock queda registrado en el historial de movimientos (movimiento_inventario).",
+               "Implementado por solicitud de Samuel: control de kardex en movimiento_inventario y bloqueo de stock negativo."),
+    },
     "RF-073": {
         "rn": ("RN-001: El sistema muestra el inventario actualizado en cada consulta.\nRN-002: Solo los administradores pueden modificar el inventario.\nRN-003: La edición se rige por RF-074.",
                f"Se ajusta la matriz ({BR}: RF-073)."),
@@ -360,7 +374,7 @@ RF = {
     },
 }
 
-PENDIENTE = {"RF-011": "Pendiente decisión de Samuel"}
+PENDIENTE = {}
 
 NOMBRES_PROCESO = {
     "Administrador": "Administrador", "Configuracion del sistema": "Configuración del sistema", "Usuario": "Usuario",
@@ -490,8 +504,8 @@ RNF_CAMBIOS = {
                 f"{G1}: prioridad Baja, se ajusta la matriz. Evidencia backend/utils/helpers.js:14-20."),
     "RNF-008": ("Toda respuesta de error de la API devolverá un código HTTP 4xx o 5xx y un JSON con success: false y un mensaje. Las restricciones de la base de datos que hoy responden 500 genérico quedan anotadas como limitación.",
                 f"{G1}: RNF sin medición reescrito con una forma comprobable."),
-    "RNF-009": ("Los errores del servidor quedarán registrados en los logs del proceso (manejador global de errores). La notificación activa a los administradores queda fuera de alcance de v1.0.",
-                f"{G1}: se ajusta a lo que hace el sistema. Evidencia entrega/t3-codigo:backend/server.js:147-161."),
+    "RNF-009": ("Los errores internos del servidor (5xx y promesas rechazadas) se registran en los logs del proceso y en la tabla alerta_sistema, mostrándose como alertas a los administradores en la campana de notificaciones del panel.",
+                "Implementado en backend/server.js, backend/routes/admin.js (/api/admin/alertas-sistema) y frontend/src/hooks/useAlerts.ts."),
     "RNF-010": ("El sistema cifrará las contraseñas con bcrypt (factor de costo de al menos 10) y nunca las guardará en texto plano.",
                 f"{G1}: se redacta con el algoritmo real. Evidencia users.js:121 (10), AuthController y PortalController (12)."),
 }

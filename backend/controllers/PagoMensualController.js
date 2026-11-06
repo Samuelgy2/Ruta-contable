@@ -178,6 +178,9 @@ async function update(req, res) {
     let actualizado;
 
     if (estadoFinal === 'pagado' && actual.estado !== 'pagado') {
+      if (!metodoPago || !METODOS_PAGO_VALIDOS.includes(metodoPago)) {
+        return res.status(400).json({ success: false, message: `El m?todo de pago es obligatorio (${METODOS_PAGO_VALIDOS.join(', ')})` });
+      }
       // Pasar a 'pagado' crea el asiento en transactions y enlaza id_transaccion
       // en la misma transacción SQL (registrar_pago_mensual). El CHECK
       // pago_mensual_pagado_con_transaccion rechaza un UPDATE directo a 'pagado'.

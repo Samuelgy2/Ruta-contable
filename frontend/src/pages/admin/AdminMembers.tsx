@@ -339,8 +339,8 @@ export function AdminMembers({ onNavigate }: AdminMembersProps) {
   // ── Submit ─────────────────────────────────────────────────────────────────
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    if (!form.nombre || !form.documento || !form.fecha_ingreso) {
-      showToast('Nombre, documento y fecha de ingreso son obligatorios', 'error');
+    if (!form.nombre || !form.documento || !form.fecha_ingreso || !form.fecha_nacimiento) {
+      showToast('Nombre, documento, fecha de nacimiento y fecha de ingreso son obligatorios', 'error');
       return;
     }
     setSubmitting(true);
@@ -498,14 +498,9 @@ export function AdminMembers({ onNavigate }: AdminMembersProps) {
                 />
               )}
 
-              {f('Fecha de Nacimiento',
-                <input
-                  type="date"
-                  value={form.fecha_nacimiento}
-                  onChange={e => setForm({ ...form, fecha_nacimiento: e.target.value })}
-                  style={inputStyle}
-                />
-              )}
+              {f('Fecha de Nacimiento', (
+                <input type="date" value={form.fecha_nacimiento} onChange={e => setForm({ ...form, fecha_nacimiento: e.target.value })} style={inputStyle} required />
+              ), true)}
 
               {f('Fecha de Ingreso',
                 <input

@@ -3,6 +3,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { pagoMensualService } from '../services/pagoMensualService';
 import { PagoMensualItem } from './usePagosMensuales';
 import { useAutoRefresh } from './useAutoRefresh';
+import { API_URL } from '../services/apiConfig';
 
 export type AlertSeverity = 'danger' | 'warning';
 
@@ -12,6 +13,15 @@ export interface Alert {
   title:     string;
   message:   string;
   memberId?: string;
+}
+
+interface SystemAlertItem {
+  id: number;
+  tipo: string;
+  mensaje: string;
+  detalle?: string | null;
+  leida: boolean;
+  created_at: string;
 }
 
 export interface UseAlertsResult {
@@ -27,15 +37,17 @@ export interface UseAlertsResult {
 
 /**
  * Calcula alertas de pagos pendientes y vencidos (RF-025)
- * directamente desde pago_mensual (pendiente / moroso).
+ * directamente desde pago_mensual (pendiente / moroso), y suma las
+ * alertas de errores o caídas del sistema (RNF-009) desde alerta_sistema.
  *
  * Se mantiene al día sola: reacciona a cualquier mutación de pagos, al volver
  * el foco a la pestaña y a un sondeo periódico.
  */
 export function useAlerts(): UseAlertsResult {
-  const [pagos,       setPagos]       = useState<PagoMensualItem[]>([]);
-  const [loading,     setLoading]     = useState(true);
-  const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
+  const [pagos,        setPagos]        = useState<PagoMensualItem[]>([]);
+  const [systemAlerts, setSystemAlerts] = useState<SystemAlertItem[]>([]);
+  const [loading,      setLoading]      = useState(true);
+  const [lastUpdated,  setLastUpdated]  = useState<Date | null>(null);
 
   // Evita que una respuesta lenta pise a otra más reciente y que se actualice
   // el estado tras desmontar el componente.
@@ -50,18 +62,26 @@ export function useAlerts(): UseAlertsResult {
   const fetchAlerts = useCallback(async () => {
     const id = ++requestId.current;
     try {
-      const [pendientes, morosos] = await Promise.all([
+      const token = localStorage.getItem('clubfinance_token');
+      const [pendientes, morosos, sysRes] = await Promise.all([
         pagoMensualService.getAll({ estado: 'pendiente' }),
         pagoMensualService.getAll({ estado: 'moroso' }),
+        fetch(`${API_URL}/admin/alertas-sistema`, {
+          headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+        }).then(r => r.ok ? r.json() : { success: false, data: [] }).catch(() => ({ success: false, data: [] })),
       ]);
       if (!mounted.current || id !== requestId.current) return;
       setPagos([
         ...(pendientes.success ? pendientes.data || [] : []),
         ...(morosos.success ? morosos.data || [] : []),
       ]);
+      setSystemAlerts(sysRes?.success ? sysRes.data || [] : []);
       setLastUpdated(new Date());
     } catch {
-      if (mounted.current && id === requestId.current) setPagos([]);
+      if (mounted.current && id === requestId.current) {
+        setPagos([]);
+        setSystemAlerts([]);
+      }
     } finally {
       if (mounted.current && id === requestId.current) setLoading(false);
     }
@@ -82,6 +102,15 @@ export function useAlerts(): UseAlertsResult {
     const result: Alert[] = [];
     const today = new Date();
     today.setHours(0, 0, 0, 0);
+
+    systemAlerts.forEach(sa => {
+      result.push({
+        id:       `sistema-${sa.id}`,
+        severity: 'danger',
+        title:    'Alerta del sistema',
+        message:  sa.mensaje,
+      });
+    });
 
     pagos.forEach(pago => {
       const name = pago.socio_nombre ?? `Socio #${pago.id_socio}`;
@@ -118,7 +147,7 @@ export function useAlerts(): UseAlertsResult {
       if (b.severity === 'danger' && a.severity !== 'danger') return  1;
       return 0;
     });
-  }, [pagos]);
+  }, [pagos, systemAlerts]);
 
   return {
     alerts,

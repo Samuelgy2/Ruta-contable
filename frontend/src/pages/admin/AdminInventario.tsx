@@ -101,18 +101,27 @@ type FormState = typeof emptyForm;
 
 export function AdminInventario({ onNavigate }: AdminInventarioProps) {
   const {
-    productos, categorias, jerseys, loading,
-    fetchProductos, fetchJerseys, createProducto, updateProducto, removeProducto, createCategoria,
+    productos, categorias, movimientos, jerseys, loading,
+    fetchProductos, fetchMovimientos, fetchJerseys,
+    createProducto, updateProducto, removeProducto, createMovimiento, createCategoria,
   } = useInventario();
   const pagJerseys = usePaginacion(jerseys);
   const pagProductos = usePaginacion(productos);
-  const [tab, setTab] = useState<'productos' | 'indumentaria'>('productos');
+  const pagMovimientos = usePaginacion(movimientos);
+  const [tab, setTab] = useState<'productos' | 'movimientos' | 'indumentaria'>('productos');
   const [searchTerm, setSearchTerm] = useState('');
   const [showForm, setShowForm] = useState(false);
   const [showCategoriaForm, setShowCategoriaForm] = useState(false);
+  const [showMovForm, setShowMovForm] = useState(false);
   const [nuevaCategoria, setNuevaCategoria] = useState('');
   const [editingId, setEditingId] = useState<number | null>(null);
   const [form, setForm] = useState<FormState>(emptyForm);
+  const [movForm, setMovForm] = useState<{
+    idProducto: string;
+    tipo: 'entrada' | 'salida' | 'ajuste';
+    cantidad: string;
+    motivo: string;
+  }>({ idProducto: '', tipo: 'entrada', cantidad: '1', motivo: '' });
   const [confirmDelete, setConfirmDelete] = useState<number | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const { toasts, show: showToast } = useToast();
@@ -124,7 +133,8 @@ export function AdminInventario({ onNavigate }: AdminInventarioProps) {
 
   useEffect(() => {
     if (tab === 'indumentaria') void fetchJerseys();
-  }, [tab, fetchJerseys]);
+    if (tab === 'movimientos') void fetchMovimientos();
+  }, [tab, fetchJerseys, fetchMovimientos]);
 
   const stockBajo = productos.filter(p => p.stock <= 5);
 
@@ -139,21 +149,63 @@ export function AdminInventario({ onNavigate }: AdminInventarioProps) {
   };
   const closeForm = () => { setShowForm(false); setEditingId(null); };
 
+  const openMovModal = (idProducto?: number) => {
+    const defaultId = idProducto ? String(idProducto) : (productos[0]?.id ? String(productos[0].id) : '');
+    setMovForm({ idProducto: defaultId, tipo: 'entrada', cantidad: '1', motivo: '' });
+    setShowMovForm(true);
+  };
+
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!form.name.trim() || !form.price) {
       showToast('Nombre y precio son obligatorios', 'error');
       return;
     }
+    const parsedStock = Number(form.stock);
+    if (!Number.isInteger(parsedStock) || parsedStock < 0) {
+      showToast('El stock debe ser un número entero mayor o igual a 0', 'error');
+      return;
+    }
     setSubmitting(true);
     try {
       const payload = {
         name: form.name.trim(), price: parseFloat(form.price), description: form.description || undefined,
-        categoriaId: form.categoriaId ? parseInt(form.categoriaId) : undefined, stock: parseInt(form.stock) || 0,
+        categoriaId: form.categoriaId ? parseInt(form.categoriaId) : undefined, stock: parsedStock,
       };
       const result = editingId !== null ? await updateProducto(editingId, payload as any) : await createProducto(payload as any);
       showToast(result.message, result.success ? 'success' : 'error');
       if (result.success) closeForm();
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleCreateMovimiento = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    const idProd = parseInt(movForm.idProducto, 10);
+    const cant = Number(movForm.cantidad);
+    if (!idProd) {
+      showToast('Selecciona un producto', 'error');
+      return;
+    }
+    if (!Number.isInteger(cant) || (movForm.tipo === 'ajuste' ? cant < 0 : cant <= 0)) {
+      showToast('La cantidad debe ser un entero válido', 'error');
+      return;
+    }
+    if (!movForm.motivo.trim()) {
+      showToast('El motivo del movimiento es obligatorio', 'error');
+      return;
+    }
+    setSubmitting(true);
+    try {
+      const result = await createMovimiento({
+        idProducto: idProd,
+        tipo: movForm.tipo,
+        cantidad: cant,
+        motivo: movForm.motivo.trim(),
+      });
+      showToast(result.message, result.success ? 'success' : 'error');
+      if (result.success) setShowMovForm(false);
     } finally {
       setSubmitting(false);
     }
@@ -195,6 +247,46 @@ export function AdminInventario({ onNavigate }: AdminInventarioProps) {
         </Modal>
       )}
 
+      {showMovForm && (
+        <Modal onClose={() => setShowMovForm(false)}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '24px' }}>
+            <h3 style={{ margin: 0, fontSize: '20px', fontWeight: '700', color: '#1f2937' }}>📦 Registrar Movimiento de Inventario</h3>
+            <button onClick={() => setShowMovForm(false)} style={{ background: '#f3f4f6', border: 'none', borderRadius: '8px', width: '34px', height: '34px', cursor: 'pointer', fontSize: '18px', color: '#6b7280' }}>×</button>
+          </div>
+          <form onSubmit={(e) => { void handleCreateMovimiento(e); }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '16px', marginBottom: '16px' }}>
+              {f('Producto', (
+                <select value={movForm.idProducto} onChange={e => setMovForm({ ...movForm, idProducto: e.target.value })} style={inputStyle} required>
+                  <option value="">Selecciona un producto...</option>
+                  {productos.map(p => <option key={p.id} value={p.id}>{p.name} (Stock actual: {p.stock})</option>)}
+                </select>
+              ), true)}
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '16px' }}>
+                {f('Tipo de Movimiento', (
+                  <select value={movForm.tipo} onChange={e => setMovForm({ ...movForm, tipo: e.target.value as 'entrada' | 'salida' | 'ajuste' })} style={inputStyle} required>
+                    <option value="entrada">Entrada (+)</option>
+                    <option value="salida">Salida (-)</option>
+                    <option value="ajuste">Ajuste (= stock final)</option>
+                  </select>
+                ), true)}
+                {f(movForm.tipo === 'ajuste' ? 'Stock Final' : 'Cantidad', (
+                  <input type="number" min={movForm.tipo === 'ajuste' ? '0' : '1'} step="1" value={movForm.cantidad} onChange={e => setMovForm({ ...movForm, cantidad: e.target.value })} style={inputStyle} required />
+                ), true)}
+              </div>
+              {f('Motivo / Justificación', (
+                <input value={movForm.motivo} onChange={e => setMovForm({ ...movForm, motivo: e.target.value })} style={inputStyle} placeholder="Ej: Compra a proveedor, consumo en torneo, ajuste físico..." required />
+              ), true)}
+            </div>
+            <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end', paddingTop: '16px', borderTop: '1px solid #f3f4f6', marginTop: '16px' }}>
+              <button type="button" onClick={() => setShowMovForm(false)} disabled={submitting} style={{ padding: '11px 24px', borderRadius: '8px', border: '1.5px solid #e5e7eb', backgroundColor: 'white', color: '#374151', fontSize: '14px', fontWeight: '500', cursor: 'pointer' }}>Cancelar</button>
+              <button type="submit" disabled={submitting} style={{ padding: '11px 28px', borderRadius: '8px', border: 'none', backgroundColor: submitting ? '#6ee7b7' : CLUB_GREEN, color: 'white', fontSize: '14px', fontWeight: '600', cursor: submitting ? 'default' : 'pointer' }}>
+                {submitting ? 'Registrando...' : 'Registrar'}
+              </button>
+            </div>
+          </form>
+        </Modal>
+      )}
+
       {showForm && (
         <Modal onClose={closeForm}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '24px' }}>
@@ -211,7 +303,7 @@ export function AdminInventario({ onNavigate }: AdminInventarioProps) {
                   {categorias.map(c => <option key={c.id} value={c.id}>{c.nombre}</option>)}
                 </select>
               ))}
-              {f('Stock', <input type="number" min="0" value={form.stock} onChange={e => setForm({ ...form, stock: e.target.value })} style={inputStyle} />)}
+              {f('Stock', <input type="number" min="0" step="1" value={form.stock} onChange={e => setForm({ ...form, stock: e.target.value })} style={inputStyle} />)}
             </div>
             {f('Descripción', <textarea value={form.description} onChange={e => setForm({ ...form, description: e.target.value })} rows={3} style={{ ...inputStyle, resize: 'vertical' }} />)}
             <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end', paddingTop: '16px', borderTop: '1px solid #f3f4f6', marginTop: '16px' }}>
@@ -230,9 +322,10 @@ export function AdminInventario({ onNavigate }: AdminInventarioProps) {
             <h3 style={{ margin: 0, fontSize: '20px', fontWeight: '700', color: '#1f2937' }}>Inventario</h3>
             <p style={{ margin: '4px 0 0', fontSize: '13px', color: '#6b7280' }}>{productos.length} producto{productos.length !== 1 ? 's' : ''} en catálogo</p>
           </div>
-          {tab === 'productos' && (
+          {(tab === 'productos' || tab === 'movimientos') && (
             <div style={{ display: 'flex', gap: '10px' }}>
               <button onClick={() => setShowCategoriaForm(true)} style={{ padding: '11px 18px', borderRadius: '10px', border: '1.5px solid #e5e7eb', backgroundColor: 'white', color: '#374151', fontSize: '14px', fontWeight: '600', cursor: 'pointer' }}>+ Categoría</button>
+              <button onClick={() => openMovModal()} disabled={productos.length === 0} style={{ padding: '11px 18px', borderRadius: '10px', border: `1.5px solid ${CLUB_GREEN}`, backgroundColor: 'white', color: CLUB_GREEN, fontSize: '14px', fontWeight: '600', cursor: productos.length === 0 ? 'not-allowed' : 'pointer', opacity: productos.length === 0 ? 0.5 : 1 }}>+ Movimiento</button>
               <button onClick={openCreate} style={{ padding: '11px 20px', borderRadius: '10px', border: 'none', backgroundColor: CLUB_GREEN, color: 'white', fontSize: '14px', fontWeight: '600', cursor: 'pointer' }}>+ Nuevo Producto</button>
             </div>
           )}
@@ -240,7 +333,7 @@ export function AdminInventario({ onNavigate }: AdminInventarioProps) {
 
         {/* Tabs */}
         <div style={{ display: 'flex', gap: '4px', marginBottom: '20px', borderBottom: '1px solid #e5e7eb' }}>
-          {(['productos', 'indumentaria'] as const).map(t => (
+          {(['productos', 'movimientos', 'indumentaria'] as const).map(t => (
             <button
               key={t}
               onClick={() => setTab(t)}
@@ -251,7 +344,7 @@ export function AdminInventario({ onNavigate }: AdminInventarioProps) {
                 borderBottom: tab === t ? `2px solid ${CLUB_GREEN}` : '2px solid transparent',
               }}
             >
-              {t === 'productos' ? 'Productos' : 'Indumentaria (consulta)'}
+              {t === 'productos' ? 'Productos' : t === 'movimientos' ? 'Movimientos (Kardex)' : 'Indumentaria (consulta)'}
             </button>
           ))}
         </div>
@@ -296,6 +389,7 @@ export function AdminInventario({ onNavigate }: AdminInventarioProps) {
                         </span>
                       </td>
                       <td style={{ padding: '14px 16px', display: 'flex', gap: '8px' }}>
+                        <button onClick={() => openMovModal(p.id)} style={{ padding: '6px 12px', borderRadius: '6px', border: '1px solid #a7f3d0', backgroundColor: '#ecfdf5', color: '#047857', fontSize: '12px', cursor: 'pointer' }}>Movimiento</button>
                         <button onClick={() => openEdit(p)} style={{ padding: '6px 12px', borderRadius: '6px', border: '1px solid #e5e7eb', backgroundColor: 'white', color: '#374151', fontSize: '12px', cursor: 'pointer' }}>Editar</button>
                         <button onClick={() => setConfirmDelete(p.id)} style={{ padding: '6px 12px', borderRadius: '6px', border: '1px solid #fecaca', backgroundColor: '#fef2f2', color: '#dc2626', fontSize: '12px', cursor: 'pointer' }}>Eliminar</button>
                       </td>
@@ -306,6 +400,44 @@ export function AdminInventario({ onNavigate }: AdminInventarioProps) {
               <Paginacion {...pagProductos} etiqueta="productos" />
             </div>
           </>
+        )}
+
+        {tab === 'movimientos' && (
+          <div style={{ backgroundColor: 'white', borderRadius: '14px', border: '1px solid #e5e7eb', overflow: 'hidden' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+              <thead>
+                <tr style={{ backgroundColor: '#f9fafb', borderBottom: '1px solid #e5e7eb' }}>
+                  {['Fecha', 'Producto', 'Tipo', 'Cantidad', 'Stock Ant.', 'Stock Nuevo', 'Motivo'].map(h => (
+                    <th key={h} style={{ padding: '12px 16px', textAlign: 'left', fontSize: '12px', fontWeight: '600', color: '#6b7280', textTransform: 'uppercase' }}>{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {movimientos.length === 0 ? (
+                  <tr><td colSpan={7} style={{ textAlign: 'center', padding: '32px', color: '#9ca3af' }}>No hay movimientos de inventario registrados</td></tr>
+                ) : pagMovimientos.itemsPagina.map(m => (
+                  <tr key={m.id_movimiento} style={{ borderBottom: '1px solid #f3f4f6' }}>
+                    <td style={{ padding: '14px 16px', fontSize: '13px', color: '#6b7280' }}>{formatDateShort(m.created_at)}</td>
+                    <td style={{ padding: '14px 16px', fontSize: '14px', color: '#1f2937', fontWeight: '500' }}>{m.producto_nombre ?? `#${m.id_producto}`}</td>
+                    <td style={{ padding: '14px 16px' }}>
+                      <span style={{
+                        padding: '3px 10px', borderRadius: '9999px', fontSize: '11px', fontWeight: '700', textTransform: 'uppercase',
+                        backgroundColor: m.tipo === 'entrada' ? '#ecfdf5' : m.tipo === 'salida' ? '#fef2f2' : '#fffbeb',
+                        color: m.tipo === 'entrada' ? '#047857' : m.tipo === 'salida' ? '#dc2626' : '#92400e',
+                      }}>
+                        {m.tipo}
+                      </span>
+                    </td>
+                    <td style={{ padding: '14px 16px', fontSize: '14px', fontWeight: '600', color: '#1f2937' }}>{m.cantidad}</td>
+                    <td style={{ padding: '14px 16px', fontSize: '14px', color: '#6b7280' }}>{m.stock_anterior}</td>
+                    <td style={{ padding: '14px 16px', fontSize: '14px', fontWeight: '600', color: '#1f2937' }}>{m.stock_nuevo}</td>
+                    <td style={{ padding: '14px 16px', fontSize: '14px', color: '#6b7280' }}>{m.motivo || '—'}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+            <Paginacion {...pagMovimientos} etiqueta="movimientos" />
+          </div>
         )}
 
         {tab === 'indumentaria' && (

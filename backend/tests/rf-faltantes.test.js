@@ -1,9 +1,10 @@
-// Reglas de negocio puras de RF-050 y RF-055/058 (sin base de datos).
+// Reglas de negocio puras de RF-050, RF-055/058 y RF-014/015 (sin base de datos).
 // Ejecutar: node --test tests/rf-faltantes.test.js
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const { validarFactura, totalLineaCentavos } = require('../controllers/FacturaController');
 const { detectarTipo } = require('../controllers/SocioDocumentoController');
+const { validarDatosClub } = require('../controllers/ClubDataController');
 
 const base = { fecha: '2026-11-05', concepto: 'QA_factura', idSocio: 1, detalles: [{ servicio: 'QA_cuota', cantidad: 2, valorUnitario: 10000 }] };
 
@@ -58,4 +59,22 @@ test('RF-050: tipo de archivo por firma, no por extensión', () => {
   assert.equal(detectarTipo(Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0])), 'image/png');
   assert.equal(detectarTipo(Buffer.from('MZ ejecutable')), null);
   assert.equal(detectarTipo(Buffer.alloc(0)), null);
+});
+
+test('RF-014 / RF-015: validarDatosClub valida nombre, email, NIT, mora y día de vencimiento', () => {
+  assert.match(validarDatosClub({ clubNombre: '' }).error, /nombre del club/i);
+  assert.match(validarDatosClub({ clubNombre: 'Club Ruta', email: 'invalido' }).error, /correo electrónico/i);
+  assert.match(validarDatosClub({ clubNombre: 'Club Ruta', nit: 'ABC-123' }).error, /NIT/i);
+  assert.match(validarDatosClub({ clubNombre: 'Club Ruta', porcentajeMora: 150 }).error, /mora/i);
+  assert.match(validarDatosClub({ clubNombre: 'Club Ruta', diaVencimientoDefault: 32 }).error, /vencimiento/i);
+  assert.deepEqual(
+    validarDatosClub({
+      clubNombre: 'Club Ruta Contable',
+      email: 'info@rutacontable.co',
+      nit: '900.123.456-7',
+      porcentajeMora: 5,
+      diaVencimientoDefault: 15,
+    }),
+    { ok: true }
+  );
 });

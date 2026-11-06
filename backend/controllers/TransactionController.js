@@ -171,6 +171,9 @@ async function create(req, res) {
     }
 
     const tipoNormalizado = normalizeTipo(tipo);
+    if (!descripcion || String(descripcion).trim() === '') {
+      return res.status(400).json({ success: false, message: 'La descripción es obligatoria' });
+    }
     if (!['ingreso', 'gasto'].includes(tipoNormalizado)) {
       return res.status(400).json({
         success: false,
@@ -250,6 +253,9 @@ async function update(req, res) {
     const { tipo, monto, fecha, descripcion, categoriaId, categoria, metodoPago, referencia, memberId } = req.body;
 
     const existing = await pool.query('SELECT * FROM transactions WHERE id = $1', [id]);
+    if (descripcion !== undefined && String(descripcion).trim() === '') {
+      return res.status(400).json({ success: false, message: 'La descripción es obligatoria' });
+    }
     if (existing.rows.length === 0) {
       return res.status(404).json({ success: false, message: 'Transacción no encontrada' });
     }

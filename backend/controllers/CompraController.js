@@ -61,7 +61,7 @@ async function getById(req, res) {
   }
 }
 
-// POST /api/compras — registra la compra en estado 'pendiente' (RF-052)
+// POST /api/compras — registra la compra en estado 'pendiente' (RF-059)
 async function create(req, res) {
   try {
     const { concepto, tipo, fecha, proveedorNombre, factura, categoriaId, observaciones } = req.body;
@@ -174,13 +174,13 @@ async function remove(req, res) {
   }
 }
 
-// ─── Detalle de compra (RF-053) — solo permitido una vez que la compra está 'aprobada' ─
+// ─── Detalle de compra (RF-060 / RF-072) — solo permitido cuando la compra está 'aprobada' ─
 
 // POST /api/compras/:id/detalle
 async function addDetalle(req, res) {
   try {
     const { id } = req.params;
-    const { concepto, cantidad = 1, valorUnitario } = req.body;
+    const { concepto, cantidad = 1, valorUnitario, idProducto } = req.body;
 
     const compra = await pool.query('SELECT estado FROM compra WHERE id_compra = $1', [id]);
     if (compra.rows.length === 0) {
@@ -192,24 +192,68 @@ async function addDetalle(req, res) {
     if (!concepto || concepto.trim() === '') {
       return res.status(400).json({ success: false, message: 'El concepto de la línea es obligatorio' });
     }
+    const cantNum = Number(cantidad);
+    if (!Number.isInteger(cantNum) || cantNum <= 0) {
+      return res.status(400).json({ success: false, message: 'La cantidad debe ser un entero mayor a cero' });
+    }
     const valorNum = parseFloat(valorUnitario);
     if (!valorUnitario || isNaN(valorNum) || valorNum <= 0) {
       return res.status(400).json({ success: false, message: 'El valor unitario debe ser numérico y mayor a cero' });
     }
 
-    const nroLinea = await pool.query(
-      'SELECT COALESCE(MAX(nro_linea), 0) + 1 AS siguiente FROM detalle_compra WHERE id_compra = $1',
-      [id]
-    );
+    const client = await pool.connect();
+    try {
+      await client.query('BEGIN');
 
-    const result = await pool.query(
-      `INSERT INTO detalle_compra (id_compra, nro_linea, concepto, cantidad, valor_unitario)
-       VALUES ($1,$2,$3,$4,$5)
-       RETURNING *`,
-      [id, nroLinea.rows[0].siguiente, concepto.trim(), parseInt(cantidad) || 1, valorNum]
-    );
+      let prodId = idProducto ? Number(idProducto) : null;
+      if (!prodId) {
+        const matchProd = await client.query(
+          'SELECT id FROM products WHERE LOWER(name) = LOWER($1) LIMIT 1',
+          [concepto.trim()]
+        );
+        if (matchProd.rows.length > 0) prodId = matchProd.rows[0].id;
+      }
 
-    res.status(201).json({ success: true, data: result.rows[0], message: 'Línea de detalle agregada' });
+      const nroLinea = await client.query(
+        'SELECT COALESCE(MAX(nro_linea), 0) + 1 AS siguiente FROM detalle_compra WHERE id_compra = $1',
+        [id]
+      );
+
+      const result = await client.query(
+        `INSERT INTO detalle_compra (id_compra, nro_linea, concepto, cantidad, valor_unitario, id_producto)
+         VALUES ($1,$2,$3,$4,$5,$6)
+         RETURNING *`,
+        [id, nroLinea.rows[0].siguiente, concepto.trim(), cantNum, valorNum, prodId]
+      );
+
+      // RF-072 RN-001: si está asociado a un producto, sumar al stock y registrar entrada
+      if (prodId) {
+        const prodRow = await client.query('SELECT stock FROM products WHERE id = $1 FOR UPDATE', [prodId]);
+        if (prodRow.rows.length > 0) {
+          const stockAnt = Number(prodRow.rows[0].stock) || 0;
+          const stockNvo = stockAnt + cantNum;
+          const userId = req.user?.id ?? null;
+          await client.query(
+            'UPDATE products SET stock = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2',
+            [stockNvo, prodId]
+          );
+          await client.query(
+            `INSERT INTO movimiento_inventario
+               (id_producto, tipo, cantidad, stock_anterior, stock_nuevo, motivo, id_compra, referencia_origen, created_by, registrado_by)
+             VALUES ($1, 'entrada', $2, $3, $4, $5, $6, 'compra', $7, $7)`,
+            [prodId, cantNum, stockAnt, stockNvo, `Compra #${id}: ${concepto.trim()}`, id, userId]
+          );
+        }
+      }
+
+      await client.query('COMMIT');
+      res.status(201).json({ success: true, data: result.rows[0], message: 'Línea de detalle agregada' });
+    } catch (err) {
+      await client.query('ROLLBACK').catch(() => {});
+      throw err;
+    } finally {
+      client.release();
+    }
   } catch (error) {
     console.error('Error addDetalle compra:', error);
     res.status(500).json({ success: false, message: 'Error al agregar línea de detalle' });

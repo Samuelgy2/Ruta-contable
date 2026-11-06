@@ -9,6 +9,7 @@ export interface Producto {
   categoria_id: number | null;
   categoria_nombre: string | null;
   stock: number;
+  codigo?: string | null;
   created_at: string;
   updated_at: string | null;
 }
@@ -16,6 +17,21 @@ export interface Producto {
 export interface CategoriaProducto {
   id: number;
   nombre: string;
+}
+
+export interface MovimientoInventario {
+  id_movimiento: number;
+  id_producto: number;
+  producto_nombre?: string | null;
+  tipo: 'entrada' | 'salida' | 'ajuste';
+  cantidad: number;
+  stock_anterior: number;
+  stock_nuevo: number;
+  motivo: string;
+  id_compra: number | null;
+  referencia_origen: string | null;
+  usuario_nombre?: string | null;
+  created_at: string;
 }
 
 export interface PedidoJersey {
@@ -36,21 +52,25 @@ export interface PedidoJersey {
 interface UseInventarioResult {
   productos: Producto[];
   categorias: CategoriaProducto[];
+  movimientos: MovimientoInventario[];
   jerseys: PedidoJersey[];
   loading: boolean;
   error: string | null;
   fetchProductos: (search?: string) => Promise<void>;
   fetchCategorias: () => Promise<void>;
+  fetchMovimientos: (idProducto?: number) => Promise<void>;
   fetchJerseys: () => Promise<void>;
   createProducto: (data: Partial<Producto>) => Promise<{ success: boolean; message: string }>;
   updateProducto: (id: number, data: Partial<Producto>) => Promise<{ success: boolean; message: string }>;
   removeProducto: (id: number) => Promise<{ success: boolean; message: string }>;
+  createMovimiento: (data: { idProducto: number; tipo: 'entrada' | 'salida' | 'ajuste'; cantidad: number; motivo: string }) => Promise<{ success: boolean; message: string }>;
   createCategoria: (nombre: string) => Promise<{ success: boolean; message: string }>;
 }
 
 export function useInventario(): UseInventarioResult {
   const [productos, setProductos] = useState<Producto[]>([]);
   const [categorias, setCategorias] = useState<CategoriaProducto[]>([]);
+  const [movimientos, setMovimientos] = useState<MovimientoInventario[]>([]);
   const [jerseys, setJerseys] = useState<PedidoJersey[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -81,6 +101,15 @@ export function useInventario(): UseInventarioResult {
     }
   }, []);
 
+  const fetchMovimientos = useCallback(async (idProducto?: number) => {
+    try {
+      const response = await inventarioService.getMovimientos(idProducto ? { idProducto } : {});
+      if (response.success) setMovimientos(response.data || []);
+    } catch {
+      // silencioso
+    }
+  }, []);
+
   const fetchJerseys = useCallback(async () => {
     try {
       const response = await inventarioService.getJerseys();
@@ -90,13 +119,13 @@ export function useInventario(): UseInventarioResult {
     }
   }, []);
 
-  useEffect(() => { fetchProductos(); fetchCategorias(); }, [fetchProductos, fetchCategorias]);
+  useEffect(() => { fetchProductos(); fetchCategorias(); fetchMovimientos(); }, [fetchProductos, fetchCategorias, fetchMovimientos]);
 
   const createProducto = async (data: Partial<Producto>) => {
     try {
       const response = await inventarioService.createProduct(data);
       if (response.success) {
-        await fetchProductos();
+        await Promise.all([fetchProductos(), fetchMovimientos()]);
         return { success: true, message: response.message || 'Producto creado' };
       }
       return { success: false, message: response.message || 'Error al crear producto' };
@@ -109,7 +138,7 @@ export function useInventario(): UseInventarioResult {
     try {
       const response = await inventarioService.updateProduct(id, data);
       if (response.success) {
-        await fetchProductos();
+        await Promise.all([fetchProductos(), fetchMovimientos()]);
         return { success: true, message: response.message || 'Producto actualizado' };
       }
       return { success: false, message: response.message || 'Error al actualizar producto' };
@@ -131,6 +160,19 @@ export function useInventario(): UseInventarioResult {
     }
   };
 
+  const createMovimiento = async (data: { idProducto: number; tipo: 'entrada' | 'salida' | 'ajuste'; cantidad: number; motivo: string }) => {
+    try {
+      const response = await inventarioService.createMovimiento(data);
+      if (response.success) {
+        await Promise.all([fetchProductos(), fetchMovimientos()]);
+        return { success: true, message: response.message || 'Movimiento registrado' };
+      }
+      return { success: false, message: response.message || 'Error al registrar movimiento' };
+    } catch (err: any) {
+      return { success: false, message: err.response?.data?.message || err.message };
+    }
+  };
+
   const createCategoria = async (nombre: string) => {
     try {
       const response = await inventarioService.createCategoria({ nombre });
@@ -145,8 +187,8 @@ export function useInventario(): UseInventarioResult {
   };
 
   return {
-    productos, categorias, jerseys, loading, error,
-    fetchProductos, fetchCategorias, fetchJerseys,
-    createProducto, updateProducto, removeProducto, createCategoria,
+    productos, categorias, movimientos, jerseys, loading, error,
+    fetchProductos, fetchCategorias, fetchMovimientos, fetchJerseys,
+    createProducto, updateProducto, removeProducto, createMovimiento, createCategoria,
   };
 }

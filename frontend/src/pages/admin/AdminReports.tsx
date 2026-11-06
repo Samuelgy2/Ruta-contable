@@ -201,16 +201,21 @@ export function AdminReports({ onNavigate }: AdminReportsProps) {
 
 
 
-  // ── Cierre mensual ─────────────────────────────────────────────────────────
+  // ── Cierre mensual (RF-034) ────────────────────────────────────────────────
   const MONTH_NAMES = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto',
     'septiembre','octubre','noviembre','diciembre'];
 
-  const handleCierreMensual = async () => {
-    const now = new Date();
-    const monthName = MONTH_NAMES[now.getMonth()];
+  const nowDate = new Date();
+  const prevMonthNum  = nowDate.getMonth() === 0 ? 12 : nowDate.getMonth();
+  const prevYearNum   = nowDate.getMonth() === 0 ? nowDate.getFullYear() - 1 : nowDate.getFullYear();
+  const prevMonthName = MONTH_NAMES[prevMonthNum - 1];
+  const prevAlreadyClosed = periodos.some(
+    p => Number(p.anio) === prevYearNum && Number(p.mes) === prevMonthNum && p.cerrado
+  );
 
+  const handleCierreMensual = async () => {
     const confirmed = window.confirm(
-      `¿Cerrar el mes de ${monthName} ${now.getFullYear()}?\n\nEsto generará el reporte financiero del periodo con los datos actuales.`
+      `¿Cerrar definitivamente el periodo de ${prevMonthName} ${prevYearNum}?\n\nUna vez cerrado el periodo contable, no podrá sobrescribirse.`
     );
     if (!confirmed) return;
 
@@ -222,7 +227,11 @@ export function AdminReports({ onNavigate }: AdminReportsProps) {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${getToken()}`,
         },
-        body: JSON.stringify({ observaciones: 'Cierre manual desde panel de reportes' }),
+        body: JSON.stringify({
+          anio: prevYearNum,
+          mes: prevMonthNum,
+          observaciones: 'Cierre manual desde panel de reportes',
+        }),
       });
 
       const json = await res.json();
@@ -437,17 +446,17 @@ export function AdminReports({ onNavigate }: AdminReportsProps) {
             <h3 style={{ fontSize: '16px', fontWeight: 700, margin: 0, color: '#111827' }}>Cierre Contable Mensual</h3>
           </div>
           <p style={{ color: '#6b7280', fontSize: '14px', margin: '0 0 20px' }}>
-            Calcula ingresos, gastos y balance del mes en curso a partir de las transacciones reales y deja el periodo cerrado en el sistema.
+            Calcula ingresos, gastos y balance del último mes completado ({prevMonthName} {prevYearNum}) a partir de las transacciones reales y deja el periodo cerrado e inmutable en el sistema.
           </p>
           <div style={{ display: 'flex', gap: '12px', alignItems: 'center', flexWrap: 'wrap', marginBottom: '20px' }}>
             <button
               onClick={() => { void handleCierreMensual(); }}
-              disabled={cierreLoading}
+              disabled={cierreLoading || prevAlreadyClosed}
               style={{
                 padding: '11px 28px', borderRadius: '10px', border: 'none',
-                backgroundColor: cierreLoading ? '#6ee7b7' : CLUB_GREEN,
+                backgroundColor: (cierreLoading || prevAlreadyClosed) ? '#9ca3af' : CLUB_GREEN,
                 color: 'white', fontSize: '14px', fontWeight: 600,
-                cursor: cierreLoading ? 'not-allowed' : 'pointer',
+                cursor: (cierreLoading || prevAlreadyClosed) ? 'not-allowed' : 'pointer',
                 boxShadow: '0 2px 8px rgba(16,185,129,0.35)',
                 display: 'flex', alignItems: 'center', gap: '8px',
               }}
@@ -462,10 +471,16 @@ export function AdminReports({ onNavigate }: AdminReportsProps) {
                   animation: 'spin 0.8s linear infinite',
                 }} />
               )}
-              {cierreLoading ? 'Procesando cierre...' : 'Cerrar Mes Actual'}
+              {cierreLoading
+                ? 'Procesando cierre...'
+                : prevAlreadyClosed
+                  ? `Periodo ${prevMonthName} ${prevYearNum} Cerrado`
+                  : `Cerrar ${prevMonthName} ${prevYearNum}`}
             </button>
             <span style={{ fontSize: '13px', color: '#9ca3af' }}>
-              Vuelve a cerrar el mismo mes para recalcularlo con las transacciones más recientes
+              {prevAlreadyClosed
+                ? 'Este periodo ya fue cerrado y no admite sobrescritura (RF-034)'
+                : 'Solo se pueden cerrar meses completados anteriores al mes en curso'}
             </span>
           </div>
 

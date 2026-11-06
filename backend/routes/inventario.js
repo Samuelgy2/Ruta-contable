@@ -11,6 +11,9 @@ router.post('/productos',      inventarioController.createProduct);    // POST  
 router.put('/productos/:id',   inventarioController.updateProduct);    // PUT    /api/inventario/productos/:id
 router.delete('/productos/:id',inventarioController.removeProduct);    // DELETE /api/inventario/productos/:id
 
+router.get('/movimientos',     inventarioController.getMovimientos);   // GET    /api/inventario/movimientos
+router.post('/movimientos',    inventarioController.createMovimiento); // POST   /api/inventario/movimientos
+
 router.get('/categorias',      inventarioController.getAllCategorias); // GET    /api/inventario/categorias
 router.post('/categorias',     inventarioController.createCategoria);  // POST   /api/inventario/categorias
 

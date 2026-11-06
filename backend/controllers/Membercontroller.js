@@ -61,13 +61,22 @@ async function create(req, res) {
       foto, observaciones,
     } = req.body;
 
-    if (!nombre || !documento || !fecha_ingreso) {
+    if (!nombre || !documento || !fecha_ingreso || !fecha_nacimiento) {
       return res.status(400).json({
         success: false,
-        message: 'nombre, documento y fecha_ingreso son obligatorios',
+        message: 'nombre, documento, fecha_ingreso y fecha_nacimiento son obligatorios',
       });
     }
 
+    const fnac = new Date(fecha_nacimiento);
+    const hoy = new Date();
+    hoy.setHours(23, 59, 59, 999);
+    if (isNaN(Date.parse(fecha_nacimiento)) || fnac > hoy) {
+      return res.status(400).json({
+        success: false,
+        message: 'La fecha de nacimiento debe ser una fecha válida y no futura',
+      });
+    }
     const exists = await pool.query(
       'SELECT id_socio FROM socio WHERE documento = $1', [documento]
     );
@@ -124,6 +133,17 @@ async function update(req, res) {
       return res.status(404).json({ success: false, message: 'Socio no encontrado' });
     }
 
+    if (fecha_nacimiento !== undefined) {
+      if (!fecha_nacimiento || String(fecha_nacimiento).trim() === '') {
+        return res.status(400).json({ success: false, message: 'La fecha de nacimiento no puede quedar vacía' });
+      }
+      const fnac = new Date(fecha_nacimiento);
+      const hoy = new Date();
+      hoy.setHours(23, 59, 59, 999);
+      if (isNaN(Date.parse(fecha_nacimiento)) || fnac > hoy) {
+        return res.status(400).json({ success: false, message: 'La fecha de nacimiento debe ser válida y no futura' });
+      }
+    }
     if (documento) {
       const dup = await pool.query(
         'SELECT id_socio FROM socio WHERE documento = $1 AND id_socio != $2',
