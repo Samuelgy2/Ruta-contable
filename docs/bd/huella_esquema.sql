@@ -1,6 +1,7 @@
 -- Huella del esquema public: un md5 por sección.
 -- Uso: correrlo igual en Supabase (execute_sql) y en una base donde se cargó
--- backend/migrations/0000_baseline.sql; las 10 filas deben coincidir.
+-- backend/migrations/0000_baseline.sql (más las migraciones posteriores); las 11 filas deben coincidir.
+-- orden_columnas compara el orden físico (attnum) de las columnas; las demás secciones lo ignoran.
 -- También sirve en L2b: tras cada migración, solo deben cambiar las secciones que esa migración toca.
 -- Normalizaciones (no cambian el significado):
 --   * orden con COLLATE "C" para no depender del locale;
@@ -34,10 +35,13 @@ com as (select string_agg(x, '|' order by x collate "C") s from (
   join pg_namespace n on n.oid=c.relnamespace left join pg_attribute a on a.attrelid=c.oid and a.attnum=d.objsubid and d.objsubid>0 where n.nspname='public') t),
 seq as (select string_agg(x, '|' order by x collate "C") s from (
   select sequencename||':'||data_type||':'||start_value||':'||increment_by||':'||min_value||':'||max_value||':'||cache_size||':'||cycle x from pg_sequences where schemaname='public') t),
+orden as (select string_agg(x, '|' order by x collate "C") s from (
+  select c.relname||':'||(select string_agg(a.attname, ',' order by a.attnum) from pg_attribute a where a.attrelid=c.oid and a.attnum>0 and not a.attisdropped) x
+  from pg_class c join pg_namespace n on n.oid=c.relnamespace where n.nspname='public' and c.relkind='r') t),
 acl as (select string_agg(x, '|' order by x collate "C") s from (
   select p.proname||':anon='||has_function_privilege('anon',p.oid,'EXECUTE')||':auth='||has_function_privilege('authenticated',p.oid,'EXECUTE') x
   from pg_proc p join pg_namespace n on n.oid=p.pronamespace where n.nspname='public' and not exists (select 1 from pg_depend d where d.objid=p.oid and d.deptype='e')) t)
 select 'columnas' seccion, md5(s) huella from cols union all select 'constraints', md5(s) from cons union all select 'indices', md5(s) from idx
 union all select 'vistas', md5(s) from vis union all select 'funciones', md5(s) from fun union all select 'triggers', md5(s) from trg
 union all select 'rls', md5(s) from rls union all select 'comentarios', md5(s) from com union all select 'secuencias', md5(s) from seq
-union all select 'permisos_funciones', md5(s) from acl;
+union all select 'permisos_funciones', md5(s) from acl union all select 'orden_columnas', md5(s) from orden;

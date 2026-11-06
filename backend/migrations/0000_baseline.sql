@@ -104,7 +104,6 @@ CREATE TABLE public.auditoria (
 
 CREATE TABLE public.camerino (
   id_camerino integer DEFAULT nextval('camerino_id_camerino_seq'::regclass) NOT NULL,
-  observaciones text,
   id_socio integer NOT NULL,
   numero_camerino character varying(20) NOT NULL,
   anio integer NOT NULL,
@@ -113,6 +112,7 @@ CREATE TABLE public.camerino (
   fecha_pago date,
   estado character varying(15) DEFAULT 'Asignado'::character varying,
   id_transaccion integer,
+  observaciones text,
   CONSTRAINT camerino_pkey PRIMARY KEY (id_camerino),
   CONSTRAINT camerino_anio_check CHECK ((anio >= 2000)),
   CONSTRAINT camerino_estado_check CHECK (((estado)::text = ANY (ARRAY[('Asignado'::character varying)::text, ('Pagado'::character varying)::text, ('Vencido'::character varying)::text, ('Liberado'::character varying)::text])))
@@ -120,11 +120,6 @@ CREATE TABLE public.camerino (
 
 CREATE TABLE public.cartera (
   id_cartera integer DEFAULT nextval('cartera_id_cartera_seq'::regclass) NOT NULL,
-  observaciones text,
-  created_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
-  id_tipo_cartera integer,
-  fecha_vencimiento date,
-  forma_pago character varying(40),
   id_socio integer NOT NULL,
   id_pago_mensual integer,
   fecha date NOT NULL,
@@ -133,6 +128,11 @@ CREATE TABLE public.cartera (
   estado character varying(15) DEFAULT 'pendiente'::character varying,
   fecha_pago date,
   id_transaccion integer,
+  observaciones text,
+  created_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+  id_tipo_cartera integer,
+  fecha_vencimiento date,
+  forma_pago character varying(40),
   CONSTRAINT cartera_pkey PRIMARY KEY (id_cartera),
   CONSTRAINT cartera_estado_check CHECK (((estado)::text = ANY (ARRAY[('pendiente'::character varying)::text, ('pagado'::character varying)::text, ('anulado'::character varying)::text]))),
   CONSTRAINT cartera_pagado_con_transaccion CHECK ((((estado)::text <> 'pagado'::text) OR (id_transaccion IS NOT NULL)))
@@ -159,6 +159,10 @@ CREATE TABLE public.categories (
 
 CREATE TABLE public.compra (
   id_compra integer DEFAULT nextval('compra_id_compra_seq'::regclass) NOT NULL,
+  concepto character varying(200) NOT NULL,
+  tipo character varying(100),
+  fecha date NOT NULL,
+  factura character varying(50),
   categoria_id integer,
   id_transaccion integer,
   observaciones text,
@@ -169,10 +173,6 @@ CREATE TABLE public.compra (
   approved_by integer,
   approved_at timestamp without time zone,
   proveedor_nombre character varying(150),
-  concepto character varying(200) NOT NULL,
-  tipo character varying(100),
-  fecha date NOT NULL,
-  factura character varying(50),
   CONSTRAINT compra_pkey PRIMARY KEY (id_compra),
   CONSTRAINT compra_estado_check CHECK (((estado)::text = ANY ((ARRAY['pendiente'::character varying, 'aprobada'::character varying])::text[])))
 );
@@ -205,7 +205,6 @@ CREATE TABLE public.detalle_compra (
 
 CREATE TABLE public.detalle_factura (
   id_factura integer NOT NULL,
-  observaciones character varying(255),
   nro_linea integer NOT NULL,
   servicio character varying(200) NOT NULL,
   descripcion text,
@@ -214,6 +213,7 @@ CREATE TABLE public.detalle_factura (
   valor_total numeric(10,2) GENERATED ALWAYS AS ((cantidad)::numeric * valor_unitario) STORED,
   iva numeric(5,2) DEFAULT 0,
   descuento numeric(5,2) DEFAULT 0,
+  observaciones character varying(255),
   CONSTRAINT detalle_factura_pkey PRIMARY KEY (id_factura, nro_linea)
 );
 
@@ -229,6 +229,12 @@ CREATE TABLE public.detalle_transaccion (
 
 CREATE TABLE public.factura (
   id_factura integer DEFAULT nextval('factura_id_factura_seq'::regclass) NOT NULL,
+  fecha date NOT NULL,
+  concepto character varying(200) NOT NULL,
+  valor_total numeric(10,2) NOT NULL,
+  numero_factura character varying(50),
+  fecha_recepcion date,
+  estado character varying(15) DEFAULT 'Pendiente'::character varying,
   id_compra integer,
   id_transaccion integer,
   observaciones text,
@@ -239,16 +245,10 @@ CREATE TABLE public.factura (
   id_socio integer,
   monto_pagado numeric DEFAULT 0 NOT NULL,
   nro_factura character varying(60),
-  fecha date NOT NULL,
   fecha_emision date DEFAULT CURRENT_DATE,
   fecha_vencimiento date,
   nit_club character varying(40),
   proveedor_nombre character varying(150),
-  concepto character varying(200) NOT NULL,
-  valor_total numeric(10,2) NOT NULL,
-  numero_factura character varying(50),
-  fecha_recepcion date,
-  estado character varying(15) DEFAULT 'Pendiente'::character varying,
   CONSTRAINT factura_pkey PRIMARY KEY (id_factura),
   CONSTRAINT factura_estado_check CHECK (((estado)::text = ANY ((ARRAY['Pendiente'::character varying, 'Emitida'::character varying, 'Pagada'::character varying, 'Anulada'::character varying, 'Vencida'::character varying])::text[])))
 );
@@ -268,7 +268,6 @@ CREATE TABLE public.inventario_jersey (
 
 CREATE TABLE public.jersey_campana (
   id integer DEFAULT nextval('jersey_campana_id_seq'::regclass) NOT NULL,
-  created_at timestamp without time zone DEFAULT now(),
   titulo character varying(120) NOT NULL,
   descripcion text,
   tallas jsonb DEFAULT '["XS", "S", "M", "L", "XL", "XXL"]'::jsonb NOT NULL,
@@ -277,6 +276,7 @@ CREATE TABLE public.jersey_campana (
   fecha_fin date,
   activa boolean DEFAULT true NOT NULL,
   created_by integer,
+  created_at timestamp without time zone DEFAULT now(),
   CONSTRAINT jersey_campana_pkey PRIMARY KEY (id),
   CONSTRAINT jersey_campana_valor_check CHECK ((valor > (0)::numeric))
 );
@@ -314,11 +314,6 @@ CREATE TABLE public.landing_version (
 );
 CREATE TABLE public.meses_periodo (
   id_periodo integer DEFAULT nextval('meses_periodo_id_periodo_seq'::regclass) NOT NULL,
-  observaciones text,
-  cerrado_by integer,
-  total_ingresos numeric DEFAULT 0.00,
-  total_gastos numeric DEFAULT 0.00,
-  balance numeric DEFAULT 0.00,
   anio integer NOT NULL,
   mes smallint NOT NULL,
   nombre_mes character varying(20) NOT NULL,
@@ -327,6 +322,11 @@ CREATE TABLE public.meses_periodo (
   activo boolean DEFAULT true,
   cerrado boolean DEFAULT false,
   fecha_cierre date,
+  observaciones text,
+  cerrado_by integer,
+  total_ingresos numeric DEFAULT 0.00,
+  total_gastos numeric DEFAULT 0.00,
+  balance numeric DEFAULT 0.00,
   CONSTRAINT meses_periodo_pkey PRIMARY KEY (id_periodo),
   CONSTRAINT meses_periodo_anio_mes_key UNIQUE (anio, mes),
   CONSTRAINT meses_periodo_anio_check CHECK ((anio >= 2000)),
@@ -335,9 +335,6 @@ CREATE TABLE public.meses_periodo (
 
 CREATE TABLE public.movimiento_inventario (
   id_movimiento integer DEFAULT nextval('movimiento_inventario_id_movimiento_seq'::regclass) NOT NULL,
-  created_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
-  referencia_origen character varying(100) DEFAULT 'manual'::character varying,
-  registrado_by integer,
   id_producto integer NOT NULL,
   tipo character varying(20) NOT NULL,
   cantidad integer NOT NULL,
@@ -346,6 +343,9 @@ CREATE TABLE public.movimiento_inventario (
   motivo character varying(200) NOT NULL,
   id_compra integer,
   created_by integer,
+  created_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+  referencia_origen character varying(100) DEFAULT 'manual'::character varying,
+  registrado_by integer,
   CONSTRAINT movimiento_inventario_pkey PRIMARY KEY (id_movimiento),
   CONSTRAINT movimiento_inventario_cantidad_check CHECK ((cantidad > 0)),
   CONSTRAINT movimiento_inventario_tipo_check CHECK (((tipo)::text = ANY ((ARRAY['entrada'::character varying, 'salida'::character varying, 'ajuste'::character varying])::text[])))
@@ -353,9 +353,6 @@ CREATE TABLE public.movimiento_inventario (
 
 CREATE TABLE public.pago_factura (
   id_pago_factura integer DEFAULT nextval('pago_factura_id_pago_factura_seq'::regclass) NOT NULL,
-  fecha_pago date DEFAULT CURRENT_DATE,
-  referencia character varying(100),
-  registrado_by integer,
   id_factura integer NOT NULL,
   fecha date DEFAULT CURRENT_DATE NOT NULL,
   monto numeric NOT NULL,
@@ -364,15 +361,15 @@ CREATE TABLE public.pago_factura (
   observaciones text,
   created_by integer,
   created_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+  fecha_pago date DEFAULT CURRENT_DATE,
+  referencia character varying(100),
+  registrado_by integer,
   CONSTRAINT pago_factura_pkey PRIMARY KEY (id_pago_factura),
   CONSTRAINT pago_factura_monto_check CHECK ((monto > (0)::numeric))
 );
 
 CREATE TABLE public.pago_mensual (
   id_pago integer DEFAULT nextval('pago_mensual_id_pago_seq'::regclass) NOT NULL,
-  observaciones text,
-  created_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
-  updated_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
   id_socio integer NOT NULL,
   id_periodo integer NOT NULL,
   valor numeric(10,2) NOT NULL,
@@ -381,6 +378,9 @@ CREATE TABLE public.pago_mensual (
   estado character varying(15) DEFAULT 'pendiente'::character varying,
   id_transaccion integer,
   dias_mora integer DEFAULT 0,
+  observaciones text,
+  created_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+  updated_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
   CONSTRAINT pago_mensual_pkey PRIMARY KEY (id_pago),
   CONSTRAINT pago_mensual_id_socio_id_periodo_key UNIQUE (id_socio, id_periodo),
   CONSTRAINT pago_mensual_estado_check CHECK (((estado)::text = ANY (ARRAY[('pendiente'::character varying)::text, ('pagado'::character varying)::text, ('moroso'::character varying)::text, ('exento'::character varying)::text, ('cancelado'::character varying)::text]))),
@@ -389,6 +389,14 @@ CREATE TABLE public.pago_mensual (
 
 CREATE TABLE public.pagos_pasarela (
   id integer DEFAULT nextval('pagos_pasarela_id_seq'::regclass) NOT NULL,
+  referencia character varying(100) NOT NULL,
+  proveedor character varying(30) DEFAULT 'paypal'::character varying NOT NULL,
+  proveedor_id character varying(100),
+  user_id integer,
+  id_socio integer,
+  concepto character varying(200),
+  monto numeric(15,2) NOT NULL,
+  amount_in_cents bigint NOT NULL,
   moneda character varying(3) DEFAULT 'USD'::character varying NOT NULL,
   estado character varying(20) DEFAULT 'PENDING'::character varying NOT NULL,
   metodo_pago character varying(50),
@@ -399,14 +407,6 @@ CREATE TABLE public.pagos_pasarela (
   finalized_at timestamp without time zone,
   estado_proveedor character varying(50),
   orden_id character varying(100),
-  referencia character varying(100) NOT NULL,
-  proveedor character varying(30) DEFAULT 'paypal'::character varying NOT NULL,
-  proveedor_id character varying(100),
-  user_id integer,
-  id_socio integer,
-  concepto character varying(200),
-  monto numeric(15,2) NOT NULL,
-  amount_in_cents bigint NOT NULL,
   CONSTRAINT pagos_pasarela_pkey PRIMARY KEY (id),
   CONSTRAINT pagos_pasarela_proveedor_id_key UNIQUE (proveedor_id),
   CONSTRAINT pagos_pasarela_referencia_key UNIQUE (referencia),
@@ -416,12 +416,6 @@ CREATE TABLE public.pagos_pasarela (
 
 CREATE TABLE public.pedido_jersey (
   id_pedido integer DEFAULT nextval('pedido_jersey_id_pedido_seq'::regclass) NOT NULL,
-  observaciones text,
-  created_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
-  updated_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
-  id_campana integer,
-  cantidad integer DEFAULT 1 NOT NULL,
-  estampado character varying(60),
   id_socio integer NOT NULL,
   fecha date NOT NULL,
   tipo character varying(15) DEFAULT 'Jersey'::character varying,
@@ -430,6 +424,12 @@ CREATE TABLE public.pedido_jersey (
   valor numeric(10,2) NOT NULL,
   estado character varying(20) DEFAULT 'Solicitado'::character varying,
   fecha_entrega date,
+  observaciones text,
+  created_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+  updated_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
+  id_campana integer,
+  cantidad integer DEFAULT 1 NOT NULL,
+  estampado character varying(60),
   CONSTRAINT pedido_jersey_pkey PRIMARY KEY (id_pedido),
   CONSTRAINT pedido_jersey_id_campana_id_socio_key UNIQUE (id_campana, id_socio),
   CONSTRAINT pedido_jersey_cantidad_check CHECK ((cantidad > 0)),
@@ -439,8 +439,6 @@ CREATE TABLE public.pedido_jersey (
 
 CREATE TABLE public.poliza_salud (
   id_poliza integer DEFAULT nextval('poliza_salud_id_poliza_seq'::regclass) NOT NULL,
-  id_transaccion integer,
-  observaciones text,
   id_socio integer NOT NULL,
   tipo character varying(15) NOT NULL,
   numero_poliza character varying(50),
@@ -449,6 +447,8 @@ CREATE TABLE public.poliza_salud (
   fecha_pago date,
   valor numeric(10,2) NOT NULL,
   estado character varying(15) DEFAULT 'Activa'::character varying,
+  id_transaccion integer,
+  observaciones text,
   CONSTRAINT poliza_salud_pkey PRIMARY KEY (id_poliza),
   CONSTRAINT poliza_salud_estado_check CHECK (((estado)::text = ANY (ARRAY[('Activa'::character varying)::text, ('Vencida'::character varying)::text, ('Cancelada'::character varying)::text]))),
   CONSTRAINT poliza_salud_tipo_check CHECK (((tipo)::text = ANY (ARRAY[('Básica'::character varying)::text, ('Premium'::character varying)::text, ('Familiar'::character varying)::text])))
@@ -456,7 +456,6 @@ CREATE TABLE public.poliza_salud (
 
 CREATE TABLE public.products (
   id integer DEFAULT nextval('products_id_seq'::regclass) NOT NULL,
-  codigo character varying(50),
   name character varying(100) NOT NULL,
   price numeric(10,2) NOT NULL,
   description text,
@@ -464,12 +463,12 @@ CREATE TABLE public.products (
   created_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
   updated_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
   categoria_id integer,
+  codigo character varying(50),
   CONSTRAINT products_pkey PRIMARY KEY (id)
 );
 
 CREATE TABLE public.proveedores (
   id_proveedor integer DEFAULT nextval('proveedores_id_proveedor_seq'::regclass) NOT NULL,
-  created_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
   nombre character varying NOT NULL,
   nit character varying,
   telefono character varying,
@@ -478,6 +477,7 @@ CREATE TABLE public.proveedores (
   estado character varying DEFAULT 'activo'::character varying NOT NULL,
   observaciones text,
   created_by integer,
+  created_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
   CONSTRAINT proveedores_pkey PRIMARY KEY (id_proveedor),
   CONSTRAINT proveedores_nombre_key UNIQUE (nombre),
   CONSTRAINT proveedores_estado_check CHECK (((estado)::text = ANY ((ARRAY['activo'::character varying, 'inactivo'::character varying])::text[])))
@@ -485,14 +485,6 @@ CREATE TABLE public.proveedores (
 
 CREATE TABLE public.socio (
   id_socio integer DEFAULT nextval('socio_id_socio_seq'::regclass) NOT NULL,
-  tipo_membresia character varying(20) DEFAULT 'Media'::character varying,
-  estado character varying(15) DEFAULT 'activo'::character varying,
-  foto character varying(255),
-  observaciones text,
-  created_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
-  updated_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
-  created_by integer,
-  nivel_aprendizaje character varying,
   nombre character varying(100) NOT NULL,
   documento character varying(20) NOT NULL,
   tipo_documento character varying(5) DEFAULT 'CC'::character varying,
@@ -501,6 +493,14 @@ CREATE TABLE public.socio (
   direccion character varying(200),
   fecha_nacimiento date,
   fecha_ingreso date NOT NULL,
+  tipo_membresia character varying(20) DEFAULT 'Media'::character varying,
+  estado character varying(15) DEFAULT 'activo'::character varying,
+  foto character varying(255),
+  observaciones text,
+  created_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+  updated_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
+  created_by integer,
+  nivel_aprendizaje character varying,
   CONSTRAINT socio_pkey PRIMARY KEY (id_socio),
   CONSTRAINT socio_documento_key UNIQUE (documento),
   CONSTRAINT socio_estado_check CHECK (((estado)::text = ANY (ARRAY[('activo'::character varying)::text, ('inactivo'::character varying)::text, ('suspendido'::character varying)::text]))),
@@ -511,7 +511,6 @@ CREATE TABLE public.socio (
 
 CREATE TABLE public.socio_documento (
   id_documento integer DEFAULT nextval('socio_documento_id_documento_seq'::regclass) NOT NULL,
-  created_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
   id_socio integer NOT NULL,
   tipo_documento character varying(60) NOT NULL,
   nombre_archivo character varying(200) NOT NULL,
@@ -520,6 +519,7 @@ CREATE TABLE public.socio_documento (
   datos bytea NOT NULL,
   observaciones text,
   created_by integer,
+  created_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
   CONSTRAINT socio_documento_pkey PRIMARY KEY (id_documento),
   CONSTRAINT socio_documento_bytes_check CHECK (((bytes >= 0) AND (bytes <= 5242880)))
 );
@@ -538,11 +538,6 @@ CREATE TABLE public.socio_perfil (
 
 CREATE TABLE public.system_data (
   id integer DEFAULT 1 NOT NULL,
-  porcentaje_mora numeric(5,2) DEFAULT 10.00,
-  created_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
-  updated_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
-  umbral_inasistencia_consecutiva smallint DEFAULT 3 NOT NULL,
-  umbral_inasistencia_acumulada smallint DEFAULT 5 NOT NULL,
   club_nombre character varying(255) DEFAULT 'Mi Club'::character varying NOT NULL,
   nit character varying(50),
   direccion text,
@@ -551,6 +546,11 @@ CREATE TABLE public.system_data (
   logo_url character varying(255),
   moneda character varying(10) DEFAULT 'COP'::character varying NOT NULL,
   dia_vencimiento_default smallint DEFAULT 15,
+  porcentaje_mora numeric(5,2) DEFAULT 10.00,
+  created_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+  updated_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
+  umbral_inasistencia_consecutiva smallint DEFAULT 3 NOT NULL,
+  umbral_inasistencia_acumulada smallint DEFAULT 5 NOT NULL,
   CONSTRAINT system_data_pkey PRIMARY KEY (id),
   CONSTRAINT system_data_id_check CHECK ((id = 1))
 );
@@ -567,17 +567,17 @@ CREATE TABLE public.tipo_cartera (
 
 CREATE TABLE public.transactions (
   id integer DEFAULT nextval('transactions_id_seq'::regclass) NOT NULL,
-  categoria_id integer,
-  referencia character varying,
-  created_by integer,
-  id_socio integer,
-  estado character varying(20) DEFAULT 'confirmada'::character varying NOT NULL,
   tipo character varying(20) NOT NULL,
   monto numeric(15,2) NOT NULL,
   fecha date NOT NULL,
   descripcion text,
   created_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
   metodo_pago character varying(50),
+  categoria_id integer,
+  referencia character varying,
+  created_by integer,
+  id_socio integer,
+  estado character varying(20) DEFAULT 'confirmada'::character varying NOT NULL,
   CONSTRAINT transactions_pkey PRIMARY KEY (id),
   CONSTRAINT transactions_estado_check CHECK (((estado)::text = ANY ((ARRAY['pendiente'::character varying, 'confirmada'::character varying, 'anulada'::character varying])::text[]))),
   CONSTRAINT transactions_metodo_pago_check CHECK (((metodo_pago IS NULL) OR ((metodo_pago)::text = ANY ((ARRAY['efectivo'::character varying, 'transferencia'::character varying, 'tarjeta'::character varying, 'cheque'::character varying])::text[])))),
@@ -586,12 +586,6 @@ CREATE TABLE public.transactions (
 
 CREATE TABLE public.users (
   id integer DEFAULT nextval('users_id_seq'::regclass) NOT NULL,
-  updated_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
-  failed_attempts integer DEFAULT 0,
-  locked_until timestamp without time zone,
-  reset_token character varying(255),
-  reset_token_expires timestamp without time zone,
-  otp_attempts integer DEFAULT 0,
   username character varying(50) NOT NULL,
   password character varying(255) NOT NULL,
   email character varying(100) NOT NULL,
@@ -600,6 +594,12 @@ CREATE TABLE public.users (
   active boolean DEFAULT true NOT NULL,
   last_login timestamp without time zone,
   created_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+  updated_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
+  failed_attempts integer DEFAULT 0,
+  locked_until timestamp without time zone,
+  reset_token character varying(255),
+  reset_token_expires timestamp without time zone,
+  otp_attempts integer DEFAULT 0,
   CONSTRAINT users_pkey PRIMARY KEY (id),
   CONSTRAINT users_email_key UNIQUE (email),
   CONSTRAINT users_username_key UNIQUE (username),
