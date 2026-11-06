@@ -4,9 +4,10 @@ const pool = require('../db');
 const METODOS_PAGO_VALIDOS = ['efectivo', 'transferencia', 'tarjeta', 'cheque'];
 
 const SELECT_WITH_SOCIO = `
-  SELECT c.*, s.nombre AS socio_nombre, s.documento AS socio_documento
+  SELECT c.*, s.nombre AS socio_nombre, s.documento AS socio_documento, t.nombre AS tipo_cartera_nombre
   FROM cartera c
   LEFT JOIN socio s ON s.id_socio = c.id_socio
+  LEFT JOIN tipo_cartera t ON t.id_tipo = c.id_tipo_cartera
 `;
 
 // GET /api/cartera
@@ -66,7 +67,7 @@ async function getById(req, res) {
 // POST /api/cartera
 async function create(req, res) {
   try {
-    const { idSocio, idPagoMensual, fecha, concepto, valor, observaciones } = req.body;
+    const { idSocio, idPagoMensual, fecha, concepto, valor, observaciones, idTipoCartera } = req.body;
 
     if (!idSocio) {
       return res.status(400).json({ success: false, message: 'El socio es obligatorio' });
@@ -83,15 +84,18 @@ async function create(req, res) {
     }
 
     const result = await pool.query(
-      `INSERT INTO cartera (id_socio, id_pago_mensual, fecha, concepto, valor, observaciones, estado)
-       VALUES ($1,$2,$3,$4,$5,$6,'pendiente')
+      `INSERT INTO cartera (id_socio, id_pago_mensual, fecha, concepto, valor, observaciones, id_tipo_cartera, estado)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,'pendiente')
        RETURNING *`,
-      [idSocio, idPagoMensual || null, fecha, concepto.trim(), valorNum, observaciones || null]
+      [idSocio, idPagoMensual || null, fecha, concepto.trim(), valorNum, observaciones || null, idTipoCartera || null]
     );
 
     res.status(201).json({ success: true, data: result.rows[0], message: 'Registro de cartera creado correctamente' });
   } catch (error) {
     console.error('Error create cartera:', error);
+    if (error.code === '23503') {
+      return res.status(400).json({ success: false, message: 'El socio o el tipo de cartera no existe' });
+    }
     res.status(500).json({ success: false, message: 'Error al crear registro de cartera' });
   }
 }
@@ -197,4 +201,58 @@ async function remove(req, res) {
   }
 }
 
-module.exports = { getAll, getById, create, update, remove };
+// ─── Tipos de cartera (RF-081) ────────────────────────────────────────────────
+
+// GET /api/cartera/tipos
+async function getTipos(req, res) {
+  try {
+    const result = await pool.query(
+      `SELECT t.*, (SELECT COUNT(*)::int FROM cartera c WHERE c.id_tipo_cartera = t.id_tipo) AS registros
+       FROM tipo_cartera t ORDER BY t.nombre`
+    );
+    res.json({ success: true, data: result.rows });
+  } catch (error) {
+    console.error('Error getTipos cartera:', error);
+    res.status(500).json({ success: false, message: 'Error al obtener tipos de cartera' });
+  }
+}
+
+// POST /api/cartera/tipos — RN1: nombre único (UNIQUE en la BD)
+async function createTipo(req, res) {
+  const nombre = typeof req.body?.nombre === 'string' ? req.body.nombre.trim() : '';
+  if (!nombre || nombre.length > 50) {
+    return res.status(400).json({ success: false, message: 'El nombre es obligatorio (máximo 50 caracteres)' });
+  }
+  try {
+    const result = await pool.query(
+      'INSERT INTO tipo_cartera (nombre, descripcion) VALUES ($1, $2) RETURNING *',
+      [nombre, req.body.descripcion?.trim() || null]
+    );
+    res.status(201).json({ success: true, data: result.rows[0], message: 'Tipo de cartera creado' });
+  } catch (error) {
+    if (error.code === '23505') {
+      return res.status(409).json({ success: false, message: 'Ya existe un tipo de cartera con ese nombre' });
+    }
+    console.error('Error createTipo cartera:', error);
+    res.status(500).json({ success: false, message: 'Error al crear tipo de cartera' });
+  }
+}
+
+// DELETE /api/cartera/tipos/:id — RN3: no se borra si tiene registros (FK ON DELETE RESTRICT)
+async function removeTipo(req, res) {
+  try {
+    const result = await pool.query('DELETE FROM tipo_cartera WHERE id_tipo = $1', [Number(req.params.id) || 0]);
+    if (result.rowCount === 0) {
+      return res.status(404).json({ success: false, message: 'Tipo de cartera no encontrado' });
+    }
+    res.json({ success: true, message: 'Tipo de cartera eliminado' });
+  } catch (error) {
+    if (error.code === '23503') {
+      return res.status(409).json({ success: false, message: 'No se puede eliminar: el tipo tiene registros de cartera asociados' });
+    }
+    console.error('Error removeTipo cartera:', error);
+    res.status(500).json({ success: false, message: 'Error al eliminar tipo de cartera' });
+  }
+}
+
+module.exports = { getAll, getById, create, update, remove, getTipos, createTipo, removeTipo };
