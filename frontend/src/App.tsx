@@ -8,7 +8,7 @@ import { Home } from './features/landing';
 import {
   AdminOverview, AdminTransactions, AdminMembers, AdminReports,
   AdminMonthlyPayments, AdminCartera, AdminSystem, AdminCategories, AdminJersey,
-  AdminProveedores, AdminCompras, AdminInventario, AdminAsistencia,
+  AdminCompras, AdminInventario, AdminAsistencia,
 } from './pages/admin';
 import { SystemTab } from './pages/admin/AdminSystem';
 import { PortalOverview, PortalPayments, PortalSettings, PortalJersey } from './pages/portal';
@@ -86,7 +86,7 @@ function AppContent() {
     const validPages: AdminPage[] = [
       'overview', 'transactions', 'members', 'reports', 'categories',
       'system', 'monthly-payments', 'cartera', 'jersey',
-      'proveedores', 'compras', 'inventario', 'asistencia',
+      'compras', 'inventario', 'asistencia',
     ];
 
     if (validPages.includes(pageOrTab as AdminPage)) {
@@ -103,7 +103,6 @@ function AppContent() {
       'monthly-payments':'monthly-payments',
       cartera:           'cartera',
       jersey:            'jersey',
-      proveedores:       'proveedores',
       compras:           'compras',
       inventario:        'inventario',
       asistencia:        'asistencia',
@@ -138,7 +137,6 @@ function AppContent() {
           case 'monthly-payments': return <AdminMonthlyPayments onNavigate={handleAdminNavigate} />;
           case 'cartera':          return <AdminCartera         onNavigate={handleAdminNavigate} />;
           case 'jersey':           return <AdminJersey          onNavigate={handleAdminNavigate} />;
-          case 'proveedores':      return <AdminProveedores     onNavigate={handleAdminNavigate} />;
           case 'compras':          return <AdminCompras         onNavigate={handleAdminNavigate} />;
           case 'inventario':       return <AdminInventario      onNavigate={handleAdminNavigate} />;
           case 'asistencia':       return <AdminAsistencia      onNavigate={handleAdminNavigate} />;

@@ -2,7 +2,6 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { usePaginacion } from '../../hooks/usePaginacion';
 import { Paginacion } from '../../components/ui/Paginacion';
 import { useCompras, Compra, DetalleCompra } from '../../hooks/useCompras';
-import { useProveedores } from '../../hooks/useProveedores';
 import { formatCurrency, formatDateShort } from '../../utils/format';
 
 interface AdminComprasProps {
@@ -99,7 +98,7 @@ const f = (label: string, children: React.ReactNode, required = false): JSX.Elem
 
 const emptyForm = {
   concepto: '', tipo: '', fecha: new Date().toISOString().split('T')[0],
-  idProveedor: '', factura: '', observaciones: '',
+  proveedorNombre: '', factura: '', observaciones: '',
 };
 type FormState = typeof emptyForm;
 
@@ -217,7 +216,6 @@ function DetalleModal({ compra, onClose, onAdded, onRemoved, showToast }: {
 
 export function AdminCompras({ onNavigate }: AdminComprasProps) {
   const { compras, loading, fetchCompras, createCompra, aprobarCompra, removeCompra, getDetalleCompra, addDetalle, removeDetalle } = useCompras();
-  const { proveedores } = useProveedores();
   const pagCompras = usePaginacion(compras);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterEstado, setFilterEstado] = useState<string>('all');
@@ -232,8 +230,6 @@ export function AdminCompras({ onNavigate }: AdminComprasProps) {
     const t = setTimeout(() => fetchCompras({ search: searchTerm, estado: filterEstado === 'all' ? undefined : filterEstado }), 400);
     return () => clearTimeout(t);
   }, [searchTerm, filterEstado, fetchCompras]);
-
-  const proveedorNombre = (id: number | null) => proveedores.find(p => p.id_proveedor === id)?.nombre ?? '—';
 
   // Alerta: compras pendientes hace más de 7 días
   const comprasPendientesViejas = compras.filter(c => {
@@ -256,7 +252,7 @@ export function AdminCompras({ onNavigate }: AdminComprasProps) {
         concepto: form.concepto.trim(),
         tipo: form.tipo || undefined,
         fecha: form.fecha,
-        idProveedor: form.idProveedor ? parseInt(form.idProveedor) : undefined,
+        proveedorNombre: form.proveedorNombre.trim() || undefined,
         factura: form.factura || undefined,
         observaciones: form.observaciones || undefined,
       } as any);
@@ -321,14 +317,7 @@ export function AdminCompras({ onNavigate }: AdminComprasProps) {
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '16px', marginBottom: '16px' }}>
               {f('Concepto', <input value={form.concepto} onChange={e => setForm({ ...form, concepto: e.target.value })} style={inputStyle} required />, true)}
               {f('Fecha', <input type="date" value={form.fecha} onChange={e => setForm({ ...form, fecha: e.target.value })} style={inputStyle} required />, true)}
-              {f('Proveedor', (
-                <select value={form.idProveedor} onChange={e => setForm({ ...form, idProveedor: e.target.value })} style={inputStyle}>
-                  <option value="">Sin proveedor</option>
-                  {proveedores.filter(p => p.estado === 'activo').map(p => (
-                    <option key={p.id_proveedor} value={p.id_proveedor}>{p.nombre}</option>
-                  ))}
-                </select>
-              ))}
+              {f('Proveedor (opcional)', <input value={form.proveedorNombre} onChange={e => setForm({ ...form, proveedorNombre: e.target.value })} maxLength={150} style={inputStyle} />)}
               {f('N° Factura', <input value={form.factura} onChange={e => setForm({ ...form, factura: e.target.value })} style={inputStyle} />)}
             </div>
             {f('Observaciones', <textarea value={form.observaciones} onChange={e => setForm({ ...form, observaciones: e.target.value })} rows={3} style={{ ...inputStyle, resize: 'vertical' }} />)}
@@ -389,7 +378,7 @@ export function AdminCompras({ onNavigate }: AdminComprasProps) {
                 <tr key={c.id_compra} style={{ borderBottom: '1px solid #f3f4f6' }}>
                   <td style={{ padding: '14px 16px', fontSize: '14px', color: '#6b7280' }}>{formatDateShort(c.fecha)}</td>
                   <td style={{ padding: '14px 16px', fontSize: '14px', color: '#1f2937', fontWeight: '500' }}>{c.concepto}</td>
-                  <td style={{ padding: '14px 16px', fontSize: '14px', color: '#6b7280' }}>{c.proveedor_nombre ?? proveedorNombre(c.id_proveedor)}</td>
+                  <td style={{ padding: '14px 16px', fontSize: '14px', color: '#6b7280' }}>{c.proveedor_nombre ?? '—'}</td>
                   <td style={{ padding: '14px 16px', fontSize: '14px', color: '#6b7280' }}>{c.factura ?? '—'}</td>
                   <td style={{ padding: '14px 16px' }}>{estadoBadge(c.estado)}</td>
                   <td style={{ padding: '14px 16px', display: 'flex', gap: '8px', flexWrap: 'wrap' }}>

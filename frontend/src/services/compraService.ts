@@ -1,10 +1,9 @@
 import api from './api';
 
 export const compraService = {
-  getAll: async (params: { estado?: string; idProveedor?: string | number; search?: string } = {}) => {
+  getAll: async (params: { estado?: string; search?: string } = {}) => {
     const qs = new URLSearchParams();
     if (params.estado) qs.set('estado', params.estado);
-    if (params.idProveedor) qs.set('idProveedor', String(params.idProveedor));
     if (params.search) qs.set('search', params.search);
     const query = qs.toString() ? `?${qs.toString()}` : '';
     const response = await api.get(`/compras${query}`);

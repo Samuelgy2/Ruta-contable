@@ -15,7 +15,6 @@ export interface Compra {
   concepto: string;
   tipo: string | null;
   fecha: string;
-  id_proveedor: number | null;
   proveedor_nombre: string | null;
   factura: string | null;
   categoria_id: number | null;
@@ -34,7 +33,7 @@ interface UseComprasResult {
   compras: Compra[];
   loading: boolean;
   error: string | null;
-  fetchCompras: (filtros?: { estado?: string; idProveedor?: string | number; search?: string }) => Promise<void>;
+  fetchCompras: (filtros?: { estado?: string; search?: string }) => Promise<void>;
   createCompra: (data: Partial<Compra>) => Promise<{ success: boolean; message: string }>;
   updateCompra: (id: number, data: Partial<Compra>) => Promise<{ success: boolean; message: string }>;
   aprobarCompra: (id: number) => Promise<{ success: boolean; message: string }>;
@@ -49,7 +48,7 @@ export function useCompras(): UseComprasResult {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const fetchCompras = useCallback(async (filtros: { estado?: string; idProveedor?: string | number; search?: string } = {}) => {
+  const fetchCompras = useCallback(async (filtros: { estado?: string; search?: string } = {}) => {
     try {
       setLoading(true);
       setError(null);
