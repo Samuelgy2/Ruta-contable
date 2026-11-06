@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { usePaginacion } from '../../hooks/usePaginacion';
 import { Paginacion } from '../../components/ui/Paginacion';
-import { useCartera, CarteraItem } from '../../hooks/useCartera';
+import { useCartera, CarteraItem, TipoCartera } from '../../hooks/useCartera';
 import { useSocios } from '../../hooks/useSocios';
+import { carteraService } from '../../services/carteraService';
 import { formatCurrency, formatDateShort } from '../../utils/format';
 
 interface AdminCarteraProps {
@@ -91,7 +92,7 @@ function estadoBadge(estado: string): JSX.Element {
   return <span style={{ padding: '4px 12px', borderRadius: '9999px', fontSize: '12px', fontWeight: '600', backgroundColor: s.bg, color: s.color }}>{s.label}</span>;
 }
 
-const emptyForm = { idSocio: '', fecha: new Date().toISOString().split('T')[0], concepto: '', valor: '', observaciones: '' };
+const emptyForm = { idSocio: '', idTipoCartera: '', fecha: new Date().toISOString().split('T')[0], concepto: '', valor: '', observaciones: '' };
 type FormState = typeof emptyForm;
 
 export function AdminCartera({ onNavigate }: AdminCarteraProps) {
@@ -104,6 +105,39 @@ export function AdminCartera({ onNavigate }: AdminCarteraProps) {
   const [form, setForm] = useState<FormState>(emptyForm);
   const [submitting, setSubmitting] = useState(false);
   const { toasts, show: showToast } = useToast();
+
+  // Tipos de cartera (RF-081)
+  const [tipos, setTipos] = useState<TipoCartera[]>([]);
+  const [showTipos, setShowTipos] = useState(false);
+  const [nuevoTipo, setNuevoTipo] = useState('');
+
+  const fetchTipos = useCallback(async () => {
+    try {
+      const r = await carteraService.getTipos();
+      if (r.success) setTipos(r.data || []);
+    } catch { /* la lista queda vacía; el formulario sigue funcionando sin tipo */ }
+  }, []);
+  useEffect(() => { void fetchTipos(); }, [fetchTipos]);
+
+  const errorMsg = (err: any) => err.response?.data?.message || err.message || 'Error inesperado';
+
+  const handleCrearTipo = async () => {
+    if (!nuevoTipo.trim()) { showToast('Escribe el nombre del tipo', 'error'); return; }
+    try {
+      const r = await carteraService.createTipo({ nombre: nuevoTipo.trim() });
+      showToast(r.message, r.success ? 'success' : 'error');
+      if (r.success) { setNuevoTipo(''); await fetchTipos(); }
+    } catch (err) { showToast(errorMsg(err), 'error'); }
+  };
+
+  const handleEliminarTipo = async (t: TipoCartera) => {
+    if (!window.confirm(`¿Eliminar el tipo "${t.nombre}"?`)) return;
+    try {
+      const r = await carteraService.removeTipo(t.id_tipo);
+      showToast(r.message, r.success ? 'success' : 'error');
+      if (r.success) await fetchTipos();
+    } catch (err) { showToast(errorMsg(err), 'error'); }
+  };
 
   useEffect(() => {
     const t = setTimeout(() => fetchCartera({ search: searchTerm, estado: filterEstado === 'all' ? undefined : filterEstado }), 400);
@@ -132,6 +166,7 @@ export function AdminCartera({ onNavigate }: AdminCarteraProps) {
     try {
       const result = await createCartera({
         idSocio: parseInt(form.idSocio),
+        idTipoCartera: form.idTipoCartera ? parseInt(form.idTipoCartera) : undefined,
         fecha: form.fecha,
         concepto: form.concepto.trim(),
         valor: form.valor,
@@ -172,6 +207,12 @@ export function AdminCartera({ onNavigate }: AdminCarteraProps) {
               {f('Fecha', <input type="date" value={form.fecha} onChange={e => setForm({ ...form, fecha: e.target.value })} style={inputStyle} required />, true)}
               {f('Concepto', <input value={form.concepto} onChange={e => setForm({ ...form, concepto: e.target.value })} style={inputStyle} placeholder="Recargo por mora, cuota pendiente..." required />, true)}
               {f('Valor', <input type="number" min="0" value={form.valor} onChange={e => setForm({ ...form, valor: e.target.value })} style={inputStyle} required />, true)}
+              {f('Tipo de cartera', (
+                <select value={form.idTipoCartera} onChange={e => setForm({ ...form, idTipoCartera: e.target.value })} style={inputStyle}>
+                  <option value="">Sin tipo</option>
+                  {tipos.filter(t => t.activo).map(t => <option key={t.id_tipo} value={t.id_tipo}>{t.nombre}</option>)}
+                </select>
+              ))}
             </div>
             {f('Observaciones', <textarea value={form.observaciones} onChange={e => setForm({ ...form, observaciones: e.target.value })} rows={3} style={{ ...inputStyle, resize: 'vertical' }} />)}
             <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end', paddingTop: '16px', borderTop: '1px solid #f3f4f6', marginTop: '16px' }}>
@@ -184,15 +225,56 @@ export function AdminCartera({ onNavigate }: AdminCarteraProps) {
         </Modal>
       )}
 
+      {showTipos && (
+        <Modal onClose={() => setShowTipos(false)}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px' }}>
+            <h3 style={{ margin: 0, fontSize: '20px', fontWeight: '700', color: '#1f2937' }}>Tipos de cartera</h3>
+            <button onClick={() => setShowTipos(false)} aria-label="Cerrar" style={{ background: '#f3f4f6', border: 'none', borderRadius: '8px', width: '34px', height: '34px', cursor: 'pointer', fontSize: '18px', color: '#6b7280' }}>×</button>
+          </div>
+          <div style={{ display: 'flex', gap: '10px', marginBottom: '16px' }}>
+            <input value={nuevoTipo} onChange={e => setNuevoTipo(e.target.value)} maxLength={50} placeholder="Nuevo tipo (p. ej. Contado)" aria-label="Nombre del nuevo tipo" style={{ ...inputStyle, flex: 1 }}
+              onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); void handleCrearTipo(); } }} />
+            <button onClick={() => { void handleCrearTipo(); }} style={{ padding: '10px 18px', borderRadius: '8px', border: 'none', backgroundColor: CLUB_GREEN, color: 'white', fontWeight: '600', cursor: 'pointer' }}>Agregar</button>
+          </div>
+          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+            <thead>
+              <tr style={{ borderBottom: '1px solid #e5e7eb' }}>
+                {['Nombre', 'Registros', ''].map(h => <th key={h} style={{ padding: '8px', textAlign: 'left', fontSize: '12px', color: '#6b7280', textTransform: 'uppercase' }}>{h}</th>)}
+              </tr>
+            </thead>
+            <tbody>
+              {tipos.length === 0 ? (
+                <tr><td colSpan={3} style={{ padding: '16px', textAlign: 'center', color: '#9ca3af' }}>No hay tipos registrados</td></tr>
+              ) : tipos.map(t => (
+                <tr key={t.id_tipo} style={{ borderBottom: '1px solid #f3f4f6' }}>
+                  <td style={{ padding: '10px 8px', fontSize: '14px' }}>{t.nombre}</td>
+                  <td style={{ padding: '10px 8px', fontSize: '14px', color: '#6b7280' }}>{t.registros}</td>
+                  <td style={{ padding: '10px 8px', textAlign: 'right' }}>
+                    <button onClick={() => { void handleEliminarTipo(t); }} disabled={t.registros > 0}
+                      title={t.registros > 0 ? 'Tiene registros de cartera asociados' : 'Eliminar'}
+                      style={{ padding: '6px 12px', borderRadius: '6px', border: '1px solid #fecaca', backgroundColor: 'white', color: t.registros > 0 ? '#d1d5db' : '#dc2626', fontSize: '12px', cursor: t.registros > 0 ? 'not-allowed' : 'pointer' }}>Eliminar</button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </Modal>
+      )}
+
       <div className="container">
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
           <div>
             <h3 style={{ margin: 0, fontSize: '20px', fontWeight: '700', color: '#1f2937' }}>Cartera</h3>
             <p style={{ margin: '4px 0 0', fontSize: '13px', color: '#6b7280' }}>{cartera.length} registro{cartera.length !== 1 ? 's' : ''}</p>
           </div>
-          <button onClick={() => setShowForm(true)} style={{ padding: '11px 20px', borderRadius: '10px', border: 'none', backgroundColor: CLUB_GREEN, color: 'white', fontSize: '14px', fontWeight: '600', cursor: 'pointer' }}>
-            + Nuevo Cargo
-          </button>
+          <div style={{ display: 'flex', gap: '10px' }}>
+            <button onClick={() => setShowTipos(true)} style={{ padding: '11px 20px', borderRadius: '10px', border: '1.5px solid #e5e7eb', backgroundColor: 'white', color: '#374151', fontSize: '14px', fontWeight: '600', cursor: 'pointer' }}>
+              Tipos de cartera
+            </button>
+            <button onClick={() => setShowForm(true)} style={{ padding: '11px 20px', borderRadius: '10px', border: 'none', backgroundColor: CLUB_GREEN, color: 'white', fontSize: '14px', fontWeight: '600', cursor: 'pointer' }}>
+              + Nuevo Cargo
+            </button>
+          </div>
         </div>
 
         {/* Stats */}
@@ -234,22 +316,23 @@ export function AdminCartera({ onNavigate }: AdminCarteraProps) {
           <table style={{ width: '100%', borderCollapse: 'collapse' }}>
             <thead>
               <tr style={{ backgroundColor: '#f9fafb', borderBottom: '1px solid #e5e7eb' }}>
-                {['Fecha', 'Socio', 'Documento', 'Concepto', 'Valor', 'Estado', 'Acciones'].map(h => (
+                {['Fecha', 'Socio', 'Documento', 'Concepto', 'Tipo', 'Valor', 'Estado', 'Acciones'].map(h => (
                   <th key={h} style={{ padding: '12px 16px', textAlign: 'left', fontSize: '12px', fontWeight: '600', color: '#6b7280', textTransform: 'uppercase' }}>{h}</th>
                 ))}
               </tr>
             </thead>
             <tbody>
               {loading ? (
-                <tr><td colSpan={7} style={{ textAlign: 'center', padding: '32px', color: '#9ca3af' }}>Cargando...</td></tr>
+                <tr><td colSpan={8} style={{ textAlign: 'center', padding: '32px', color: '#9ca3af' }}>Cargando...</td></tr>
               ) : cartera.length === 0 ? (
-                <tr><td colSpan={7} style={{ textAlign: 'center', padding: '32px', color: '#9ca3af' }}>No hay registros de cartera</td></tr>
+                <tr><td colSpan={8} style={{ textAlign: 'center', padding: '32px', color: '#9ca3af' }}>No hay registros de cartera</td></tr>
               ) : pagCartera.itemsPagina.map(c => (
                 <tr key={c.id_cartera} style={{ borderBottom: '1px solid #f3f4f6' }}>
                   <td style={{ padding: '14px 16px', fontSize: '14px', color: '#6b7280' }}>{formatDateShort(c.fecha)}</td>
                   <td style={{ padding: '14px 16px', fontSize: '14px', color: '#1f2937', fontWeight: '500' }}>{c.socio_nombre ?? '—'}</td>
                   <td style={{ padding: '14px 16px', fontSize: '14px', color: '#6b7280' }}>{c.socio_documento ?? '—'}</td>
                   <td style={{ padding: '14px 16px', fontSize: '14px', color: '#6b7280' }}>{c.concepto}</td>
+                  <td style={{ padding: '14px 16px', fontSize: '14px', color: '#6b7280' }}>{c.tipo_cartera_nombre ?? '—'}</td>
                   <td style={{ padding: '14px 16px', fontSize: '14px', color: '#1f2937', fontWeight: '600' }}>{formatCurrency(parseFloat(c.valor), 'COP')}</td>
                   <td style={{ padding: '14px 16px' }}>{estadoBadge(c.estado)}</td>
                   <td style={{ padding: '14px 16px' }}>

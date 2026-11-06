@@ -8,7 +8,7 @@ import { Home } from './features/landing';
 import {
   AdminOverview, AdminTransactions, AdminMembers, AdminReports,
   AdminMonthlyPayments, AdminCartera, AdminSystem, AdminCategories, AdminJersey,
-  AdminProveedores, AdminCompras, AdminInventario, AdminAsistencia,
+  AdminProveedores, AdminCompras, AdminInventario, AdminAsistencia, AdminFacturas,
 } from './pages/admin';
 import { SystemTab } from './pages/admin/AdminSystem';
 import { PortalOverview, PortalPayments, PortalSettings, PortalJersey } from './pages/portal';
@@ -86,7 +86,7 @@ function AppContent() {
     const validPages: AdminPage[] = [
       'overview', 'transactions', 'members', 'reports', 'categories',
       'system', 'monthly-payments', 'cartera', 'jersey',
-      'proveedores', 'compras', 'inventario', 'asistencia',
+      'proveedores', 'compras', 'inventario', 'asistencia', 'facturas',
     ];
 
     if (validPages.includes(pageOrTab as AdminPage)) {
@@ -142,6 +142,7 @@ function AppContent() {
           case 'compras':          return <AdminCompras         onNavigate={handleAdminNavigate} />;
           case 'inventario':       return <AdminInventario      onNavigate={handleAdminNavigate} />;
           case 'asistencia':       return <AdminAsistencia      onNavigate={handleAdminNavigate} />;
+          case 'facturas':         return <AdminFacturas        onNavigate={handleAdminNavigate} />;
         }
       };
 

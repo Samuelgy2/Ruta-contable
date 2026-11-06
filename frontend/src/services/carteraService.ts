@@ -30,4 +30,8 @@ export const carteraService = {
     const response = await api.delete(`/cartera/${id}`);
     return response.data;
   },
+
+  getTipos: async () => (await api.get('/cartera/tipos')).data,
+  createTipo: async (data: { nombre: string; descripcion?: string }) => (await api.post('/cartera/tipos', data)).data,
+  removeTipo: async (id: number) => (await api.delete(`/cartera/tipos/${id}`)).data,
 };

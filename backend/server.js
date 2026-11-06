@@ -40,6 +40,7 @@ const dns = require('dns').promises;
   const jerseyRoutes       = require('./routes/jersey');
   const landingRoutes      = require('./routes/landing');
   const landingAdminRoutes = require('./routes/landingAdmin');
+  const facturaRoutes      = require('./routes/facturas');
 
   // ── Variables de entorno de PayPal ────────────────────────────────────
   // Se validan al arranque para fallar rápido y no descubrir el problema con
@@ -137,6 +138,7 @@ const dns = require('dns').promises;
   app.use('/api/portal',          portalRoutes);
   app.use('/api/pagos',           pagoRoutes);
   app.use('/api/jersey',          jerseyRoutes);
+  app.use('/api/facturas',        facturaRoutes);
   app.get('/health', async (_req, res) => {
     try {
       await pool.query('SELECT 1');

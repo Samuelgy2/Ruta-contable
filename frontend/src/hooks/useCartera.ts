@@ -14,6 +14,16 @@ export interface CarteraItem {
   fecha_pago: string | null;
   observaciones: string | null;
   created_at: string;
+  id_tipo_cartera: number | null;
+  tipo_cartera_nombre: string | null;
+}
+
+export interface TipoCartera {
+  id_tipo: number;
+  nombre: string;
+  descripcion: string | null;
+  activo: boolean;
+  registros: number;
 }
 
 interface UseCarteraResult {

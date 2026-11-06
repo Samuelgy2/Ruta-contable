@@ -1,0 +1,15 @@
+MATRIZ DE REQUISITOS,,
+,,
+,,
+Requisitos del Sistema,,
+No.,Descripción,Atributo
+RS-01,Se requiere un equipo con procesador dual core 2.0 Hz o superior,Hardware
+RS-02,Se requiere un equipo con 2Gb de ram o superior,
+RS-03,Se requiere un equipo con Disco duro de 50 Gb o superior,
+RS-04,Se requiere que el equipo cuente con un monitor de minimo 1366px x 768,
+RS-05,Se requiere que el equipo cuente con mouse USB o Ps2,
+RS-06,Se requiere que el equipo cuente con teclado USB o Ps2,
+RS-07,"Se requiere que el equipo cuente con un sistema operativo windows 7 o superior, linux o mac",Software
+RS-08,"Se requiere que el equipo cuente con un navegador web (Firefox, chrome, explorer 11+, edge, opera)",
+RS-09,Se requiere que el equipo cuente con conexión a internet de 3Mb minimo,I. Comunicación
+RS-10,Se requiere un servidor web o hosting con sistema operativo linux,
