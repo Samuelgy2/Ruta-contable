@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const bcrypt = require('bcryptjs');
-const jwt = require('jsonwebtoken');
+const { firmar, verificar } = require('../utils/jwt');
 const rateLimit = require('express-rate-limit');
 
 const pool = require('../db');                               // raíz/db.js
@@ -38,8 +38,13 @@ router.post('/login', loginLimiter, async (req, res) => {
       return res.status(400).json({ success: false, message: 'Error de validación', errors });
     }
 
+    // El bloqueo se calcula en la base (LOCALTIMESTAMP), con el mismo reloj con
+    // el que se escribe locked_until, para no depender de la zona horaria del servidor.
     const result = await pool.query(
-      'SELECT * FROM users WHERE username = $1 OR email = $1',
+      `SELECT *,
+              (locked_until IS NOT NULL AND locked_until >  LOCALTIMESTAMP) AS bloqueado,
+              (locked_until IS NOT NULL AND locked_until <= LOCALTIMESTAMP) AS bloqueo_vencido
+         FROM users WHERE username = $1 OR email = $1`,
       [username]
     );
 
@@ -49,19 +54,39 @@ router.post('/login', loginLimiter, async (req, res) => {
     }
 
     const user = result.rows[0];
+
+    if (user.bloqueado) {
+      logFailedAttempt(username, clientIp, 'Cuenta bloqueada por intentos fallidos');
+      return res.status(429).json({
+        success: false,
+        message: 'Cuenta bloqueada temporalmente por intentos fallidos. Intenta de nuevo en 15 minutos.',
+      });
+    }
+
     const isValid = await bcrypt.compare(password, user.password);
 
     if (!isValid) {
-      const newAttempts = (user.failed_attempts || 0) + 1;
-      const lockedUntil = newAttempts >= 5 ? new Date(Date.now() + 15 * 60 * 1000) : null;
+      // Si el bloqueo ya venció, la cuenta empieza de cero; si no, un solo fallo
+      // más la volvería a bloquear al instante.
+      const intentosPrevios = user.bloqueo_vencido ? 0 : (user.failed_attempts || 0);
+      const newAttempts = intentosPrevios + 1;
 
       await pool.query(
-        'UPDATE users SET failed_attempts = $1, locked_until = $2 WHERE id = $3',
-        [newAttempts, lockedUntil, user.id]
+        `UPDATE users
+            SET failed_attempts = $1,
+                locked_until = CASE WHEN $1 >= 5 THEN LOCALTIMESTAMP + INTERVAL '15 minutes' ELSE NULL END
+          WHERE id = $2`,
+        [newAttempts, user.id]
       );
 
       logFailedAttempt(username, clientIp, `Contraseña incorrecta (intento ${newAttempts}/5)`);
       return res.status(401).json({ success: false, message: 'Usuario o contraseña incorrectos' });
+    }
+
+    // La cuenta desactivada no entra aunque la clave sea correcta.
+    if (!user.active) {
+      logFailedAttempt(username, clientIp, 'Usuario inactivo');
+      return res.status(403).json({ success: false, message: 'Usuario inactivo' });
     }
 
     await pool.query(
@@ -69,11 +94,7 @@ router.post('/login', loginLimiter, async (req, res) => {
       [user.id]
     );
 
-    const token = jwt.sign(
-      { id: user.id, username: user.username, role: user.role },
-      process.env.JWT_SECRET,
-      { expiresIn: '1d', issuer: 'ruta-contable-api', audience: 'ruta-contable-frontend' }
-    );
+    const token = firmar({ id: user.id, username: user.username, role: user.role });
 
     res.json({
       success: true,
@@ -99,7 +120,7 @@ router.get('/verify', async (req, res) => {
     }
 
     const token = authHeader.split(' ')[1];
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const decoded = verificar(token);
     const result = await pool.query(
       'SELECT id, username, email, full_name, role, active FROM users WHERE id = $1',
       [decoded.id]

@@ -4,6 +4,7 @@ const router   = express.Router();
 const bcrypt   = require('bcryptjs');
 const nodemailer = require('nodemailer');
 const rateLimit  = require('express-rate-limit');
+const { randomInt } = require('crypto');
 
 const pool = require('../db');
 
@@ -34,11 +35,25 @@ const otpLimiter = rateLimit({
   message: { success: false, message: 'Demasiados intentos. Espera 15 minutos.' },
 });
 
+// reset-password no pasaba por ningún limitador.
+const resetLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 10,
+  message: { success: false, message: 'Demasiados intentos. Espera 15 minutos.' },
+});
+
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 /** Genera un OTP numérico de 6 dígitos */
 function generateOTP() {
-  return Math.floor(100000 + Math.random() * 900000).toString();
+  return randomInt(100000, 1000000).toString();
+}
+
+/** Escapa texto para insertarlo en HTML (el nombre lo escribe el usuario) */
+function escaparHTML(texto) {
+  return String(texto ?? '').replace(/[&<>"']/g, (c) => ({
+    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;',
+  }[c]));
 }
 
 /** Plantilla HTML del email */
@@ -50,7 +65,7 @@ function buildEmailHTML(fullName, otp) {
       </div>
       <div style="padding:40px;">
         <h2 style="color:#111827;margin:0 0 8px;font-size:20px;">Recuperación de contraseña</h2>
-        <p style="color:#6b7280;margin:0 0 32px;font-size:15px;">Hola <strong style="color:#111827;">${fullName}</strong>, aquí está tu código de verificación:</p>
+        <p style="color:#6b7280;margin:0 0 32px;font-size:15px;">Hola <strong style="color:#111827;">${escaparHTML(fullName)}</strong>, aquí está tu código de verificación:</p>
 
         <div style="background:#f9fafb;border:2px dashed #10b981;border-radius:12px;padding:28px;text-align:center;margin-bottom:32px;">
           <p style="margin:0 0 8px;font-size:13px;color:#9ca3af;letter-spacing:0.08em;text-transform:uppercase;font-weight:600;">Tu código OTP</p>
@@ -237,7 +252,7 @@ router.post('/verify-otp', otpLimiter, async (req, res) => {
  * Recibe: { resetToken, newPassword }
  * Valida el token temporal del paso anterior y actualiza la contraseña.
  */
-router.post('/reset-password', async (req, res) => {
+router.post('/reset-password', resetLimiter, async (req, res) => {
   try {
     const { resetToken, newPassword } = req.body;
 

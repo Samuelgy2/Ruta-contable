@@ -1,4 +1,4 @@
-const jwt = require('jsonwebtoken');
+const { verificar } = require('../utils/jwt');
 const pool = require('../db');
 
 // Consulta de la sesión: sólo columnas de users. El perfil (socio_perfil o
@@ -21,7 +21,7 @@ async function requireAdmin(req, res, next) {
     }
 
     const token = authHeader.split(' ')[1];
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const decoded = verificar(token);
 
     const result = await pool.query(
       'SELECT id, username, role, active FROM users WHERE id = $1',
@@ -81,7 +81,7 @@ async function requireAuth(req, res, next) {
     }
 
     const token = authHeader.split(' ')[1];
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const decoded = verificar(token);
 
     const result = await pool.query(CONSULTA_SESION, [decoded.id]);
 
