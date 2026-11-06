@@ -50,7 +50,7 @@ pool.on('connect', (cliente) => {
 });
 
 async function verificarAislamiento() {
-  const { rows } = await pool.query('SELECT current_schemas(false) AS s');
+  const { rows } = await pool.query('SELECT current_schemas(false)::text[] AS s');
   assert.deepEqual(rows[0].s, [ESQUEMA], 'search_path debe apuntar solo al esquema temporal');
 }
 
