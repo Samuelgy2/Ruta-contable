@@ -17,6 +17,7 @@ const dns = require('dns').promises;
   const cors      = require('cors');
   const helmet    = require('helmet');
   const rateLimit = require('express-rate-limit');
+  const morgan    = require('morgan');
 
   const pool           = require('./db');
   const authRoutes         = require('./routes/auth');
@@ -86,6 +87,10 @@ const dns = require('dns').promises;
     .map((origin) => origin.trim())
     .filter(Boolean);
 
+  // Registro de accesos a stdout (RNF-007); Render y Docker lo capturan. /health queda fuera.
+  app.use(morgan(process.env.NODE_ENV === 'production' ? 'combined' : 'dev', {
+    skip: (req) => req.path === '/health',
+  }));
   app.use(helmet());
   app.use(cors({
     origin:         allowedOrigins,

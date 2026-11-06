@@ -1,34 +1,55 @@
-// Pruebas del módulo de landing (RF-088 a RF-097) contra una base de PRUEBAS.
-//   TEST_DB_PASSWORD=... npm test
-// Variables opcionales: TEST_DB_HOST (localhost), TEST_DB_PORT (5432),
-// TEST_DB_USER (postgres), TEST_DB_NAME (ruta_contable_test).
-// Se niega a correr si la base no es local o su nombre no termina en _test.
+// Pruebas del módulo de landing (RF-088 a RF-097).
+//
+// La base es única (Supabase), así que las pruebas NO tocan el esquema `public`:
+// crean un esquema temporal `test_<marca de tiempo>`, aplican ahí la migración de
+// landing, corren todo con search_path apuntando solo a ese esquema y lo borran
+// al terminar. Corre solo con confirmación explícita:
+//
+//   TEST_ESQUEMA_TEMPORAL=1 npm test
+//
+// Usa las variables DB_* del entorno o de backend/.env (puerto 5432 o conexión
+// directa; el pooler en modo transacción, puerto 6543, no conserva search_path y
+// se rechaza). Sin la confirmación, el archivo se omite.
 const { test, before, after } = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
 
-const host = process.env.TEST_DB_HOST || 'localhost';
-const name = process.env.TEST_DB_NAME || 'ruta_contable_test';
-if (!['localhost', '127.0.0.1'].includes(host) || !name.endsWith('_test')) {
-  throw new Error(`Base de pruebas rechazada (${host}/${name}): debe ser local y terminar en _test.`);
+const habilitado = process.env.TEST_ESQUEMA_TEMPORAL === '1';
+if (!habilitado) {
+  test('landing: omitido (define TEST_ESQUEMA_TEMPORAL=1 para correrlo en un esquema temporal)', { skip: true }, () => {});
+  return;
 }
-// Se fijan antes de cargar db.js; dotenv no sobrescribe variables ya definidas.
-Object.assign(process.env, {
-  DB_HOST: host,
-  DB_HOST_IP: host,
-  DB_PORT: process.env.TEST_DB_PORT || '5432',
-  DB_USER: process.env.TEST_DB_USER || 'postgres',
-  DB_PASSWORD: process.env.TEST_DB_PASSWORD || '',
-  DB_NAME: name,
-  DB_SSL: 'false',
-  JWT_SECRET: 'secreto-solo-para-pruebas',
-});
+if (!process.env.DB_HOST && !require('dotenv').config().parsed?.DB_HOST) {
+  throw new Error('Faltan las variables DB_* (entorno o backend/.env).');
+}
+if (String(process.env.DB_PORT) === '6543') {
+  throw new Error('El pooler en modo transacción (6543) no conserva search_path: usa el puerto 5432.');
+}
+
+// Nombre generado aquí, nunca recibido de fuera, y con forma fija: no puede ser `public`.
+const ESQUEMA = `test_${Date.now()}`;
+assert.match(ESQUEMA, /^test_[0-9]{13}$/);
+process.env.JWT_SECRET = 'secreto-solo-para-pruebas-con-longitud-suficiente';
 
 const express = require('express');
-const jwt = require('jsonwebtoken');
 const pool = require('../db');
+const { firmar } = require('../utils/jwt');
 const { validarContenido, limpiarTexto } = require('../controllers/LandingController');
+
+// Toda conexión del pool arranca con search_path = solo el esquema temporal; las
+// consultas que se encolan después en esa misma conexión ya lo ven.
+pool.on('connect', (cliente) => {
+  cliente.query(`SET search_path TO ${ESQUEMA}, pg_temp`).catch((e) => {
+    console.error('No se pudo fijar search_path:', e.message);
+    process.exit(1);
+  });
+});
+
+async function verificarAislamiento() {
+  const { rows } = await pool.query('SELECT current_schemas(false) AS s');
+  assert.deepEqual(rows[0].s, [ESQUEMA], 'search_path debe apuntar solo al esquema temporal');
+}
 
 const migracion = (sufijo) => fs.readFileSync(path.join(__dirname, '..', 'migrations', `20261028_landing.${sufijo}.sql`), 'utf8');
 const PNG = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==', 'base64');
@@ -51,21 +72,24 @@ const conTexto = (contenido, id, cambios) => ({
 });
 
 before(async () => {
+  await pool.query(`CREATE SCHEMA ${ESQUEMA}`);
+  await verificarAislamiento();
+  // La migración de landing referencia users(id): se crea mínima, solo en el esquema temporal.
   await pool.query(`
-    CREATE TABLE IF NOT EXISTS users (
+    CREATE TABLE ${ESQUEMA}.users (
       id SERIAL PRIMARY KEY, username VARCHAR(50) UNIQUE NOT NULL, password VARCHAR(255) NOT NULL,
       email VARCHAR(100) UNIQUE NOT NULL, full_name VARCHAR(100) NOT NULL,
       role VARCHAR(20) DEFAULT 'user', active BOOLEAN DEFAULT true)`);
-  await pool.query(migracion('down'));
   await pool.query(migracion('up'));
   await pool.query(migracion('seed'));
+  await verificarAislamiento();
 
   const crear = async (usuario, rol) => (await pool.query(
     `INSERT INTO users (username, password, email, full_name, role) VALUES ($1, 'x', $2, $3, $4)
      ON CONFLICT (username) DO UPDATE SET role = EXCLUDED.role, active = true RETURNING id`,
     [usuario, `${usuario}@prueba.test`, `Usuario ${usuario}`, rol])).rows[0].id;
-  tokenAdmin = jwt.sign({ id: await crear('admin_prueba', 'admin') }, process.env.JWT_SECRET);
-  tokenSocio = jwt.sign({ id: await crear('socio_prueba', 'user') }, process.env.JWT_SECRET);
+  tokenAdmin = firmar({ id: await crear('admin_prueba', 'admin') });
+  tokenSocio = firmar({ id: await crear('socio_prueba', 'user') });
 
   const app = express();
   app.use(express.json());
@@ -77,14 +101,19 @@ before(async () => {
 
 after(async () => {
   servidor?.close();
-  await pool.query(migracion('down'));
-  const quedan = await pool.query(`SELECT to_regclass('landing_version') AS t`);
-  assert.equal(quedan.rows[0].t, null, 'el rollback debe borrar las tablas');
-  // Deja la base lista para usarla a mano: migración y semilla de nuevo.
-  await pool.query(migracion('up'));
-  await pool.query(migracion('seed'));
-  await pool.query(`DELETE FROM users WHERE username IN ('admin_prueba', 'socio_prueba')`);
-  await pool.end();
+  try {
+    await verificarAislamiento();
+    // El rollback de la migración debe borrar las tablas de landing del esquema temporal.
+    await pool.query(migracion('down'));
+    const quedan = await pool.query(`SELECT to_regclass('landing_version') AS t`);
+    assert.equal(quedan.rows[0].t, null, 'el rollback debe borrar las tablas');
+  } finally {
+    // DROP SCHEMA con nombre calificado: independiente de search_path y solo toca el temporal.
+    await pool.query(`DROP SCHEMA IF EXISTS ${ESQUEMA} CASCADE`);
+    const resto = await pool.query('SELECT 1 FROM information_schema.schemata WHERE schema_name = $1', [ESQUEMA]);
+    await pool.end();
+    assert.equal(resto.rows.length, 0, 'el esquema temporal debe quedar borrado');
+  }
 });
 
 test('sanitización: quita scripts, etiquetas y etiquetas partidas', () => {

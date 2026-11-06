@@ -10,7 +10,8 @@ const pool = new Pool({
   user: process.env.DB_USER,
   password: process.env.DB_PASSWORD,
   database: process.env.DB_NAME,
-  ssl: { rejectUnauthorized: false },
+  // Supabase exige SSL; un Postgres local de pruebas no lo tiene (DB_SSL=false).
+  ssl: process.env.DB_SSL === 'false' ? false : { rejectUnauthorized: false },
   max: 10,
   idleTimeoutMillis: 6000000,        // 10 minutos (antes 30s) - evita cierre prematuro
   connectionTimeoutMillis: 200000,   // 20 segundos (antes 10s) - más tiempo para reconectar
