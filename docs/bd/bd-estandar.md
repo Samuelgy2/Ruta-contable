@@ -307,7 +307,9 @@ docker exec -i rc_t2_baseline psql -U postgres -d qa_baseline -tA < docs/bd/huel
 # Supabase: correr docs/bd/huella_esquema.sql con execute_sql y comparar las 10 filas
 ```
 
-Resultado del 5 nov: las 10 huellas son iguales.
+Resultado del 5 nov: las 10 huellas de entonces son iguales (tabla de abajo, estado antes de L2b).
+
+**Corrección del 6 nov.** El orden de las columnas en `CREATE TABLE` salió por `attnum::text`, o sea alfabético (1, 10, 11… 2), y no numérico. 20 tablas quedaron con el orden físico distinto al real. Las 10 huellas no lo detectaban porque ordenan sus listas; se notó al comparar el md5 del diccionario generado. Se reordenó la línea base con el orden real de Supabase y se agregó la sección `orden_columnas` a `huella_esquema.sql`. Después se reconstruyó la base local desde cero (línea base y las 7 migraciones de `CAMBIOS.md`): las 11 huellas coinciden con Supabase (`orden_columnas` = `2cd0a1c5daebc191f9dcb5c73f8276fb`).
 
 | sección | huella |
 |---|---|

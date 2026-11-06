@@ -31,4 +31,12 @@ Proyecto `hfibhmntifttdududwpw`. Una fila por migración aplicada con `apply_mig
 
 **Huella completa tras el cambio 7** (igual en Supabase y en local): columnas `22093a7d…`, constraints `67ff3c87…`, índices `cf0d9efe…`, vistas `72f30a71…`, funciones `e321e2c7…`, triggers `b88cef81…`, rls `5ae8e6b4…`, comentarios `a48ae673…`, secuencias `c5f0a080…`, permisos_funciones `a3a41352…`.
 
+**Documentos generados del esquema vivo (6 nov, tras el cambio 7):**
+- `docs/bd/diccionario.md`, con `docs/bd/genera_diccionario.sql`: md5 del texto `567b34d5ae179b30784f305cd2202b03`, igual en Supabase y en local.
+- `docs/bd/er.md` (Mermaid), con `docs/bd/genera_er.sql`: md5 `8a0655fa230d18b314e4275e3fcfefbf`, igual en Supabase y en local. Son 35 tablas, 353 atributos y 62 relaciones. La sintaxis de los atributos se validó con una expresión regular; el render de Mermaid no se probó.
+- Los archivos se escriben desde el contenedor local porque el MCP solo devuelve el texto. La igualdad de md5 prueba que su contenido es el que produce Supabase.
+- Hay que regenerar los dos archivos y repetir la comparación después de cada migración.
+
+**Corrección de `0000_baseline.sql` (6 nov):** el orden de columnas de 20 tablas no era el real. Ver `bd-estandar.md` §5.
+
 **No verificado:** humo por HTTP de los endpoints de jersey (`controllers/JerseyController.js`, `controllers/InventarioController.js`). No se levantó el backend porque usa `.env` y apunta a la base real. El trigger que esos endpoints disparan se probó por SQL.

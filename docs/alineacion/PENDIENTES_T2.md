@@ -26,6 +26,11 @@ T2 escribe solo en `backend/migrations/**` y `docs/bd/**`. Lo de abajo lo encont
 | `config_mensualidad` | sin código; se solapa con `system_data.dia_vencimiento_default` | — |
 | Función `sp_registrar_pago_mensual` | inserta en `transaccion_fin`, tabla que no existe | Rota y sin uso |
 
+## Para T4 (README y manuales)
+
+- El diagrama ER del README (`README.md`, bloque Mermaid alrededor de las líneas 330-480) está desactualizado: todavía muestra `proveedores` relacionada con `compra` y `factura`, y le faltan las tablas nuevas. Lo vigente, generado del esquema vivo, está en `docs/bd/er.md` y `docs/bd/diccionario.md`. Conviene enlazarlos en lugar de copiarlos, porque se regeneran después de cada migración.
+- El Manual Técnico (BD) y el Manual de Instalación pueden citar `docs/bd/diccionario.md`, `docs/bd/er.md` y `backend/migrations/0000_baseline.sql` más las migraciones listadas en `docs/bd/CAMBIOS.md`.
+
 ## Para quien administre `graphify-out/`
 
 `graphify-out/graph.json` no existe en este árbol, así que `graphify query` falla y T2 usó grep (regla del CLAUDE.md: aplica "cuando graph.json existe"). Para regenerarlo: `graphify update .`
