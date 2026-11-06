@@ -18,7 +18,7 @@ from pathlib import Path
 RAIZ = Path(__file__).resolve().parent.parent
 COLUMNAS = ["rf", "proceso", "subproceso", "descripcion_matriz", "estado", "evidencia", "tabla_bd", "accion", "nota"]
 ESTADOS = {"OK", "PARCIAL", "NO_IMPLEMENTADO", "DUPLICADO", "FUERA_DE_MATRIZ"}
-ACCIONES = {"AJUSTAR_MATRIZ", "AJUSTAR_CODIGO", "AMBOS", "SIN_CAMBIO"}
+ACCIONES = {"AJUSTAR_MATRIZ", "AJUSTAR_CODIGO", "AMBOS", "SIN_CAMBIO", "PENDIENTE_SAMUEL"}
 
 
 def ids_matriz(rf_csv: Path, rnf_csv: Path) -> list[str]:
