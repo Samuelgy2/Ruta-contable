@@ -1,0 +1,331 @@
+MATRIZ DE REQUISITOS,,,,,,,,,,,
+,,,,,,,,,,,
+RUTA CONTABLE,,,,,,,,,,,
+,,,,,,,,,,,
+,,,,,,,,,,,
+,,,,,,,,,,,
+Requisitos Funcionales,,,,,Requisitos de información,,Reglas de negocio,,,,
+,,,,Baja,,,,,,,
+Proceso,Subproceso,Nro .,Descripción,Prioridad,Nro.,Descripción,Nro.,Descripción,,,
+Administrador,Inicio De Sesion,RF - 001,El sistema permitira al gestor poder registrar un administrador,Media,RI-001,"Nombre y apellido del gestor, nombre de usuario, correo electrónico, contraseña (mínimo 6 caracteres) ",RN- 001,"Rn1:Para la creación de una cuenta el gestor debera ingresar su nombre y apellido
+Rn2: Para crear una cuenta el gestor también debera ingresar un usuario
+Rn3: Para crear una cuenta el gestor debera digitar una dirección de correo electrónico
+Rn4: Para que el gestor pueda crear una cuenta, debera digitar una contraseña de mínimo 6 caracteres, y además de esto tendrá que digitar de nuevo la contraseña como método de confirmación",,,51/66
+,,RF - 002,El sistema permitira al administrador iniciar sesión,Baja,RI-002,Usuario y contraseña del administrador.,RN- 002,"Rn1: Para el inicio de sesión, el administrador podrá ingresar su usuario
+Rn2: Para el inicio de sesión, el administrador podrá ingresar su contraseña
+Rn3: El sistema no permitirá el inicio de sesión si el usuario o la contraseña son incorrectos.",X,,
+,,RF - 003,El sistema permitira al administrador recuperar su contraseña,Media,RI-003,"Correo electrónico registrado, código de verificación (OTP), nueva contraseña (mín. 6 caracteres) y confirmación.",RN- 003,"Rn1: el administrador tendrá que digitar el correo electrónico asociado a su cuenta
+Rn2: el administrador deberá digitar su nueva contraseña mínimo de 6 caracteres
+Rn3: el administrador deberá digitar la confirmación de la nueva contraseña",X,,
+,,RF - 004,El sistema permitira a los administradores gestionar sus contraseñas mediante funciones de recuperación,Baja,RI-004,El sistema exigirá validación de correo electronico asociada a la cuenta antes de permitir cambios.,RN- 004,"Rn1: La contraseña deberá cumplir con criterios mínimos de seguridad definidos por el sistema (longitud y combinación de caracteres).
+Rn2: El sistema validará que la contraseña actual sea correcta antes de permitir su cambio.",X,,
+,Gestion de Administrador,RF - 005,El sistema permitira al gestor editar administrador,Media,RI-005,"Identificador del administrador, nombre, correo electrónico, usuario y rol a modificar.",RN- 005,"Rn1: Solo los gestores con permisos de administración pueden editar la información de un administrador.
+Rn2: Los datos editados deben cumplir los formatos definidos (correo válido, nombre obligatorio, rol permitido).
+Rn3: No se permite duplicidad en campos únicos (correo o usuario).",,,
+,,RF - 006,El sistema permitira al gestor eliminar administrador ,Baja,RI-006,Identificador del administrador a eliminar.,RN- 006,"Rn1: No se puede eliminar un administrador que tenga procesos activos asociados (según política de la organización).
+Rn2: Solo gestores autorizados pueden ejecutar la eliminación.
+Rn3: Toda eliminación debe quedar registrada en el sistema de auditoría.",,,
+,,RF - 007,El sistema permitira al gestor consultar administrador,Media,RI-007,"Criterio de búsqueda (nombre, usuario o correo) del administrador.",RN- 007,"Rn1: Solo gestores con permisos pueden acceder a la información de administradores.
+Rn2: La información consultada debe ser precisa y estar actualizada.
+Rn3: Se debe proteger la información sensible según normativas internas.",,,
+Configuracion del sistema,Visualizacion del Sistema,RF - 008,"El sistema permitira visualizar el saldo actual del club
+",Baja,RI-008,Ingresos y egresos registrados y aprobados en el sistema.,RN- 008,"Rn1: El saldo actual debera calcularse automaticamente. Rn2: unicamente el gestor podra acceder a la consulta de saldo actual. Rn3: El saldo actual deberá mostrarse en tiempo real, considerando únicamente los ingresos y egresos registrados del mes en curso.",X,,
+,,RF - 009,"El sistema permitira Visualizar socios activos del club
+",Media,RI-009,Listado de socios con estado activo registrado en la base de datos.,RN- 009,"Rn1: Se considera socio activo aquel que está registrado en el sistema con estado activo. (La redacción original, “pero no tenga gestión sobre el aplicativo”, es ambigua.)
+Rn2: El sistema debera contabilizar automaticamente el numero de socios activos
+Rn3: Solo el gestor podra visualizar los socios activos en el club",,,
+,,RF - 010,El sistema permitira Visualizar estadisticas generales del club,Baja,RI-010,"Total de transacciones, total de socios, cuotas pagadas y cuotas pendientes registradas en el sistema.",RN- 010,"Rn1: El total de transacciones del mes se calculará automáticamente a partir de los ingresos y egresos registrados en el mes en curso
+Rn2: El total de socios debera corresponder a la cantidad de miembros registrados
+Rn3: Las cuotas pagadas deberan contabilizar unicamente cuando su estado se encuentre marcado como pagado en el sistema
+Rn4: Las cuotas pendientes incluirán las registradas como pendientes y las morosas; se excluyen las canceladas y las exentas.",,,
+,,RF - 011,El sistema permitira Visualizar informacion general del sistema,Media,RI-011,"Nombre del club, año fiscal, moneda configurada y cantidad de usuarios activos. Informacion de solo lectura, definida en la configuracion del sistema (no editable desde este panel).",RN- 011,Rn1:  El nombre del club y la moneda se mostrarán según lo registrado en Datos del Club. Rn2: El año fiscal corresponderá al año calendario en curso y no podrá modificarse desde el Resumen. Rn3: La moneda mostrada debera ser la configurada por el sistema. Rn4: La cantidad de socios activos se calculará automáticamente con base en los socios con estado activo.. Rn5: Solo el gestor podra visualizar la informacion general del sistema,,,
+,,RF - 012,El sistema permitira Visualizar el resumen del sistema,Baja,RI-012,"Saldo actual, ingresos, egresos, socios activos, estadísticas generales e información general del sistema.",RN- 012,"Rn1: El gestor podra visualizar el saldo actual, los ingresos, egresos y socios activos del club
+Rn2: El gestor podra visualizar las estadisticas generales del club
+Rn3: El gestor podra visualizar la informacion general del sistema",,,
+,,RF - 013,El sistema permitira Visualización de transacciones contables,Media,RI-013," Fecha, monto, tipo, categoría, descripción, método, registrado por y origen de las transacciones registradas..",RN- 013,"RN - 001 Acceso autorizado a la visualización de transacciones
+RN - 002 Visualización en modo solo lectura
+RN - 003 Filtrado de transacciones por tipo, texto y rango de fechas.
+RN - 004 Detalle completo de la transacción",,,
+,Datos del club,RF - 014,El sistema permitira la Configuración de la información general del club,Baja,RI-014,"Nombre del club, NIT o identificación fiscal, correo electrónico institucional y moneda.",RN- 014,"RN1. Registro obligatorio de datos institucionales
+RN2. Validación del NIT o identificación fiscal
+RN3. Formato del correo electrónico institucional
+RN4. Definición única de la moneda
+RN6. Restricción de modificación de datos",X,,
+,,RF - 015,El sistema permitira Actualizar datos del club,Media,RI-015,"Datos generales del club a modificar (nombre, dirección, correo electrónico, moneda, entre otros).",RN- 015,"RN - 001 Autorización para la actualización de datos del club
+RN - 002 Validación de campos obligatorios
+RN - 003 Formato y consistencia de la información
+RN - 004 Restricción de modificación de datos críticos",X,,
+Usuario,Gestion de Usuario,RF - 016,El sistema permitira Registrar usuario,Media,RI-016,"Formulario de registro con campos obligatorios, validaciones en tiempo real y mensajes de error claros.",RN- 016,"RN-01: El registro debe completarse en menos de 3 segundos bajo condiciones normales de red.
+RN-02: La contraseña debe almacenarse cifrada (hash) y nunca en texto plano.
+RN-03: El sistema debe validar formato de correo y unicidad del documento antes de confirmar el registro.",,,
+,,RF - 017,El sistema permitira Actualizar los datos,Media,RI-017,Formulario de edición precargado con los datos actuales del usuario y botón de confirmación de cambios.,RN- 017,"RN-01: Solo usuarios con rol autorizado (administrador o el propio usuario) pueden editar los datos.
+RN-02: Toda actualización debe quedar registrada con fecha, hora y usuario responsable del cambio.
+RN-03: La actualización debe reflejarse en la interfaz en menos de 2 segundos tras confirmarse.",,,
+,,RF - 018,El sistema permitira Visualizar información,Baja,RI-018,"Vista de tabla/listado con buscador, filtros (por rol, estado) y detalle individual al seleccionar un usuario.",RN- 018,"RN-01: La consulta debe cargar hasta 100 registros en menos de 3 segundos.
+RN-02: La información sensible (contraseña) nunca debe mostrarse en la interfaz.
+RN-03: La visualización debe ser responsiva y adaptarse a dispositivos móviles y de escritorio.",,,
+,,RF - 019,El sistema permitira Generar transacciones,Baja,RI-019,Formulario de generación de transacción con campos validados y confirmación antes de guardar.,RN- 019,"RN-01: La transacción debe registrarse en menos de 3 segundos y confirmarse al usuario con un mensaje de éxito.
+RN-02: El sistema debe validar que los datos de la transacción sean consistentes (montos positivos, campos obligatorios completos) antes de guardarla.
+RN-03: Cada transacción generada debe quedar asociada al usuario que la creó, con fecha y hora de registro, para trazabilidad",,,
+,,RF - 020,El sistema permitira Inhabilitar usuario,Baja,RI-020,"Botón/acción de ""Inhabilitar"" en el listado o detalle de usuario, con confirmación previa mediante modal.",RN- 020,"RN-01: Un usuario inhabilitado no debe poder iniciar sesión, mostrando un mensaje claro del estado.
+RN-02: Solo un administrador debe poder inhabilitar o reactivar usuarios.
+RN-03: El cambio de estado debe reflejarse de inmediato (menos de 2 segundos) en toda la interfaz.",,,
+,,RF - 021,"El sistema permitira al usuario escoger las especificaciones de su jersey (talla, estampado, cantidad)",Baja,RI-021,,RN- 021,,,,
+Financiera,Gestion Financiera,RF - 022,El sistema permitira Visualización de transacciones contables,Baja,RI-022,"Fecha, monto, tipo, descripción y estado de las transacciones registradas.",RN- 022,"RN - 001 Acceso autorizado a la visualización de transacciones
+RN - 002 Visualización en modo solo lectura
+RN - 003 Ordenamiento y filtrado de transacciones
+RN - 004 Detalle completo de la transacción",,,
+,,RF - 023,"El sistema permitira la Generación de reportes financieros
+",Baja,RI-023,"Periodo, tipo de reporte y criterios de filtrado seleccionados.",RN- 023,"RN - 001 Acceso autorizado a la generación de reportes
+RN - 002 Generación basada en información contable válida
+RN - 003 Selección de criterios para generación de reportes
+RN - 004 Tipos de reportes financieros disponibles",,,
+,,RF - 024,El sistema permitira Registrar transacciones de ingresos ,Media,RI-024,"Fecha, monto, tipo de transacción, descripción y usuario asociado.",RN- 024,"RN-001.1 Toda transacción debe tener fecha, monto, tipo y descripción obligatoria.
+RN-001.2 El monto debe ser mayor a cero.
+RN-001.3 Cada transacción debe quedar asociada a un usuario del sistema.
+",,,
+,,RF - 025,El sistema permitira Registrar transacciones de egresos,Media,RI-025,"Fecha, monto, tipo de transacción, descripción y usuario asociado.",RN- 025,"""RN-001.1 Toda transacción debe tener fecha, monto, tipo y descripción obligatoria.
+RN-001.2 El monto debe ser mayor a cero.
+RN-001.3 Cada transacción debe quedar asociada a un usuario del sistema.
+""",,,
+,,RF - 026,El sistema permitira Generar reportes financieros en Excel y web,Baja,RI-026,"Periodo consultado, tipo de reporte y formato de exportación (Excel o web).",RN- 026,"RN-002.1Los reportes deberán generarse únicamente con información registrada en el sistema y validada previamente. 
+RN-002.2 Solo usuarios con rol autorizado Administrador podrán generar y exportar reportes financieros. 
+RN-002.3 Todo reporte generado deberá incluir fecha de generación y periodo consultado.                                                                                                                  RN-002.4 Solo el administrador podra eliminar transacciones",,,
+,,RF - 027,El sistema permitira Validar que no se ingresen transacciones con campos vacíos,Baja,RI-027,"Fecha, monto, tipo de transacción y descripción de la transacción.",RN- 027,"RN-005.1 El sistema no permitirá guardar una transacción si alguno de los campos obligatorios se encuentra vacío.
+RN-005.2 Los campos obligatorios serán: fecha, monto, tipo de transacción y descripción.
+RN-005.3 El sistema mostrará un mensaje de error indicando los campos faltantes antes de permitir el registro. El sisema bloqueara al usuario tras 3 intentos fallidos",,,
+,,RF - 028,El sistema permitira Consultar transacciones por rango de fechas,Baja,RI-028,Fecha inicial y fecha final del rango de consulta.,RN- 028,"RN-006.1 El administrador deberá seleccionar una fecha inicial y una fecha final para realizar la consulta.
+RN-006.2 La fecha final no podrá ser menor que la fecha inicial.
+RN-006.3 El sistema solo mostrará las transacciones registradas dentro del rango de fechas seleccionado.
+
+",X,,
+,,RF - 029,El sistema debe Permitir el registro de socios,Media,RI-029,"Nombre completo, documento de identidad, fecha de nacimiento y demás datos personales del socio.",RN- 029,"RN-009.1 Solo los Administradores podrán registrar, modificar o eliminar socios.
+RN-009.2 El número de identificación del socio deberá ser único en el sistema.
+RN-009.3 No se permitirá registrar un socio si no se han diligenciado completamente los datos personales.
+",,,
+,,RF - 030,El sistema permitira Mostrar a los administradores un dashboard con indicadores financieros actualizados del sistema.,Baja,RI-030,Transacciones registradas y periodo seleccionado (o periodo actual por defecto).,RN- 030,"RN-010.1 El dashboard podrá ser visualizado por usuarios con rol Administrador.
+RN-010.2 Los indicadores financieros deberán actualizarse automáticamente con base en las transacciones registradas en el sistema.
+RN-010.3 El dashboard mostrará información correspondiente al periodo seleccionado o al periodo actual por defecto.",,,
+,,RF - 031,"El sistema permitira Generar alertas automáticas para informar a los administradores sobre pagos pendientes 
+",Media,RI-031,Pagos registrados con estado pendiente o vencido.,RN- 031,"RN-014.1 El sistema generará una alerta cuando un pago se encuentre en estado pendiente o vencido. 
+RN-014.2 Las alertas deberán mostrarse en el panel principal del sistema para los administradores.",X,,
+,,RF - 032,El sistema permitira Gestionar gastos,Baja,RI-032,"Categoría de gasto, tipo de gasto, monto y descripción del gasto.",RN- 032,"""RN-001 El gestor podrá visualizar las categorías de gastos
+RN-002 El gestor podrá registrar gastos
+RN-003 El sistema exigirá el tipo de gasto
+
+
+""",,,
+,,RF - 033,El sistema permitira Visualizar reportes y estadísticas financieras,Baja,RI-033,"Información financiera registrada, periodo y tipo de dato a consultar.",RN- 033," RN - 001 Acceso controlado a la visualización de reportes
+ RN - 002 Información financiera actualizada                                                                                                                                                                                                       RN - 003 Visualización gráfica y tabular de datos                                                                                                                                                                                                RN - 004 Filtros de visualización por periodo y tipo
+ ",,,
+,,RF - 034,"El sistema permitira Cierres contables automáticos
+",Media,RI-034,Periodo contable y transacciones asociadas a dicho periodo.,RN- 034,"RN-018.1 El sistema permitirá al administrador realizar cierres contables automáticos.
+RN-018.2 Los cierres contables automáticos solo se ejecutarán sobre períodos contables completos.
+RN-018.3 El sistema generará un registro histórico del cierre contable realizado.",,,
+,,RF - 035,El sistema permitira exportar reportes y estadísticas financieras del club,Baja,RI-035,"Reporte a exportar, periodo consultado y formato de exportación permitido.",RN- 035,"RN - 001 Autorización para la exportación de reportes
+RN - 002 Formatos de exportación permitidos
+RN - 003 Exportación según criterios seleccionados
+RN - 004 Conservación de estructura y datos del reporte
+",,,
+,,RF - 036,El sistema permitira consultar reportes y estadísticas financieras del club,Media,RI-036,"Criterios de consulta (periodo, tipo de reporte).",RN- 036,"RN - 001 Consulta basada en criterios definidos
+RN - 002 Consulta de información en modo solo lectura
+RN - 003 Tiempo de respuesta eficiente del sistema
+RN - 004 Consistencia entre consulta, visualización y exportación
+",,,
+,,RF - 037,"El sistema permitira Gestión de transacciones contables
+",Media,RI-037,"Fecha, monto, tipo, clasificación y descripción de la transacción.",RN- 037,"RN - 001 Acceso autorizado a la gestión de transacciones
+RN - 002 Registro obligatorio de transacciones
+RN - 003 Clasificación de transacciones
+RN - 004 Validación de montos
+RN - 005 Edición controlada de transacciones",,,
+,,RF - 038,El sistema permitira Registrar movimientos financieros,Baja,RI-038,"Tipo de transacción (ingreso o egreso), valor y categoría del movimiento.",RN- 038,"RN-001: Todo movimiento financiero deberá estar asociado a un tipo de transacción.
+RN-002: El movimiento deberá clasificarse como ingreso o egreso.
+RN-003: El valor del movimiento deberá ser mayor a cero.",,,
+,,RF - 039,El sistema permitira la Generación de estadísticas contables,Media,RI-039,Transacciones registradas y criterios estadísticos seleccionados.,RN- 039,"RN - 001 Acceso autorizado a la generación de estadísticas
+RN - 002 Generación basada en información contable registrada
+RN - 003 Selección de criterios estadísticos
+RN - 004 Cálculo automático de indicadores",,,
+,,RF - 040,El sistema permitira Clasificar movimientos financieros según tipo de socio,Baja,RI-040,"Nivel de aprendizaje (Iniciacion, Rider School, Club) asociado al socio.",RN- 040,"RN-001: El sistema debera clasificar a los socios segun su nivel de aprendizaje. RN-002: Los niveles de aprendizaje permitidos seran: Iniciacion, Rider School y Club. RN-003: El nivel de aprendizaje es independiente del plan de mensualidad del socio. RN-004: El nivel de aprendizaje podra quedar sin asignar hasta su clasificacion manual por el gestor..",X,,
+,,RF - 041,El sistema permitira Consultar historial de movimientos financieros,Baja,RI-041,Movimientos financieros registrados y fecha de los mismos.,RN- 041,"RN-001: El sistema deberá mostrar los movimientos financieros ordenados por fecha. 
+RN-002: Los movimientos no podrán ser modificados desde la consulta. 
+RN-003: Solo usuarios autorizados podrán acceder a esta información.",,,
+,,RF - 042,El sistema permitira gestionar categorias de egresos,Baja,RI-042,"El sistema debe registrar y mantener listado de categorías tipo expense, cada una con nombre único (por tipo), descripción opcional y estado activo/inactivo, para clasificar transacciones de egreso.",RN- 042,"RN-001: No puede existir dos categorías con mismo name y mismo type (expense) — validación en creación y edición (unicidad name+type).
+RN-002: Categoría con transacciones asociadas (categoria_id en transactions) no puede eliminarse; solo desactivarse (active=false).
+RN-003: Nombre obligatorio, no vacío tras trim; si falta, rechazar con error 400.",,,
+,,RF - 043,El sistema permitira Gestionar categorías de ingresos,Baja,RI-043,"El sistema debe registrar y mantener listado de categorías tipo income, con mismos atributos (nombre, descripción, estado), para clasificar transacciones de ingreso.",RN- 043,"RN-001: No puede existir dos categorías con mismo name y mismo type (income).
+RN-002: Categoría con transacciones asociadas no puede eliminarse; solo desactivarse.
+RN-003: Nombre obligatorio, no vacío.",,,
+,,RF - 044,El sistema permitira visualizar estadisticas financieras,Baja,RI-044,"El módulo debe presentar un dashboard que resuman ingresos, egresos y saldo neto del club.",RN- 044,"RN-01: Solo los usuarios con rol de administrador o tesorero podrán acceder al módulo de estadísticas financieras.
+RN-02: Las estadísticas deben calcularse únicamente con transacciones que se encuentren en estado ""confirmado"" o ""aprobado"" (no se incluyen pendientes ni anuladas).
+RN-03: El sistema debe recalcular automáticamente los indicadores cada vez que se registre, edite o elimine un movimiento financiero relacionado.",,,
+ Socios,Gestion de socios,RF - 045,El sistema permitira el registro del socio al club,Baja,RI-045,"Nombre, correo electronico, documento de identidad del socio.",RN- 045,RN-001 Registro unico de socios. RN-002 Campos obligatorios del socio. RN-003 Validacion del correo electronico. RN-004 El socio no gestiona el aplicativo (sin rol de sistema); solo se clasifica por tipo de membresia y nivel de aprendizaje.,,,
+,,RF - 046,El sistema permitira Visualizar reportes ,Media,RI-046,"Información financiera registrada, periodo y tipo de dato a consultar.",RN- 046," RN - 001 Acceso controlado a la visualización de reportes
+ RN - 002 Información financiera actualizada                                                                                                                                                                                                       RN - 003 Visualización gráfica y tabular de datos                                                                                                                                                                                                RN - 004 Filtros de visualización por periodo y tipo
+ ",,,
+,,RF - 047,El sistema permitira la Visualización de socios del club,Baja,RI-047,Datos del perfil del socio registrados en el sistema.,RN- 047,"RN - 001 Acceso autorizado a la visualización de miembros 
+RN - 002 Visualización en modo solo lectura 
+RN - 003 Búsqueda y filtrado de socios
+RN - 004 Visualización detallada del perfil de socios
+RN - 005 Consistencia y actualización de la información
+",,,
+,,RF - 048,El sistema permitira Registrar socios,Media,RI-048,"Nombre completo, documento de identidad y fecha de nacimiento del socio.",RN- 048,"RN-001: Para registrar un socio, el sistema deberá exigir como mínimo el nombre completo, documento de identidad y fecha de nacimiento.
+
+RN-002: El documento de identidad del socio deberá ser único dentro del sistema.
+
+RN-003: El sistema no permitirá registrar socios con campos obligatorios vacíos.
+",,,
+,,RF - 049,El sistema permitira Consultar socios,Baja,RI-049,Criterio de búsqueda (nombre o documento) del socio.,RN- 049,"RN - 001 Acceso autorizado a la consulta de socios
+RN - 002 Consulta de información en modo solo lectura
+RN - 003 Búsqueda y filtrado de socios
+RN - 004 Visualización completa del perfil del socio",,,
+,,RF - 050,El sistema permitira la Gestión de documentos del socio,Baja,RI-050,"Tipo de documento, Numero del documento del socio.",RN- 050,"RN-001: Todo documento registrado deberá estar asociado obligatoriamente a un socio existente.
+
+RN-002: El sistema deberá permitir almacenar múltiples documentos por cada socio.
+
+RN-003: No se permitirá registrar documentos sin especificar el tipo de documento.
+
+RN-004: Los documentos del socio solo podrán ser consultados por usuarios con permisos adecuados",,,
+,,RF - 051,El sistema permitira Editar socios,Media,RI-051,"Identificador del socio y datos a modificar (nombre, correo, documento, entre otros).",RN- 051,"RN - 001 Autorización para la edición de socios
+RN - 002 Validación de campos obligatorios
+RN - 003 Restricción de edición de datos críticos
+RN - 004 Registro de cambios realizados",,,
+,,RF - 052,El sistema permitira Eliminar socios,Baja,RI-052,Identificador del socio a eliminar.,RN- 052,"RN - 001 Autorización para la eliminación de socios
+RN - 002 Validación de dependencias financieras
+RN - 003 Eliminación lógica del socio
+RN - 004 Confirmación previa a la eliminación",,,
+Pagos,Gestion de pagos,RF - 053,El sistema permitira Generar cartera de pagos,Media,RI-053,"Socio asociado, periodo (mes y año) y valor de la cartera.",RN- 053,"RN-001: La cartera de pagos deberá generarse asociada a un socio y a un periodo específico (mes y año).
+
+RN-002: No se permitirá generar dos carteras para el mismo socio en el mismo periodo.
+
+RN-003: El valor de la cartera deberá ser mayor a cero.",,,
+,,RF - 054,"El sistema permitira Registrar pagos mensuales
+",Baja,RI-054,"Socio, periodo asociado, valor del pago y fecha del pago.",RN- 054,RN-001: Todo pago mensual debera estar asociado a un socio y a un periodo existente. RN-002: El valor del pago debera ser mayor a cero. RN-003: El sistema debera registrar la fecha exacta en la que se realiza el pago. RN-004: No se permitira registrar dos pagos mensuales activos para el mismo socio en el mismo periodo..,,,
+,,RF - 055,El sistema permitira Gestión de facturación,Baja,RI-055,"Socio o proveedor asociado, detalle de la factura (productos o servicios) y pagos asociados.",RN- 055,"RN-001: Toda factura debera estar asociada a un socio o proveedor existente. RN-002: Una factura debera contener al menos un detalle de factura. RN-003: El valor total de la factura debera calcularse automaticamente a partir de sus detalles. RN-004: Toda factura podra tener uno o varios pagos asociados. RN-005: El sistema no permitira registrar pagos por un valor superior al total de la factura. RN-006: Una factura se considerara pagada unicamente cuando el total de los pagos cubra su valor total.
+",,,
+,,RF - 056,El sistema permitira Registrar método de pago,Media,RI-056,"Metodo de pago seleccionado entre los valores definidos por el sistema (efectivo, transferencia, tarjeta, cheque).",RN- 056,"RN-001: Todo pago debera tener un metodo de pago registrado. RN-002: El metodo de pago debera ser uno de los valores predefinidos por el sistema. RN-003: No se permitira registrar pagos sin metodo de pago seleccionado..
+",,,
+,,RF - 057,El sistema permitira Consultar historial de pagos,Media,RI-057,Pagos registrados asociados a los socios existentes.,RN- 057,"RN-001: El sistema debera mostrar el historial de pagos ordenado cronologicamente. RN-002: Solo se podran consultar pagos asociados a socios existentes. RN-003: El historial de pagos no podra ser modificado desde la vista de consulta.
+ ",X,,
+,,RF - 058,El sistema permitira Gestión de facturación,Baja,RI-058,"Proveedor asociado, detalle de la factura (productos o servicios) y pagos asociados.",RN- 058,"RN-001: Toda factura debera estar asociada a un proveedor existente. RN-002: Una factura debera contener al menos un detalle de factura. RN-003: El valor total de la factura debera calcularse automaticamente a partir de sus detalles. RN-004: Toda factura podra tener uno o varios pagos asociados. RN-005: El sistema no permitira registrar pagos por un valor superior al total de la factura. RN-006: Una factura se considerara pagada unicamente cuando el total de los pagos cubra su valor total.
+",,,
+ compras,Gestion de compras,RF - 059,El sistema permitira Registrar compras ,Media,RI-059,"Proveedor, estado de la compra y datos generales de la compra.",RN- 059,"RN-001: Toda compra deberá estar asociada obligatoriamente a un proveedor registrado en el sistema.
+RN-002: La compra deberá iniciar en estado pendiente de aprobación.
+RN-003: Solo usuarios con permisos administrativos podrán aprobar o rechazar una compra.
+RN-004: No se permitirá registrar el detalle de una compra que no haya sido aprobada.
+RN-005: Una compra aprobada no podrá ser modificada posteriormente.
+
+",,,
+,,RF - 060,El sistema permitira Registrar detalle de compras,Baja,RI-060,"Producto, cantidad y valor unitario del detalle de compra.",RN- 060,"RN-001: Cada detalle de compra deberá estar asociado a una compra existente y aprobada.
+RN-002: El detalle de compra deberá incluir producto, cantidad y valor unitario.
+RN-003: La cantidad registrada deberá ser mayor a cero.
+RN-004: El valor total del detalle deberá calcularse automáticamente.",,,
+Jersey,Gestion de jersey,RF - 061,El sistema permitira Seleccionar socio desde el listado real de miembros,Baja,RI-061,"El sistema debe almacenar, por cada pedido de indumentaria: socio asociado, fecha, tipo de prenda, talla, estampado, valor, estado y observaciones.",RN- 061,"RN-075	Solo se pueden generar pedidos para socios en estado ""activo"".
+RN-076	El campo socio es obligatorio para registrar el pedido.
+RN-077	El socio seleccionado debe existir en la tabla de socios (no se permite un id_socio inválido o inexistente).",,,
+,,RF - 062,"El sistema permitira Formulario con socio, talla, estampado y cantidad",Baja,RI-062,"El sistema debe almacenar, por cada unidad de inventario generada, el pedido al que pertenece, su número de ítem, estado de entrega y fecha de entrega.",RN- 062,"RN-078	El campo cantidad es obligatorio y debe ser un número entero mayor a cero.
+RN-079	Los campos talla y estampado son opcionales; no bloquean el registro del pedido si se dejan vacíos.
+RN-080	El tipo de prenda debe ser uno de los valores permitidos: Jersey, Short, Medias o Chaqueta.",,,
+,,RF - 063,Generar una unidad de inventario por cada prenda solicitada,Baja,RI-063,El sistema debe mostrar el nombre del socio (no solo su ID) en cualquier listado o formulario relacionado con pedidos de indumentaria.solo,RN- 063,"RN-081	Se debe generar exactamente una unidad de inventario por cada unidad indicada en la cantidad del pedido.
+RN-082	Cada unidad de inventario generada debe iniciar en estado de entrega ""Pendiente"".
+RN-083	La numeración de las unidades (nro. de ítem) debe ser consecutiva dentro de un mismo pedido, iniciando en 1",,,
+,,RF - 064,Mostrar cantidad total solicitada y cantidad entregada por pedido,Baja,RI-064,"El sistema debe calcular y mostrar, por cada pedido de indumentaria, la cantidad total de unidades solicitadas y la cantidad de unidades ya entregadas (a partir del conteo de unidades de inventario asociadas al pedido y su estado de entrega).",RN- 064,"RN-084	La cantidad total del pedido corresponde al número de unidades de inventario asociadas a ese pedido.
+RN-085	La cantidad entregada corresponde al número de unidades de inventario cuyo estado de entrega es ""Entregado"".
+RN-086	Un pedido no puede mostrar más unidades entregadas que unidades totales solicitadas.",,,
+Categoria,Gestion de categorias,RF - 065,Consultar listado de categorias,Baja,RI-065,"Si no existen categorías de gasto activas configuradas, el sistema debe mostrar una alerta indicando que las transacciones de egreso no podrán clasificarse.",RN- 065,"RN.1 Nombre de la categoría
+RN.2 Tipo de categoría (Ingreso / Gasto)
+RN.3 Cantidad total de categorías registradas",,,
+,,RF - 066,Registrar categoría de tipo Ingreso,Baja,RI-066,"Los campos Nombre y Tipo son obligatorios; el tipo debe quedar preseleccionado como ""Ingreso"" y la categoría se crea activa por defecto salvo que el usuario desmarque la opción.",RN- 066,"RN.1 Nombre de la categoría
+RN.2 Descripción de la categoría
+RN.3 Estado de la categoría (activa/inactiva)",,,
+,,RF - 067,Registrar categoría de tipo Gasto,Baja,RI-067,"Los campos Nombre y Tipo son obligatorios; el tipo debe quedar preseleccionado como ""Gasto"" y la categoría se crea activa por defecto salvo que el usuario desmarque la opción.",RN- 067,"RN.1 Nombre de la categoría
+RN.2 Descripción de la categoría
+RN.3 Estado de la categoría (activa/inactiva)",,,
+,,RF - 068,Editar categoría existente,Baja,RI-068,El campo Nombre no puede quedar vacío al guardar la edición; el formulario debe mostrar los datos actuales de la categoría seleccionada antes de permitir su modificación.,RN- 068,"RN.1 Nombre actual de la categoría
+RN.2 Tipo de categoría (Ingreso/Gasto)
+RN.3 Estado actual de la categoría (activa/inactiva)",,,
+Proveedores,Administración de proveedores,RF - 069,El sistema permitira Gestionar proveedores,Baja,RI-069,"Nombre del proveedor, datos de contacto y estado (activo/inactivo).",RN- 069,"RN-001: El sistema deberá permitir registrar proveedores con nombre único.
+RN-002: No se permitirá eliminar un proveedor si tiene compras asociadas.
+RN-003: Un proveedor inactivo no podrá ser seleccionado en nuevas compras.",X,,
+,,RF - 070,El sistema permitira Registrar compras a proveedores,Media,RI-070,"Proveedor asociado, estado de la compra y datos generales de la compra.",RN- 070,"RN-001: Toda compra deberá estar asociada obligatoriamente a un proveedor registrado en el sistema.
+RN-002: La compra deberá iniciar en estado pendiente de aprobación.
+RN-003: Solo usuarios con permisos administrativos podrán aprobar o rechazar una compra.
+RN-004: No se permitirá registrar el detalle de una compra que no haya sido aprobada.
+RN-005: Una compra aprobada no podrá ser modificada posteriormente.
+
+",X,,
+ inventario,Gestion de inventario,RF - 071,El sistema permitira Registrar productos,Media,RI-071,"Nombre, código, cantidad inicial y valor del producto.",RN- 071,"RN-001: Todo producto deberá registrarse con nombre único.
+RN-002: El producto deberá tener una cantidad inicial definida.
+RN-003: No se permitirá registrar productos con valores negativos.",X,,
+,,RF - 072,El sistema permitira Actualizar inventario general,Baja,RI-072,Cantidad de productos según compras o salidas registradas.,RN- 072,"RN-001: La cantidad en inventario deberá actualizarse automáticamente al registrar compras o salidas.
+RN-002: El inventario no podrá tener cantidades negativas.
+RN-003: Toda actualización de inventario deberá quedar registrada en el sistema.",X,,
+,,RF - 073,El sistema permitira Consultar inventario general,Media,RI-073,Productos registrados y cantidades disponibles en inventario.,RN- 073,"RN-001: El sistema deberá mostrar el inventario actualizado en tiempo real.
+RN-002: El inventario solo podrá ser modificado desde procesos autorizados.
+RN-003: La consulta de inventario no permitirá edición directa.",X,,
+,,RF - 074,El sistema permitirá editar productos del inventario,Media,RI-074,"Identificador del producto y datos a modificar (nombre, cantidad, valor).",RN- 074,"RN1: Solo usuarios autorizados podrán editar productos.
+RN2: No se podrá modificar el código del producto una vez creado.
+RN3: La cantidad editada no podrá ser negativa.",,,
+,,RF - 075,El sistema permitirá eliminar productos del inventario,Media,RI-075,Identificador del producto a eliminar.,RN- 075,"RN1: Solo el administrador podrá eliminar productos.
+RN2: No se podrá eliminar un producto si tiene compras o salidas registradas.
+RN3: La eliminación quedará registrada en el historial.",,,
+,,RF - 076,El sistema permitirá registrar categorías de producto,Media,RI-076,Nombre de la categoría del producto.,RN- 076,"RN1: Toda categoría deberá tener un nombre único.
+RN2: No se podrá eliminar una categoría con productos asociados.
+RN3: Solo usuarios autorizados podrán crear categorías.",,,
+Cartera,Gestion de cartera,RF - 077,El sistema permitirá registrar cuentas por cobrar (cartera) de clientes,Media,RI-077,"Cliente asociado, concepto y valor de la cartera.",RN- 077,RN1: Toda cuenta por cobrar debera estar asociada a un cliente existente. RN2: El registro debera incluir concepto y valor. RN3: El valor de la cartera debera ser mayor a cero.,,,
+,,RF - 078,El sistema permitirá consultar la cartera de clientes,Baja,RI-078,Estado de la cartera (pendiente/pagado/anulado) y cliente asociado.,RN- 078,RN1: El sistema debera permitir consultar el estado (pendiente/pagado/anulado) de la cartera. RN2: Solo usuarios autorizados podran acceder a la informacion de cartera. RN3: Las cuentas pendientes deberan mostrarse marcadas como tal.,,,
+,,RF - 079,El sistema permitirá editar registros de cartera,Baja,RI-079,"Identificador del registro de cartera y datos a modificar (concepto, valor, observaciones, estado).",RN- 079,"RN1: Solo usuarios autorizados podran editar cartera. RN2: No se podra modificar el cliente asociado al registro. RN3: No se podra editar un registro en estado anulado.
+",,,
+,,RF - 080,El sistema permitirá eliminar registros de cartera,Baja,RI-080,Identificador del registro de cartera a eliminar.,RN- 080,"	RN1: Solo el administrador podrá eliminar registros de cartera.
+RN2: Solo se podrán eliminar cuentas canceladas o saldadas en su totalidad.
+RN3: La eliminación quedará registrada en el sistema (auditoría).",,,
+,,RF - 081,"El sistema permitirá registrar tipos de cartera (contado, crédito, por cuotas, etc.)",Baja,RI-081,"Nombre del tipo de cartera (contado, crédito, por cuotas, etc.).",RN- 081,"RN1: Todo tipo de cartera debera tener un nombre unico. RN2: Solo usuarios autorizados podran registrarlos. RN3: No se podra eliminar un tipo de cartera con registros asociados.
+",,,
+Asistencia,Gestion de Asistencia,RF - 082,El sistema permitira Gestión de Asistencia,Media,RI-082,"Socio, actividad y estado de asistencia (presente/ausente).",RN- 082,"RN-001 Registro de asistencia por actividad  
+ 
+
+RN-002 Estados de asistencia  
+ 
+
+RN-003 Asociación obligatoria al socio  
+ 
+
+RN-004 Restricción por estado del socio  
+ 
+
+RN-005 Modificación controlada
+",,,
+,,RF - 083,El sistema permitira Visualización de Asistencia,Baja,RI-083,Registros de asistencia por socio o por actividad.,RN- 083,"RN-001 Consulta individual de asistencia  
+ 
+
+RN-002 Consulta general de asistencia  
+ 
+
+RN-003 Filtros de búsqueda  
+ 
+
+RN-004 Acceso según rol  
+.
+
+RN-005 Información de solo lectura
+ ",,,
+,,RF - 084,El sistema permitira Gestión de Alertas de Asistencia,Baja,RI-084,Inasistencias acumuladas o consecutivas registradas por socio.,RN- 084,"RN-001 Alertas por inasistencia acumulada 
+
+
+RN-002 Alertas por inasistencia consecutiva 
+
+
+RN-003 Configuración de parámetros 
+
+
+RN-004 Notificación al gestor 
+
+
+RN-005 Relación con decisiones administrativas 
+",,,
+,,RF - 085,El sistema permitirá editar registros de asistencia,Baja,RI-085,"Socio, tipo de entrenamiento y estado de asistencia (Presente/Ausente/Justificado/Tarde).",RN- 085,RN-001 Registro de asistencia por actividad. RN-002 Estados de asistencia. RN-003 Asociacion obligatoria al socio. RN-004 Restriccion por estado del socio. RN-005 Modificacion controlada,,,
+,,RF - 086,El sistema permitirá eliminar registros de asistencia,Baja,RI-086,Identificador del registro de asistencia a eliminar.,RN- 086,"RN1: Solo el gestor podrá eliminar registros.
+RN2: La eliminación quedará registrada en el sistema.
+RN3: No se podrán eliminar registros asociados a alertas activas.",,,
+,,RF - 087,El sistema permitirá exportar reportes de asistencia,Baja,RI-087,Periodo consultado y formato de exportación.,RN- 087,"RN1: Solo usuarios autorizados podrán exportar el reporte.
+RN2: El reporte deberá incluir el periodo consultado.
+RN3: El reporte exportado conservará la información tal como se muestra en pantalla.",,,

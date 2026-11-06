@@ -1,0 +1,15 @@
+MATRIZ DE REQUISITOS,,,,
+,,,,
+,,,,
+Requisitos No Funcionales,,,,
+No.,Descripción,Atributo,,Atributos
+RNF-001,"El sistema contara con diseño responsivo para que se pueda usar en computadores, tablet y moviles",Portabilidad,,Fiabilidad
+RNF-002,El sistema contara con iconografia amigable para facilitar la navegacion de usuarios contables,Fiabilidad,,Seguridad
+RNF-003,El sistema manejara los colores corporativos de BMX para mantener la coherencia visual,,,Disponibilidad
+RNF-004,"El sistema contara con filtros avanzados para consultar facturas, reportes y balances de manera agil",,,Mantenibilidad
+RNF-005,El sistema tendra un maximo de carga de 5 segundos al generar reportes financieros,Disponibilidad,,Escalabilidad
+RNF-006,El sistema estara disponible las 24 horas del dia para registrar transacciones,,,Portabilidad
+RNF-007,El sistema generara logs de los errores ocurridos y de operaciones criticas como creacion de facturas,Escalabilidad,,
+RNF-008,El sistema mostrara codigos de error claros para identificar problemas en procesos contables,Mantenibilidad,,
+RNF-009,El sistema enviara notificaciones de errores y caidas a los admnistradores del software,,,
+RNF-010,El sistema encriptará las contraseñas y datos sensibles en MD5 o SHA1 o superior,Seguridad,,
