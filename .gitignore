@@ -8,7 +8,6 @@ frontend/node_modules/
 .env.local
 .env.*.local
 .env.docker
-.env.example
 
 # Directorios de compilación
 build/
