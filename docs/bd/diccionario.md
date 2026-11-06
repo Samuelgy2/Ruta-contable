@@ -1,12 +1,12 @@
 # Diccionario de datos — Ruta Contable
 
-Generado desde el catálogo de PostgreSQL con `docs/bd/genera_diccionario.sql`. No se edita a mano: se regenera después de cada migración. Esquema `public`: 35 tablas, 8 vistas y 17 funciones.
+Generado desde el catálogo de PostgreSQL con `docs/bd/genera_diccionario.sql`. No se edita a mano: se regenera después de cada migración. Esquema `public`: 34 tablas, 8 vistas y 17 funciones.
 
 Reglas de nombres, equivalencias y hallazgos por tabla (filas reales, uso en código): `docs/bd/bd-estandar.md`. Diagrama entidad-relación: `docs/bd/er.md`. Historial de cambios: `docs/bd/CAMBIOS.md`.
 
 Convenciones: **Nulo** = ¿admite NULL? · **Clave**: PK primaria, UK única, FK → tabla.columna referida.
 
-Tablas: [admin_perfil](#admin_perfil), [alerta_sistema](#alerta_sistema), [asistencia](#asistencia), [auditoria](#auditoria), [camerino](#camerino), [cartera](#cartera), [categoria_producto](#categoria_producto), [categories](#categories), [compra](#compra), [config_mensualidad](#config_mensualidad), [detalle_compra](#detalle_compra), [detalle_factura](#detalle_factura), [detalle_transaccion](#detalle_transaccion), [factura](#factura), [inventario_jersey](#inventario_jersey), [jersey_campana](#jersey_campana), [landing_borrador](#landing_borrador), [landing_imagen](#landing_imagen), [landing_version](#landing_version), [meses_periodo](#meses_periodo), [movimiento_inventario](#movimiento_inventario), [pago_factura](#pago_factura), [pago_mensual](#pago_mensual), [pagos_pasarela](#pagos_pasarela), [pedido_jersey](#pedido_jersey), [poliza_salud](#poliza_salud), [products](#products), [proveedores](#proveedores), [socio](#socio), [socio_documento](#socio_documento), [socio_perfil](#socio_perfil), [system_data](#system_data), [tipo_cartera](#tipo_cartera), [transactions](#transactions), [users](#users).
+Tablas: [admin_perfil](#admin_perfil), [alerta_sistema](#alerta_sistema), [asistencia](#asistencia), [auditoria](#auditoria), [camerino](#camerino), [cartera](#cartera), [categoria_producto](#categoria_producto), [categories](#categories), [compra](#compra), [config_mensualidad](#config_mensualidad), [detalle_compra](#detalle_compra), [detalle_factura](#detalle_factura), [detalle_transaccion](#detalle_transaccion), [factura](#factura), [inventario_jersey](#inventario_jersey), [jersey_campana](#jersey_campana), [landing_borrador](#landing_borrador), [landing_imagen](#landing_imagen), [landing_version](#landing_version), [meses_periodo](#meses_periodo), [movimiento_inventario](#movimiento_inventario), [pago_factura](#pago_factura), [pago_mensual](#pago_mensual), [pagos_pasarela](#pagos_pasarela), [pedido_jersey](#pedido_jersey), [poliza_salud](#poliza_salud), [products](#products), [socio](#socio), [socio_documento](#socio_documento), [socio_perfil](#socio_perfil), [system_data](#system_data), [tipo_cartera](#tipo_cartera), [transactions](#transactions), [users](#users).
 
 ## Tablas
 
@@ -226,7 +226,6 @@ RLS: activo, sin políticas.
 | observaciones | text | sí |  |  |  |
 | created_by | integer | sí |  | FK → users.id |  |
 | created_at | timestamp without time zone | no | CURRENT_TIMESTAMP |  |  |
-| id_proveedor | integer | sí |  | FK → proveedores.id_proveedor |  |
 | estado | character varying | no | 'pendiente'::character varying |  |  |
 | approved_by | integer | sí |  | FK → users.id | FK a users.id: usuario que aprobó la compra (estado aprobada). |
 | approved_at | timestamp without time zone | sí |  |  | Fecha y hora de la aprobación de la compra. |
@@ -241,7 +240,6 @@ Restricciones CHECK:
 - `idx_compra_approved_by` (approved_by)
 - `idx_compra_categoria_id` (categoria_id)
 - `idx_compra_created_by` (created_by)
-- `idx_compra_id_proveedor` (id_proveedor)
 - `idx_compra_id_transaccion` (id_transaccion)
 
 Referenciada por: `detalle_compra.id_compra` (ON DELETE NO ACTION), `factura.id_compra` (ON DELETE SET NULL), `movimiento_inventario.id_compra` (ON DELETE SET NULL).
@@ -354,7 +352,6 @@ RLS: activo, sin políticas.
 | created_by | integer | sí |  | FK → users.id |  |
 | created_at | timestamp without time zone | no | CURRENT_TIMESTAMP |  |  |
 | updated_at | timestamp without time zone | sí | CURRENT_TIMESTAMP |  |  |
-| id_proveedor | integer | sí |  | FK → proveedores.id_proveedor |  |
 | id_socio | integer | sí |  | FK → socio.id_socio |  |
 | monto_pagado | numeric | no | 0 |  |  |
 | nro_factura | character varying(60) | sí |  |  | Mismo propósito que numero_factura (columnas duplicadas). Ninguna de las dos se usa en el backend al 6 nov 2026. |
@@ -373,7 +370,6 @@ Restricciones CHECK:
 - `idx_factura_estado` (estado)
 - `idx_factura_fecha` (fecha)
 - `idx_factura_id_compra` (id_compra)
-- `idx_factura_id_proveedor` (id_proveedor)
 - `idx_factura_id_socio` (id_socio)
 - `idx_factura_id_transaccion` (id_transaccion)
 
@@ -568,6 +564,7 @@ Restricciones CHECK:
 
 Índices (además de los de PK y UK):
 
+- `idx_movimiento_inv_producto` (id_producto)
 - `idx_movimiento_inventario_created_by` (created_by)
 - `idx_movimiento_inventario_id_compra` (id_compra)
 - `idx_movimiento_inventario_id_producto` (id_producto)
@@ -601,6 +598,7 @@ Restricciones CHECK:
 Índices (además de los de PK y UK):
 
 - `idx_pago_factura_created_by` (created_by)
+- `idx_pago_factura_factura` (id_factura)
 - `idx_pago_factura_id_factura` (id_factura)
 - `idx_pago_factura_id_transaccion` (id_transaccion)
 - `idx_pago_factura_registrado_by` (registrado_by)
@@ -793,35 +791,6 @@ RLS: activo, sin políticas.
 
 Referenciada por: `detalle_compra.id_producto` (ON DELETE RESTRICT), `movimiento_inventario.id_producto` (ON DELETE RESTRICT).
 
-### proveedores
-
-_Sin comentario._
-
-RLS: activo, sin políticas.
-
-| Columna | Tipo | Nulo | Por defecto | Clave | Descripción |
-|---|---|---|---|---|---|
-| id_proveedor | integer | no | nextval('proveedores_id_proveedor_seq'::regclass) | PK |  |
-| nombre | character varying | no |  | UK |  |
-| nit | character varying | sí |  |  |  |
-| telefono | character varying | sí |  |  |  |
-| email | character varying | sí |  |  |  |
-| direccion | character varying | sí |  |  |  |
-| estado | character varying | no | 'activo'::character varying |  |  |
-| observaciones | text | sí |  |  |  |
-| created_by | integer | sí |  | FK → users.id |  |
-| created_at | timestamp without time zone | no | CURRENT_TIMESTAMP |  |  |
-
-Restricciones CHECK:
-
-- `proveedores_estado_check`: `estado` ∈ {activo, inactivo}
-
-Índices (además de los de PK y UK):
-
-- `idx_proveedores_created_by` (created_by)
-
-Referenciada por: `compra.id_proveedor` (ON DELETE NO ACTION), `factura.id_proveedor` (ON DELETE NO ACTION).
-
 ### socio
 
 Información completa de los socios del club
@@ -897,6 +866,7 @@ Restricciones CHECK:
 
 - `idx_socio_documento_created_by` (created_by)
 - `idx_socio_documento_id_socio` (id_socio)
+- `idx_socio_documento_socio` (id_socio)
 
 ### socio_perfil
 
@@ -1041,7 +1011,7 @@ Triggers:
 - `trg_users_crear_perfil`: AFTER INSERT ON public.users FOR EACH ROW EXECUTE FUNCTION crear_perfil_por_rol()
 - `update_users_updated_at`: BEFORE UPDATE ON public.users FOR EACH ROW EXECUTE FUNCTION update_updated_at_column()
 
-Referenciada por: `admin_perfil.creado_por` (ON DELETE SET NULL), `admin_perfil.user_id` (ON DELETE CASCADE), `asistencia.registrado_by` (ON DELETE SET NULL), `auditoria.usuario_id` (ON DELETE SET NULL), `compra.approved_by` (ON DELETE NO ACTION), `compra.created_by` (ON DELETE SET NULL), `config_mensualidad.created_by` (ON DELETE SET NULL), `factura.created_by` (ON DELETE SET NULL), `inventario_jersey.recibido_by` (ON DELETE SET NULL), `jersey_campana.created_by` (ON DELETE NO ACTION), `landing_borrador.updated_by` (ON DELETE SET NULL), `landing_imagen.created_by` (ON DELETE SET NULL), `landing_version.publicado_by` (ON DELETE SET NULL), `meses_periodo.cerrado_by` (ON DELETE SET NULL), `movimiento_inventario.created_by` (ON DELETE SET NULL), `movimiento_inventario.registrado_by` (ON DELETE SET NULL), `pago_factura.created_by` (ON DELETE SET NULL), `pago_factura.registrado_by` (ON DELETE SET NULL), `pagos_pasarela.user_id` (ON DELETE SET NULL), `proveedores.created_by` (ON DELETE NO ACTION), `socio.created_by` (ON DELETE SET NULL), `socio_documento.created_by` (ON DELETE SET NULL), `socio_perfil.user_id` (ON DELETE CASCADE), `transactions.created_by` (ON DELETE NO ACTION).
+Referenciada por: `admin_perfil.creado_por` (ON DELETE SET NULL), `admin_perfil.user_id` (ON DELETE CASCADE), `asistencia.registrado_by` (ON DELETE SET NULL), `auditoria.usuario_id` (ON DELETE SET NULL), `compra.approved_by` (ON DELETE NO ACTION), `compra.created_by` (ON DELETE SET NULL), `config_mensualidad.created_by` (ON DELETE SET NULL), `factura.created_by` (ON DELETE SET NULL), `inventario_jersey.recibido_by` (ON DELETE SET NULL), `jersey_campana.created_by` (ON DELETE NO ACTION), `landing_borrador.updated_by` (ON DELETE SET NULL), `landing_imagen.created_by` (ON DELETE SET NULL), `landing_version.publicado_by` (ON DELETE SET NULL), `meses_periodo.cerrado_by` (ON DELETE SET NULL), `movimiento_inventario.created_by` (ON DELETE SET NULL), `movimiento_inventario.registrado_by` (ON DELETE SET NULL), `pago_factura.created_by` (ON DELETE SET NULL), `pago_factura.registrado_by` (ON DELETE SET NULL), `pagos_pasarela.user_id` (ON DELETE SET NULL), `socio.created_by` (ON DELETE SET NULL), `socio_documento.created_by` (ON DELETE SET NULL), `socio_perfil.user_id` (ON DELETE CASCADE), `transactions.created_by` (ON DELETE NO ACTION).
 
 ## Vistas
 
@@ -1057,7 +1027,7 @@ Columnas: `id_cartera` integer, `id_socio` integer, `socio_nombre` character var
 
 _Sin comentario._
 
-Opciones: security_invoker=true.
+Opciones: ninguna.
 
 Columnas: `anio` numeric, `mes` numeric, `total_ingresos` numeric, `total_gastos` numeric, `resultado_neto` numeric.
 
@@ -1113,7 +1083,7 @@ Columnas: `id` integer, `username` character varying(50), `email` character vary
 
 - `categoria_mensualidad_id()` → `integer` · sql · search_path: search_path=public
 - `crear_perfil_por_rol()` → `trigger` · plpgsql · SECURITY DEFINER · search_path: search_path=""
-- `fn_sync_unidades_jersey()` → `trigger` · plpgsql · search_path: search_path=public
+- `fn_sync_unidades_jersey()` → `trigger` · plpgsql · search_path: sin fijar
 - `registrar_pago_cartera(p_id_cartera integer, p_metodo_pago character varying, p_referencia character varying, p_user_id integer, p_fecha_pago date, p_id_transaccion integer)` → `integer` · plpgsql · search_path: search_path=public
 - `registrar_pago_mensual(p_id_pago integer, p_metodo_pago character varying, p_referencia character varying, p_user_id integer, p_fecha_pago date, p_id_transaccion integer)` → `integer` · plpgsql · search_path: search_path=public
 - `set_updated_at()` → `trigger` · plpgsql · search_path: search_path=""
@@ -1128,4 +1098,3 @@ Columnas: `id` integer, `username` character varying(50), `email` character vary
 - `tr_socio_perfil_cambio_socio()` → `trigger` · plpgsql · search_path: search_path=public
 - `update_updated_at_column()` → `trigger` · plpgsql · search_path: search_path=public
 - `verificar_instalacion()` → `text` · plpgsql · search_path: search_path=public
-

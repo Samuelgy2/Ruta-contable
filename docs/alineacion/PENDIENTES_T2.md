@@ -2,36 +2,30 @@
 
 T2 escribe solo en `backend/migrations/**` y `docs/bd/**`. Lo de abajo lo encontró T2, pero lo resuelve quien es dueño de la ruta. Detalle y evidencia: `docs/bd/bd-estandar.md`.
 
-## Para T3 (backend)
+## Para T3 (backend) — Estado al cierre
 
-1. **Bloqueo de D4 y del paso 7 de L2b.** `setupDatabase()` en `backend/server.js:118-207` hace:
-   - `CREATE TABLE IF NOT EXISTS users` (`:121`) y `transactions` (`:184`);
-   - siembra `admin`/`admin123` (`:147-151`);
-   - recrea `idx_socio_documento` (`:178`).
+1. **Resuelto (DDL en `server.js`):** T3 reemplazó `setupDatabase()` por `verificarEsquema()` en `backend/server.js`.
+2. **Resuelto (Fase 2 de proveedores):** Tras desplegar en Render el código sin `/api/proveedores`, se aplicó `backend/migrations/20261105_proveedores_fase2_eliminar.up.sql` en Supabase (versión `20261106202639`) y se regeneraron `docs/bd/diccionario.md` y `docs/bd/er.md`.
+3. **Verificado (`transactions_metodo_pago_check`):** `controllers/PagoController.js` registra pagos de pasarela con `'tarjeta'`, que cumple el CHECK (`efectivo/transferencia/tarjeta/cheque`).
+4. **Resuelto (`users.reset_token`):** `routes/forgotPassword.js` almacena `reset_token` como hash SHA-256 (`crypto.createHash('sha256')`) y sin trazas de diagnóstico en consola.
 
-   Si T2 renombra tablas (D4) o borra ese índice antes de que se quite este DDL (plan §9.1.2), el siguiente arranque recrea los objetos, incluidas las tablas vacías con el admin por defecto. **Orden obligatorio: primero T3 quita el DDL y lo despliega; después T2 migra.**
-2. **Bloqueo de la fase 2 de proveedores** (`backend/migrations/20261105_proveedores_fase2_eliminar.up.sql`). Al 6 nov, el retiro de proveedores del backend (`ProveedorController.js` y `routes/proveedores.js` borrados; cambios en `server.js` y `CompraController.js`) está sin commitear, y `origin/main` todavía referencia `proveedores`. Pasos: commitear, integrar y desplegar en Render, y avisar a T2. Recién entonces T2 aplica la fase 2, que ya está ensayada en local. Decisión de Samuel (6 nov): esperar el despliegue.
-3. `transactions_metodo_pago_check` solo admite `efectivo/transferencia/tarjeta/cheque`. Revisar qué `metodo_pago` manda `controllers/PagoController.js` cuando una pasarela aprueba un pago. NO VERIFICADO.
-4. `users.reset_token`: confirmar si se guarda en claro o con hash (`routes/forgotPassword.js`). NO VERIFICADO.
-
-## Para T1 (brechas.csv)
+## Para T1 (brechas.csv) — Estado al cierre
 
 | Tema | Evidencia | Nota |
 |---|---|---|
-| RNF-009 (avisar errores a los administradores) | tabla `alerta_sistema` (2 filas), sin código que escriba en ella | La estructura existe, pero el código no la usa |
-| RNF-007 (logs) | `auditoria` solo la escribe `controllers/LandingController.js:149` | Auditoría parcial: solo el módulo landing |
-| RF-055/058 (facturación) | `factura`, `detalle_factura` y `pago_factura` existen, sin código | El esquema existe y la API no |
-| `camerino`, `poliza_salud` | tablas sin código, 0 filas | El README las declara como API pendiente |
-| `tipo_cartera`, `cartera.id_tipo_cartera`, `cartera.forma_pago` | sin uso en `backend/` | Ver si algún RF de cartera las pide |
-| `movimiento_inventario` | 5 filas, sin código | Ver si el RF de inventario pide movimientos o kardex |
-| `config_mensualidad` | sin código; se solapa con `system_data.dia_vencimiento_default` | — |
-| Función `sp_registrar_pago_mensual` | inserta en `transaccion_fin`, tabla que no existe | Rota y sin uso |
+| RNF-009 (avisar errores a los administradores) | `server.js`, `routes/admin.js` y `useAlerts.ts` | Implementado: errores 5xx se registran en `alerta_sistema` y se muestran en la campana |
+| RNF-007 (logs) | `auditoria` en `LandingController.js` + `morgan` y `security.log` | Alineado en `matriz_v2.xlsx` |
+| RF-055/058 (facturación) | `FacturaController.js`, `routes/facturas.js`, `AdminFacturas.tsx` | Implementado e integrado |
+| `camerino`, `poliza_salud` | tablas sin código, 0 filas | Documentadas como reserva para versiones futuras |
+| `tipo_cartera`, `cartera.id_tipo_cartera` | `CarteraController.js`, `AdminCartera.tsx` | Implementado (RF-081) |
+| `movimiento_inventario` | `InventarioController.js`, `CompraController.js`, `AdminInventario.tsx` | Implementado (RF-072, Kardex de movimientos) |
+| `config_mensualidad` | sin código; se usa `system_data.dia_vencimiento_default` | Documentado en `diccionario.md` |
+| Función `sp_registrar_pago_mensual` | reemplazada en uso por `registrar_pago_mensual` | Documentado en `bd-estandar.md` |
 
 ## Para T4 (README y manuales)
 
-- El diagrama ER del README (`README.md`, bloque Mermaid alrededor de las líneas 330-480) está desactualizado: todavía muestra `proveedores` relacionada con `compra` y `factura`, y le faltan las tablas nuevas. Lo vigente, generado del esquema vivo, está en `docs/bd/er.md` y `docs/bd/diccionario.md`. Conviene enlazarlos en lugar de copiarlos, porque se regeneran después de cada migración.
-- El Manual Técnico (BD) y el Manual de Instalación pueden citar `docs/bd/diccionario.md`, `docs/bd/er.md` y `backend/migrations/0000_baseline.sql` más las migraciones listadas en `docs/bd/CAMBIOS.md`.
+- Resuelto: `README.md`, `MANUAL_TECNICO.md` y `MANUAL_INSTALACION.md` enlazan a `docs/bd/er.md`, `docs/bd/diccionario.md`, `backend/migrations/0000_baseline.sql` y `docs/bd/CAMBIOS.md`.
 
 ## Para quien administre `graphify-out/`
 
-`graphify-out/graph.json` no existe en este árbol, así que `graphify query` falla y T2 usó grep (regla del CLAUDE.md: aplica "cuando graph.json existe"). Para regenerarlo: `graphify update .`
+- Resuelto: `graphify update .` ejecutado tras la integración.

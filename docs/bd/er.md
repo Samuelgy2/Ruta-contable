@@ -1,6 +1,6 @@
 # Diagrama entidad-relación — Ruta Contable
 
-Generado desde el catálogo de PostgreSQL con `docs/bd/genera_er.sql`. No se edita a mano: se regenera después de cada migración. 35 tablas y 62 relaciones (FK). Cada relación lleva como etiqueta la columna FK de la tabla hija. Detalle de columnas, tipos completos y restricciones: `docs/bd/diccionario.md`.
+Generado desde el catálogo de PostgreSQL con `docs/bd/genera_er.sql`. No se edita a mano: se regenera después de cada migración. 34 tablas y 59 relaciones (FK). Cada relación lleva como etiqueta la columna FK de la tabla hija. Detalle de columnas, tipos completos y restricciones: `docs/bd/diccionario.md`.
 
 ```mermaid
 erDiagram
@@ -91,7 +91,6 @@ erDiagram
     text observaciones
     integer created_by FK
     timestamp created_at
-    integer id_proveedor FK
     varchar estado
     integer approved_by FK
     timestamp approved_at
@@ -150,7 +149,6 @@ erDiagram
     integer created_by FK
     timestamp created_at
     timestamp updated_at
-    integer id_proveedor FK
     integer id_socio FK
     numeric monto_pagado
     varchar nro_factura
@@ -321,18 +319,6 @@ erDiagram
     integer categoria_id FK
     varchar codigo
   }
-  proveedores {
-    integer id_proveedor PK
-    varchar nombre UK
-    varchar nit
-    varchar telefono
-    varchar email
-    varchar direccion
-    varchar estado
-    text observaciones
-    integer created_by FK
-    timestamp created_at
-  }
   socio {
     integer id_socio PK
     varchar nombre
@@ -442,8 +428,6 @@ erDiagram
   pedido_jersey ||--o{ inventario_jersey : "id_pedido"
   products |o--o{ detalle_compra : "id_producto"
   products ||--o{ movimiento_inventario : "id_producto"
-  proveedores |o--o{ compra : "id_proveedor"
-  proveedores |o--o{ factura : "id_proveedor"
   socio ||--o{ asistencia : "id_socio"
   socio ||--o{ camerino : "id_socio"
   socio ||--o{ cartera : "id_socio"
@@ -485,10 +469,8 @@ erDiagram
   users |o--o{ pago_factura : "created_by"
   users |o--o{ pago_factura : "registrado_by"
   users |o--o{ pagos_pasarela : "user_id"
-  users |o--o{ proveedores : "created_by"
   users |o--o{ socio : "created_by"
   users |o--o{ socio_documento : "created_by"
   users ||--o| socio_perfil : "user_id"
   users |o--o{ transactions : "created_by"
 ```
-

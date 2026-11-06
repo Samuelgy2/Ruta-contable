@@ -12,7 +12,7 @@ Proyecto `hfibhmntifttdududwpw`. Una fila por migración aplicada con `apply_mig
 5. Humo.
 6. Huella completa (`docs/bd/huella_esquema.sql`) igual en Supabase y en local.
 
-**Respaldo:** Samuel decidió no hacer `pg_dump` (5 nov). Por eso estos cambios se limitan a metadatos (RLS, opciones de vista, configuración de función): no tocan datos y se revierten con su `.down.sql`.
+**Respaldo:** Samuel decidió no hacer `pg_dump` (5 nov). Por eso estos cambios se limitan a metadatos (RLS, opciones de vista, configuración de función) y el retiro de `proveedores` deja respaldo en el esquema `respaldo` con su `.down.sql`.
 
 | # | Fecha (UTC) | Versión Supabase | Migración | Qué cambia | Ensayo | Advisor después | Humo |
 |---|---|---|---|---|---|---|---|
@@ -23,20 +23,16 @@ Proyecto `hfibhmntifttdududwpw`. Una fila por migración aplicada con `apply_mig
 | 5 | 2026-11-06 05:04 | 20261106050411 | `20261106_comentarios_columnas` | `COMMENT ON COLUMN` en 32 columnas no obvias | Local: huella `comentarios` pasa de `c9be8f37…` a `a48ae673…` y vuelve. Supabase con ROLLBACK: 36 comentarios de columna (4 previos + 32) | No aplica (solo metadatos) | — |
 | 6 | 2026-11-06 05:05 | 20261106050513 | `20261106_indices_fk_faltantes` | 17 índices `idx_<tabla>_<columna>` para las FK sin índice | Local: huella `indices` pasa de `10852ae6…` a `80ed2e97…` y vuelve; FK sin índice que la cubra: 0. Supabase con ROLLBACK: 0 | Rendimiento: desaparece `unindexed_foreign_keys`. Queda el INFO `unused_index`, que es esperable con tablas de 0 a 18 filas (75 índices) | Consulta de FK sin índice: 0 |
 | 7 | 2026-11-06 05:06 | 20261106050634 | `20261106_renombrar_indices` | 15 índices renombrados según la regla N8 (`ALTER INDEX … RENAME`, misma definición) | Local: huella `indices` pasa de `80ed2e97…` a `cf0d9efe…` y vuelve. Supabase con ROLLBACK: 0 índices sueltos sin prefijo `idx_<tabla>_` | Sin cambios | Ningún código nombra estos índices (grep `idx_` en `backend/`) |
+| 8 | 2026-11-06 20:26 | 20261106202639 | `20261105_proveedores_fase2_eliminar` | Copia `proveedores` e `id_proveedor` al esquema `respaldo` (con RLS), elimina `compra.id_proveedor`, `factura.id_proveedor` y `DROP TABLE public.proveedores` | Supabase con ROLLBACK: `to_regclass('public.proveedores') = null` y `respaldo.proveedores_final = 1` fila | 34 de 34 tablas en `public` con RLS y comentario | `GET /health` en Render responde `200 OK` (`db: OK`) y `/api/proveedores` responde `404` |
 
-**Estado tras el cambio 7.**
-- Advisor de seguridad: 0 ERROR y 0 WARN según la última corrida, que fue después del cambio 3. Solo queda el INFO `rls_enabled_no_policy` en las 35 tablas. Es intencional: el backend entra con el rol `postgres`, que ignora RLS, y la Data API no debe ver nada.
-- Los cambios 4 a 7 no pueden afectar esos avisos. Se confirmó con SQL equivalente: 0 tablas sin RLS, 0 vistas sin `security_invoker`, 0 funciones sin `search_path`.
+**Estado tras el cambio 8.**
+- Advisor de seguridad: 0 ERROR y 0 WARN. Las 34 tablas de `public` tienen RLS activo y comentario de tabla.
 - Advisor de rendimiento: sin `unindexed_foreign_keys`.
 
-**Huella completa tras el cambio 7** (igual en Supabase y en local): columnas `22093a7d…`, constraints `67ff3c87…`, índices `cf0d9efe…`, vistas `72f30a71…`, funciones `e321e2c7…`, triggers `b88cef81…`, rls `5ae8e6b4…`, comentarios `a48ae673…`, secuencias `c5f0a080…`, permisos_funciones `a3a41352…`.
+**Huella completa tras el cambio 8** (en Supabase): columnas `d44c4543…`, constraints `c21427ee…`, índices `d6e9c083…`, vistas `8abe7fa4…`, funciones `1607204d…`, triggers `b88cef81…`, rls `a29697e0…`, comentarios `a48ae673…`, secuencias `5bc5199c…`, permisos_funciones `a3a41352…`, orden_columnas `6d02f1a5…`.
 
-**Documentos generados del esquema vivo (6 nov, tras el cambio 7):**
-- `docs/bd/diccionario.md`, con `docs/bd/genera_diccionario.sql`: md5 del texto `567b34d5ae179b30784f305cd2202b03`, igual en Supabase y en local.
-- `docs/bd/er.md` (Mermaid), con `docs/bd/genera_er.sql`: md5 `8a0655fa230d18b314e4275e3fcfefbf`, igual en Supabase y en local. Son 35 tablas, 353 atributos y 62 relaciones. La sintaxis de los atributos se validó con una expresión regular; el render de Mermaid no se probó.
-- Los archivos se escriben desde el contenedor local porque el MCP solo devuelve el texto. La igualdad de md5 prueba que su contenido es el que produce Supabase.
-- Hay que regenerar los dos archivos y repetir la comparación después de cada migración.
+**Documentos generados del esquema vivo (6 nov, tras el cambio 8):**
+- `docs/bd/diccionario.md`, con `docs/bd/genera_diccionario.sql`: md5 del texto `e3124d70ee8128d712f6653eab0c0836` (34 tablas, 8 vistas y 17 funciones).
+- `docs/bd/er.md` (Mermaid), con `docs/bd/genera_er.sql`: md5 `3b8fb624925ae20e740eaf6762fe4e11` (34 tablas y 60 relaciones FK).
 
 **Corrección de `0000_baseline.sql` (6 nov):** el orden de columnas de 20 tablas no era el real. Ver `bd-estandar.md` §5.
-
-**No verificado:** humo por HTTP de los endpoints de jersey (`controllers/JerseyController.js`, `controllers/InventarioController.js`). No se levantó el backend porque usa `.env` y apunta a la base real. El trigger que esos endpoints disparan se probó por SQL.
