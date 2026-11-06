@@ -3,6 +3,7 @@ import { usePaginacion } from '../../hooks/usePaginacion';
 import { Paginacion } from '../../components/ui/Paginacion';
 import { useSocios } from '../../hooks/useSocios';
 import { userService } from '../../services/userService';
+import { SocioDocumentos } from './SocioDocumentos';
 
 // ─── Tipos ────────────────────────────────────────────────────────────────────
 interface Socio {
@@ -223,6 +224,7 @@ export function AdminMembers({ onNavigate }: AdminMembersProps) {
   const [confirmDelete, setConfirmDelete] = useState<number | null>(null);
   const [submitting, setSubmitting] = useState<boolean>(false);
   const { toasts, show: showToast } = useToast();
+  const [documentosDe, setDocumentosDe] = useState<{ id: number; nombre: string } | null>(null);
 
   // ── Vínculo usuario ↔ socio ────────────────────────────────────────────────
   // Una sola fila abre el desplegable a la vez; los errores (409 de la BD) se
@@ -406,6 +408,12 @@ export function AdminMembers({ onNavigate }: AdminMembersProps) {
           onConfirm={() => { void handleDeleteConfirmed(); }}
           onCancel={() => setConfirmDelete(null)}
         />
+      )}
+
+      {documentosDe && (
+        <Modal onClose={() => setDocumentosDe(null)}>
+          <SocioDocumentos idSocio={documentosDe.id} nombre={documentosDe.nombre} onToast={showToast} onClose={() => setDocumentosDe(null)} />
+        </Modal>
       )}
 
       {showForm && (
@@ -800,6 +808,15 @@ export function AdminMembers({ onNavigate }: AdminMembersProps) {
                       )}
                     </td>
                     <td style={{ padding: '14px 16px', textAlign: 'right' }}>
+                      <button
+                        onClick={() => setDocumentosDe({ id: socio.id_socio, nombre: socio.nombre })}
+                        title="Documentos"
+                        aria-label={`Documentos de ${socio.nombre}`}
+                        style={{
+                          backgroundColor: '#f3f4f6', border: 'none', padding: '8px 10px',
+                          borderRadius: '8px', cursor: 'pointer', marginRight: '8px', fontSize: '15px',
+                        }}
+                      >📄</button>
                       <button
                         onClick={() => openEdit(socio)}
                         title="Editar"

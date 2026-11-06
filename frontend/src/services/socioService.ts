@@ -37,4 +37,20 @@ export const socioService = {
     const response = await api.delete(`/socios/${idSocio}/vincular`);
     return response.data;
   },
+
+  // Documentos del socio (RF-050): el archivo viaja como cuerpo binario.
+  getDocumentos: async (idSocio: number) => (await api.get(`/socios/${idSocio}/documentos`)).data,
+
+  subirDocumento: async (idSocio: number, archivo: File, tipo: string) =>
+    (await api.post(
+      `/socios/${idSocio}/documentos?tipo=${encodeURIComponent(tipo)}&nombre=${encodeURIComponent(archivo.name)}`,
+      archivo,
+      { headers: { 'Content-Type': archivo.type || 'application/octet-stream' } },
+    )).data,
+
+  descargarDocumento: async (idSocio: number, idDocumento: number): Promise<Blob> =>
+    (await api.get(`/socios/${idSocio}/documentos/${idDocumento}/archivo`, { responseType: 'blob' })).data,
+
+  eliminarDocumento: async (idSocio: number, idDocumento: number) =>
+    (await api.delete(`/socios/${idSocio}/documentos/${idDocumento}`)).data,
 };
