@@ -86,7 +86,10 @@ function estadoBadge(estado: string) {
 // ─── Formulario (crear / editar) ──────────────────────────────────────────────
 interface LineaForm { servicio: string; descripcion: string; cantidad: string; valorUnitario: string; descuento: string; iva: string; }
 const lineaVacia = (): LineaForm => ({ servicio: '', descripcion: '', cantidad: '1', valorUnitario: '', descuento: '0', iva: '0' });
-const totalLinea = (l: LineaForm) => num(l.cantidad) * num(l.valorUnitario) - num(l.descuento) + num(l.iva);
+// Igual que el backend (totalLineaCentavos): descuento e IVA son porcentajes.
+const calcLinea = (cantidad: number, valor: number, desc: number, iva: number) =>
+  Math.round(Math.round(cantidad * Math.round(valor * 100) * (1 - desc / 100)) * (1 + iva / 100)) / 100;
+const totalLinea = (l: LineaForm) => calcLinea(num(l.cantidad), num(l.valorUnitario), num(l.descuento), num(l.iva));
 
 function FormFactura({ inicial, onGuardado, onClose, toast }: {
   inicial: FacturaDetalle | null;
@@ -171,7 +174,7 @@ function FormFactura({ inicial, onGuardado, onClose, toast }: {
       <div style={{ overflowX: 'auto' }}>
         <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: '640px' }}>
           <thead>
-            <tr>{['Producto o servicio', 'Cant.', 'Valor unitario', 'Descuento', 'IVA', 'Total', ''].map(h => <th key={h} style={{ textAlign: 'left', fontSize: '12px', color: '#6b7280', padding: '4px' }}>{h}</th>)}</tr>
+            <tr>{['Producto o servicio', 'Cant.', 'Valor unitario', 'Desc. %', 'IVA %', 'Total', ''].map(h => <th key={h} style={{ textAlign: 'left', fontSize: '12px', color: '#6b7280', padding: '4px' }}>{h}</th>)}</tr>
           </thead>
           <tbody>
             {lineas.map((l, i) => (
@@ -179,8 +182,8 @@ function FormFactura({ inicial, onGuardado, onClose, toast }: {
                 <td style={{ padding: '4px' }}><input aria-label={`Servicio línea ${i + 1}`} value={l.servicio} maxLength={200} required onChange={e => setLinea(i, 'servicio', e.target.value)} style={inputStyle} /></td>
                 <td style={{ padding: '4px', width: '70px' }}><input aria-label={`Cantidad línea ${i + 1}`} type="number" min="1" step="1" value={l.cantidad} required onChange={e => setLinea(i, 'cantidad', e.target.value)} style={inputStyle} /></td>
                 <td style={{ padding: '4px', width: '130px' }}><input aria-label={`Valor unitario línea ${i + 1}`} type="number" min="0.01" step="0.01" value={l.valorUnitario} required onChange={e => setLinea(i, 'valorUnitario', e.target.value)} style={inputStyle} /></td>
-                <td style={{ padding: '4px', width: '110px' }}><input aria-label={`Descuento línea ${i + 1}`} type="number" min="0" step="0.01" value={l.descuento} onChange={e => setLinea(i, 'descuento', e.target.value)} style={inputStyle} /></td>
-                <td style={{ padding: '4px', width: '100px' }}><input aria-label={`IVA línea ${i + 1}`} type="number" min="0" step="0.01" value={l.iva} onChange={e => setLinea(i, 'iva', e.target.value)} style={inputStyle} /></td>
+                <td style={{ padding: '4px', width: '110px' }}><input aria-label={`Descuento % línea ${i + 1}`} type="number" min="0" max="100" step="0.01" value={l.descuento} onChange={e => setLinea(i, 'descuento', e.target.value)} style={inputStyle} /></td>
+                <td style={{ padding: '4px', width: '100px' }}><input aria-label={`IVA % línea ${i + 1}`} type="number" min="0" max="100" step="0.01" value={l.iva} onChange={e => setLinea(i, 'iva', e.target.value)} style={inputStyle} /></td>
                 <td style={{ padding: '4px', fontSize: '14px', whiteSpace: 'nowrap' }}>{formatCurrency(totalLinea(l), 'COP')}</td>
                 <td style={{ padding: '4px' }}>
                   <button type="button" aria-label={`Quitar línea ${i + 1}`} disabled={lineas.length === 1} onClick={() => setLineas(prev => prev.filter((_, j) => j !== i))} style={{ ...btn('white', '#dc2626', '1px solid #fecaca'), padding: '8px 10px', opacity: lineas.length === 1 ? 0.4 : 1 }}>×</button>
@@ -259,7 +262,7 @@ function VerFactura({ factura, onCambio, onEditar, onClose, toast }: {
 
       <div style={{ overflowX: 'auto' }}>
         <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-          <thead><tr>{['#', 'Producto o servicio', 'Cant.', 'Valor unit.', 'Desc.', 'IVA', 'Total'].map(h => <th key={h} style={{ ...celda, textAlign: 'left', fontSize: '12px', color: '#6b7280' }}>{h}</th>)}</tr></thead>
+          <thead><tr>{['#', 'Producto o servicio', 'Cant.', 'Valor unit.', 'Desc. %', 'IVA %', 'Total'].map(h => <th key={h} style={{ ...celda, textAlign: 'left', fontSize: '12px', color: '#6b7280' }}>{h}</th>)}</tr></thead>
           <tbody>
             {factura.detalles.map(d => (
               <tr key={d.nro_linea}>
@@ -267,9 +270,9 @@ function VerFactura({ factura, onCambio, onEditar, onClose, toast }: {
                 <td style={celda}>{d.servicio}{d.descripcion ? <div style={{ fontSize: '12px', color: '#6b7280' }}>{d.descripcion}</div> : null}</td>
                 <td style={celda}>{d.cantidad}</td>
                 <td style={celda}>{formatCurrency(num(d.valor_unitario), 'COP')}</td>
-                <td style={celda}>{formatCurrency(num(d.descuento), 'COP')}</td>
-                <td style={celda}>{formatCurrency(num(d.iva), 'COP')}</td>
-                <td style={celda}>{formatCurrency(d.cantidad * num(d.valor_unitario) - num(d.descuento) + num(d.iva), 'COP')}</td>
+                <td style={celda}>{num(d.descuento)}%</td>
+                <td style={celda}>{num(d.iva)}%</td>
+                <td style={celda}>{formatCurrency(calcLinea(d.cantidad, num(d.valor_unitario), num(d.descuento), num(d.iva)), 'COP')}</td>
               </tr>
             ))}
           </tbody>

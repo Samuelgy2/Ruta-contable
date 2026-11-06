@@ -12,6 +12,15 @@ const METODOS_PAGO_VALIDOS = ['efectivo', 'transferencia', 'tarjeta', 'cheque'];
 // Dinero en centavos para comparar sin errores de coma flotante.
 const centavos = (v) => Math.round(Number(v) * 100);
 
+// valor_unitario y valor_total son numeric(10,2); descuento e iva son numeric(5,2): porcentajes.
+const MAX_VALOR = 99999999.99;
+
+// Total de una línea en centavos: cantidad × valor × (1 − descuento%) × (1 + iva%).
+function totalLineaCentavos({ cantidad, valorUnitario, descuento = 0, iva = 0 }) {
+  const neto = Math.round(cantidad * centavos(valorUnitario) * (1 - descuento / 100));
+  return Math.round(neto * (1 + iva / 100));
+}
+
 const SELECT_FACTURA = `
   SELECT f.*, s.nombre AS socio_nombre, s.documento AS socio_documento,
          (f.valor_total - f.monto_pagado) AS saldo
@@ -21,7 +30,7 @@ const SELECT_FACTURA = `
 
 // Valida cabecera y detalles; devuelve { error } o { datos } con los totales ya calculados.
 // RN-001: tercero obligatorio (socio existente o proveedor). RN-002: al menos un detalle.
-// RN-003: el total se calcula de los detalles: Σ (cantidad × valor_unitario − descuento + iva).
+// RN-003: el total se calcula de los detalles con totalLineaCentavos (descuento e IVA en %).
 function validarFactura(body) {
   const { fecha, concepto, idSocio, proveedorNombre, nroFactura, fechaVencimiento, observaciones, detalles } = body || {};
   const proveedor = typeof proveedorNombre === 'string' ? proveedorNombre.trim() : '';
@@ -51,14 +60,16 @@ function validarFactura(body) {
     if (!servicio || servicio.length > 200) return { error: `Detalle ${n}: el producto o servicio es obligatorio (máximo 200 caracteres)` };
     if (!Number.isInteger(cantidad) || cantidad < 1) return { error: `Detalle ${n}: la cantidad debe ser un entero mayor a cero` };
     if (!(valorUnitario > 0)) return { error: `Detalle ${n}: el valor unitario debe ser mayor a cero` };
-    if (!(descuento >= 0) || !(iva >= 0)) return { error: `Detalle ${n}: descuento e IVA no pueden ser negativos` };
+    if (!(descuento >= 0 && descuento <= 100) || !(iva >= 0 && iva <= 100)) {
+      return { error: `Detalle ${n}: descuento e IVA son porcentajes entre 0 y 100` };
+    }
+    if (cantidad * valorUnitario > MAX_VALOR) return { error: `Detalle ${n}: el subtotal supera el máximo permitido` };
 
-    const bruto = cantidad * centavos(valorUnitario);
-    if (centavos(descuento) > bruto) return { error: `Detalle ${n}: el descuento no puede superar el subtotal` };
-    totalCentavos += bruto - centavos(descuento) + centavos(iva);
+    totalCentavos += totalLineaCentavos({ cantidad, valorUnitario, descuento, iva });
     lineas.push({ servicio, descripcion: d.descripcion?.trim() || null, cantidad, valorUnitario, descuento, iva });
   }
   if (totalCentavos <= 0) return { error: 'El total de la factura debe ser mayor a cero' };
+  if (totalCentavos > centavos(MAX_VALOR)) return { error: 'El total de la factura supera el máximo permitido' };
 
   return {
     datos: {
@@ -265,4 +276,4 @@ async function registrarPago(req, res) {
   }
 }
 
-module.exports = { getAll, getById, create, update, anular, registrarPago, validarFactura };
+module.exports = { getAll, getById, create, update, anular, registrarPago, validarFactura, totalLineaCentavos };

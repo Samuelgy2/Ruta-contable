@@ -2,20 +2,30 @@
 // Ejecutar: node --test tests/rf-faltantes.test.js
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const { validarFactura } = require('../controllers/FacturaController');
+const { validarFactura, totalLineaCentavos } = require('../controllers/FacturaController');
 const { detectarTipo } = require('../controllers/SocioDocumentoController');
 
 const base = { fecha: '2026-11-05', concepto: 'QA_factura', idSocio: 1, detalles: [{ servicio: 'QA_cuota', cantidad: 2, valorUnitario: 10000 }] };
 
-test('RN-003: total = Σ (cantidad × valor − descuento + iva), en centavos exactos', () => {
+test('RN-003: total = Σ cantidad × valor × (1 − desc%) × (1 + IVA%), en centavos exactos', () => {
   const { datos } = validarFactura({
     ...base,
     detalles: [
-      { servicio: 'A', cantidad: 3, valorUnitario: 0.1 },                       // 0.30
-      { servicio: 'B', cantidad: 1, valorUnitario: 10000, descuento: 1, iva: 0.2 }, // 9999.20
+      { servicio: 'A', cantidad: 3, valorUnitario: 0.1 },                          // 0.30
+      { servicio: 'B', cantidad: 2, valorUnitario: 10000, descuento: 10 },          // 18000.00
+      { servicio: 'C', cantidad: 1, valorUnitario: 50000, iva: 19 },                // 59500.00
+      { servicio: 'D', cantidad: 1, valorUnitario: 333.33, descuento: 5, iva: 19 }, // 316.66 → 376.83
     ],
   });
-  assert.equal(datos.total, 9999.5);
+  assert.equal(datos.total, 77877.13);
+  assert.equal(totalLineaCentavos({ cantidad: 1, valorUnitario: 100, descuento: 100 }), 0);
+});
+
+test('descuento e IVA son porcentajes 0..100 y el total respeta numeric(10,2)', () => {
+  assert.match(validarFactura({ ...base, detalles: [{ servicio: 'X', valorUnitario: 10, descuento: 101 }] }).error, /porcentajes/);
+  assert.match(validarFactura({ ...base, detalles: [{ servicio: 'X', valorUnitario: 10, iva: 9500 }] }).error, /porcentajes/);
+  assert.match(validarFactura({ ...base, detalles: [{ servicio: 'X', cantidad: 2, valorUnitario: 60000000 }] }).error, /máximo/);
+  assert.match(validarFactura({ ...base, detalles: [{ servicio: 'X', valorUnitario: 10, descuento: 100 }] }).error, /mayor a cero/);
 });
 
 test('RN-001: exige socio o proveedor, pero no ambos', () => {
@@ -32,8 +42,7 @@ test('límites de detalle: cantidad, valor, descuento', () => {
   assert.match(validarFactura({ ...base, detalles: [{ servicio: 'X', cantidad: 0, valorUnitario: 1 }] }).error, /cantidad/);
   assert.match(validarFactura({ ...base, detalles: [{ servicio: 'X', cantidad: 1.5, valorUnitario: 1 }] }).error, /cantidad/);
   assert.match(validarFactura({ ...base, detalles: [{ servicio: 'X', valorUnitario: 0 }] }).error, /valor unitario/);
-  assert.match(validarFactura({ ...base, detalles: [{ servicio: 'X', valorUnitario: 10, descuento: 11 }] }).error, /descuento no puede superar/);
-  assert.match(validarFactura({ ...base, detalles: [{ servicio: 'X', valorUnitario: 10, iva: -1 }] }).error, /negativos/);
+  assert.match(validarFactura({ ...base, detalles: [{ servicio: 'X', valorUnitario: 10, iva: -1 }] }).error, /porcentajes/);
   assert.match(validarFactura({ ...base, detalles: [{ servicio: '', valorUnitario: 10 }] }).error, /producto o servicio/);
 });
 
