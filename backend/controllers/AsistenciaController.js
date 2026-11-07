@@ -81,6 +81,14 @@ async function create(req, res) {
         message: "estado debe ser 'Presente', 'Ausente', 'Justificado' o 'Tarde'",
       });
     }
+    // RN-004: solo socios activos (mismo criterio que la checklist).
+    const socio = await pool.query('SELECT estado FROM socio WHERE id_socio = $1', [idSocio]);
+    if (socio.rows.length === 0) {
+      return res.status(404).json({ success: false, message: 'Socio no encontrado' });
+    }
+    if (socio.rows[0].estado !== 'activo') {
+      return res.status(400).json({ success: false, message: 'No se puede registrar asistencia de un socio inactivo' });
+    }
 
     const result = await pool.query(
       `INSERT INTO asistencia (id_socio, fecha, tipo_entrenamiento, estado, observacion, registrado_by)
