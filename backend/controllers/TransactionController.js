@@ -1,4 +1,5 @@
 const pool = require('../db');
+const { buscarPeriodoCerrado, mensajePeriodoCerrado } = require('../utils/periodoCerrado');
 
 // Normaliza 'income'/'expense' (frontend legacy) → 'ingreso'/'gasto' (BD, columna transactions.tipo)
 function normalizeTipo(tipo) {
@@ -186,6 +187,12 @@ async function create(req, res) {
       });
     }
 
+    // RN-018.3: un mes cerrado no admite movimientos nuevos.
+    const periodoCerrado = await buscarPeriodoCerrado([fecha]);
+    if (periodoCerrado) {
+      return res.status(409).json({ success: false, message: mensajePeriodoCerrado(periodoCerrado) });
+    }
+
     // tipo obligatorio
     if (!tipo) {
       return res.status(400).json({ success: false, message: 'El tipo de transacción es obligatorio.' });
@@ -281,6 +288,12 @@ async function update(req, res) {
       return res.status(404).json({ success: false, message: 'Transacción no encontrada' });
     }
 
+    // RN-018.3: ni editar un movimiento de un mes cerrado ni moverlo a uno.
+    const periodoCerrado = await buscarPeriodoCerrado([existing.rows[0].fecha, fecha]);
+    if (periodoCerrado) {
+      return res.status(409).json({ success: false, message: mensajePeriodoCerrado(periodoCerrado) });
+    }
+
     const tipoNormalizado = tipo ? normalizeTipo(tipo) : existing.rows[0].tipo;
     if (tipo && !['ingreso', 'gasto'].includes(tipoNormalizado)) {
       return res.status(400).json({
@@ -361,6 +374,17 @@ async function update(req, res) {
 async function remove(req, res) {
   try {
     const { id } = req.params;
+    const existing = await pool.query('SELECT fecha FROM transactions WHERE id = $1', [id]);
+    if (existing.rows.length === 0) {
+      return res.status(404).json({ success: false, message: 'Transacción no encontrada' });
+    }
+
+    // RN-018.3: borrar un movimiento de un mes cerrado descuadraría el cierre.
+    const periodoCerrado = await buscarPeriodoCerrado([existing.rows[0].fecha]);
+    if (periodoCerrado) {
+      return res.status(409).json({ success: false, message: mensajePeriodoCerrado(periodoCerrado) });
+    }
+
     const result = await pool.query(
       'DELETE FROM transactions WHERE id = $1 RETURNING id', [id]
     );

@@ -1,4 +1,5 @@
 const pool = require('../db');
+const { buscarPeriodoCerrado, mensajePeriodoCerrado } = require('../utils/periodoCerrado');
 
 const SELECT_WITH_JOIN = `
   SELECT pm.*, s.nombre AS socio_nombre, s.documento AS socio_documento,
@@ -180,6 +181,12 @@ async function update(req, res) {
     if (estadoFinal === 'pagado' && actual.estado !== 'pagado') {
       if (!metodoPago || !METODOS_PAGO_VALIDOS.includes(metodoPago)) {
         return res.status(400).json({ success: false, message: `El m?todo de pago es obligatorio (${METODOS_PAGO_VALIDOS.join(', ')})` });
+      }
+      // RN-018.3: el pago genera un ingreso con fecha = fecha de pago; no puede
+      // caer en un mes ya cerrado.
+      const periodoCerrado = await buscarPeriodoCerrado([fechaPagoFinal]);
+      if (periodoCerrado) {
+        return res.status(409).json({ success: false, message: mensajePeriodoCerrado(periodoCerrado) });
       }
       // Pasar a 'pagado' crea el asiento en transactions y enlaza id_transaccion
       // en la misma transacción SQL (registrar_pago_mensual). El CHECK
