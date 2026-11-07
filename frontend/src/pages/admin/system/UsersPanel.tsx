@@ -40,6 +40,7 @@ export function UsersPanel({ showToast }: UsersPanelProps) {
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [form, setForm] = useState<FormState>(emptyForm);
+  const [confirmPassword, setConfirmPassword] = useState(''); // RF-001 Rn4: se digita dos veces
   const [confirmDelete, setConfirmDelete] = useState<number | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
@@ -57,9 +58,10 @@ export function UsersPanel({ showToast }: UsersPanelProps) {
   const inactivos = visibleUsers.filter((u: any) => !u.active);
   const admins = visibleUsers.filter((u: any) => u.role === 'admin');
 
-  const openCreate = () => { setEditingId(null); setForm(emptyForm); setShowForm(true); };
+  const openCreate = () => { setEditingId(null); setForm(emptyForm); setConfirmPassword(''); setShowForm(true); };
   const openEdit = (user: User) => {
     setForm({ username: user.username, password: '', fullName: user.fullName, email: user.email, role: user.role, active: user.active });
+    setConfirmPassword('');
     setEditingId(user.id);
     setShowForm(true);
   };
@@ -69,6 +71,10 @@ export function UsersPanel({ showToast }: UsersPanelProps) {
     e.preventDefault();
     if (!form.username || (!editingId && !form.password) || !form.fullName || !form.email) {
       showToast('Usuario, nombre completo, email y contraseña son obligatorios', 'error');
+      return;
+    }
+    if (form.password && form.password !== confirmPassword) {
+      showToast('Las contraseñas no coinciden', 'error');
       return;
     }
     setSubmitting(true);
@@ -109,6 +115,9 @@ export function UsersPanel({ showToast }: UsersPanelProps) {
               {f('Usuario', <input value={form.username} onChange={e => setForm({ ...form, username: e.target.value })} style={inputStyle} required />, true)}
               {f(editingId !== null ? 'Contraseña (dejar vacío para no cambiar)' : 'Contraseña', (
                 <PasswordInput value={form.password} onChange={e => setForm({ ...form, password: e.target.value })} style={inputStyle} required={editingId === null} />
+              ), editingId === null)}
+              {f('Confirmar contraseña', (
+                <PasswordInput value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} style={inputStyle} required={editingId === null || form.password !== ''} />
               ), editingId === null)}
               {f('Nombre Completo', <input value={form.fullName} onChange={e => setForm({ ...form, fullName: e.target.value })} style={inputStyle} required />, true)}
               {f('Email', <input type="email" value={form.email} onChange={e => setForm({ ...form, email: e.target.value })} style={inputStyle} required />, true)}

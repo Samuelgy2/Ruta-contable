@@ -4,6 +4,10 @@ const bcrypt = require('bcryptjs');
 const pool = require('../db');
 const { requireAdmin } = require('../middleware/auth');
 
+const FORMATO_EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/; // mismo criterio que AuthController y PortalController
+const ROLES = ['user', 'admin']; // CHECK users_role_check
+const vacio = (v) => !v || !String(v).trim();
+
 router.get('/', requireAdmin, async (req, res) => {
   try {
     const result = await pool.query(`
@@ -92,18 +96,26 @@ router.post('/', requireAdmin, async (req, res) => {
   try {
     const { username, password, email, fullName, role, active } = req.body;
 
-    if (!username || !password || !email || !fullName) {
-      return res.status(400).json({ 
-        success: false, 
-        message: 'Los campos username, password, email y fullName son requeridos' 
+    if (vacio(username) || !password || vacio(email) || vacio(fullName)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Los campos username, password, email y fullName son requeridos'
       });
     }
 
     if (password.length < 6) {
-      return res.status(400).json({ 
-        success: false, 
-        message: 'La contraseña debe tener al menos 6 caracteres' 
+      return res.status(400).json({
+        success: false,
+        message: 'La contraseña debe tener al menos 6 caracteres'
       });
+    }
+
+    if (!FORMATO_EMAIL.test(email)) {
+      return res.status(400).json({ success: false, message: 'El correo electrónico no tiene un formato válido' });
+    }
+
+    if (role && !ROLES.includes(role)) {
+      return res.status(400).json({ success: false, message: "El rol debe ser 'user' o 'admin'" });
     }
 
     const existingUser = await pool.query(
