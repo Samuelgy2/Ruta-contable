@@ -1,5 +1,6 @@
-import { useState, useRef, useCallback, CSSProperties } from 'react';
+import { useState, useRef, CSSProperties } from 'react';
 import { AppPage } from '../../../types/index';
+import { useToast } from '../../../components/ui/feedback';
 
 interface ForgotPasswordProps {
   onNavigate: (page: AppPage) => void;
@@ -9,52 +10,6 @@ interface ForgotPasswordProps {
 const CLUB_GREEN = '#10b981';
 
 type Step = 'email' | 'otp' | 'reset' | 'done';
-
-// ─── Toast ────────────────────────────────────────────────────────────────────
-type ToastType = 'success' | 'error' | 'warning';
-interface Toast { id: number; message: string; type: ToastType; }
-
-function useToast() {
-  const [toasts, setToasts] = useState<Toast[]>([]);
-  const show = useCallback((message: string, type: ToastType = 'success') => {
-    const id = Date.now();
-    setToasts(prev => [...prev, { id, message, type }]);
-    setTimeout(() => setToasts(prev => prev.filter(t => t.id !== id)), 4000);
-  }, []);
-  return { toasts, show };
-}
-
-function ToastContainer({ toasts }: { toasts: Toast[] }) {
-  const colors: Record<ToastType, { bg: string; border: string; icon: string }> = {
-    success: { bg: '#f0fdf4', border: '#10b981', icon: '✓' },
-    error:   { bg: '#fef2f2', border: '#ef4444', icon: '✕' },
-    warning: { bg: '#fffbeb', border: '#f59e0b', icon: '⚠' },
-  };
-  return (
-    <div style={{ position: 'fixed', top: '24px', right: '24px', zIndex: 9999, display: 'flex', flexDirection: 'column', gap: '10px' }}>
-      {toasts.map(t => {
-        const c = colors[t.type];
-        return (
-          <div key={t.id} style={{
-            display: 'flex', alignItems: 'center', gap: '12px',
-            backgroundColor: c.bg, border: `1px solid ${c.border}`,
-            borderLeft: `4px solid ${c.border}`, borderRadius: '10px',
-            padding: '14px 18px', boxShadow: '0 4px 16px rgba(0,0,0,0.10)',
-            minWidth: '280px', maxWidth: '380px', animation: 'slideIn 0.25s ease',
-          }}>
-            <span style={{
-              width: '22px', height: '22px', borderRadius: '50%',
-              backgroundColor: c.border, color: 'white',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              fontSize: '13px', fontWeight: '700', flexShrink: 0,
-            }}>{c.icon}</span>
-            <span style={{ fontSize: '14px', color: '#1f2937', fontWeight: '500' }}>{t.message}</span>
-          </div>
-        );
-      })}
-    </div>
-  );
-}
 
 // ─── Componente principal ─────────────────────────────────────────────────────
 export function ForgotPassword({ onNavigate }: ForgotPasswordProps) {
@@ -66,7 +21,7 @@ export function ForgotPassword({ onNavigate }: ForgotPasswordProps) {
   const [confirmPass,  setConfirmPass]  = useState('');
   const [loading,      setLoading]      = useState(false);
   const [attemptsLeft, setAttemptsLeft] = useState(3);
-  const { toasts, show: showToast } = useToast();
+  const { show: showToast } = useToast();
   const otpRefs = useRef<(HTMLInputElement | null)[]>([]);
 
   const inputStyle: CSSProperties = {
@@ -219,7 +174,6 @@ export function ForgotPassword({ onNavigate }: ForgotPasswordProps) {
         .rc-input:focus  { border-color: #10b981 !important; }
       `}</style>
 
-      <ToastContainer toasts={toasts} />
 
       <div style={{
         background: 'white', borderRadius: '24px', padding: '40px',

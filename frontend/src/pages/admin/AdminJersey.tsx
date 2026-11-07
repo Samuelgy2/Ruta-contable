@@ -6,6 +6,7 @@ import {
   jerseyService, JerseyCampana, JerseyPedido, JerseyEstado, JERSEY_ESTADOS,
 } from '../../services/jerseyService';
 import { formatCurrency, formatDateShort, hoyLocal } from '../../utils/format';
+import { toast, confirmar, type ToastType } from '../../components/ui/feedback';
 
 interface AdminJerseyProps {
   onNavigate?: (tab: string) => void;
@@ -65,12 +66,7 @@ export function AdminJersey({ onNavigate }: AdminJerseyProps) {
   const [pedidoBusy, setPedidoBusy] = useState<number | null>(null);
   const [filaError, setFilaError] = useState<Record<number, string>>({});
 
-  const [aviso, setAviso] = useState('');
-
-  const mostrarAviso = (texto: string) => {
-    setAviso(texto);
-    setTimeout(() => setAviso(''), 3500);
-  };
+  const mostrarAviso = (texto: string, tipo: ToastType = 'success') => toast(texto, tipo);
 
   const cargarCampanas = useCallback(async () => {
     setLoadingCampanas(true);
@@ -156,7 +152,7 @@ export function AdminJersey({ onNavigate }: AdminJerseyProps) {
   };
 
   const handleCerrarCampana = async (campana: JerseyCampana) => {
-    if (!window.confirm(`¿Cerrar la campaña "${campana.titulo}"? Los socios dejarán de poder pedir.`)) return;
+    if (!await confirmar({ title: '¿Cerrar la campaña?', message: `"${campana.titulo}": los socios dejarán de poder pedir.`, icon: '🔒', confirmLabel: 'Cerrar', confirmColor: '#f59e0b' })) return;
     try {
       const r = await jerseyService.updateCampana(campana.id, { activa: false });
       if (r?.success) {
@@ -164,7 +160,7 @@ export function AdminJersey({ onNavigate }: AdminJerseyProps) {
         await cargarCampanas();
       }
     } catch (err) {
-      mostrarAviso(mensajeDeError(err, 'No se pudo cerrar la campaña'));
+      mostrarAviso(mensajeDeError(err, 'No se pudo cerrar la campaña'), 'error');
     }
   };
 
@@ -176,7 +172,7 @@ export function AdminJersey({ onNavigate }: AdminJerseyProps) {
         await cargarCampanas();
       }
     } catch (err) {
-      mostrarAviso(mensajeDeError(err, 'No se pudo reabrir la campaña'));
+      mostrarAviso(mensajeDeError(err, 'No se pudo reabrir la campaña'), 'error');
     }
   };
 
@@ -242,7 +238,7 @@ export function AdminJersey({ onNavigate }: AdminJerseyProps) {
   };
 
   const handleEliminarPedido = async (pedido: JerseyPedido) => {
-    if (!window.confirm(`¿Eliminar el pedido de ${pedido.socioNombre ?? 'este socio'}?`)) return;
+    if (!await confirmar({ title: '¿Eliminar pedido?', message: `Se eliminará el pedido de ${pedido.socioNombre ?? 'este socio'}.` })) return;
     setPedidoBusy(pedido.id);
     try {
       const r = await jerseyService.deletePedido(pedido.id);
@@ -289,12 +285,6 @@ export function AdminJersey({ onNavigate }: AdminJerseyProps) {
   return (
     <div className="app">
       <div className="container">
-        {aviso && (
-          <div className="card" style={{ marginBottom: '16px', borderLeft: '4px solid #10b981', backgroundColor: '#f0fdf4', padding: '12px 16px' }}>
-            {aviso}
-          </div>
-        )}
-
         {/* ── Campañas ─────────────────────────────────────────────────────── */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
           <div>

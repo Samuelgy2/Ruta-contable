@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { socioService } from '../../services/socioService';
 import { formatDateShort } from '../../utils/format';
+import { confirmar } from '../../components/ui/feedback';
 
 // Documentos del socio (RF-050): listar, subir (PDF/JPG/PNG, máx. 5 MB), descargar y eliminar.
 
@@ -79,7 +80,7 @@ export function SocioDocumentos({ idSocio, nombre, onToast, onClose }: {
   };
 
   const eliminar = async (d: Documento) => {
-    if (!window.confirm(`¿Eliminar "${d.nombre_archivo}"? Esta acción no se puede deshacer.`)) return;
+    if (!await confirmar({ title: '¿Eliminar documento?', message: `"${d.nombre_archivo}" se eliminará. Esta acción no se puede deshacer.` })) return;
     try {
       const r = await socioService.eliminarDocumento(idSocio, d.id_documento);
       onToast(r.message, r.success ? 'success' : 'error');

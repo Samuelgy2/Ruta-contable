@@ -4,6 +4,7 @@ import { Paginacion } from '../../components/ui/Paginacion';
 import { useSocios } from '../../hooks/useSocios';
 import { facturaService } from '../../services/facturaService';
 import { formatCurrency, formatDateShort, hoyLocal } from '../../utils/format';
+import { toast as mostrarToast, confirmar } from '../../components/ui/feedback';
 
 // Facturación (RF-055 / RF-058): registrar, consultar, editar (sin pagos), anular y registrar pagos.
 
@@ -237,7 +238,7 @@ function VerFactura({ factura, onCambio, onEditar, onClose, toast }: {
   };
 
   const anular = async () => {
-    if (!window.confirm('¿Anular esta factura? Esta acción no se puede deshacer.')) return;
+    if (!await confirmar({ title: '¿Anular esta factura?', message: 'Esta acción no se puede deshacer.', icon: '🧾', confirmLabel: 'Anular' })) return;
     try {
       const r = await facturaService.anular(factura.id_factura);
       toast(r.message, r.success);
@@ -334,12 +335,10 @@ export function AdminFacturas(_props: AdminFacturasProps) {
   const [search, setSearch] = useState('');
   const [estado, setEstado] = useState('');
   const [vista, setVista] = useState<{ modo: 'nueva' } | { modo: 'ver' | 'editar'; factura: FacturaDetalle } | null>(null);
-  const [aviso, setAviso] = useState<{ texto: string; ok: boolean } | null>(null);
   const pag = usePaginacion(facturas);
 
   const toast = useCallback((texto: string, ok: boolean) => {
-    setAviso({ texto, ok });
-    setTimeout(() => setAviso(null), 3500);
+    mostrarToast(texto, ok ? 'success' : 'error');
   }, []);
 
   const cargar = useCallback(async () => {
@@ -373,12 +372,6 @@ export function AdminFacturas(_props: AdminFacturasProps) {
 
   return (
     <div className="app">
-      {aviso && (
-        <div role="status" style={{ position: 'fixed', top: '24px', right: '24px', zIndex: 9999, padding: '14px 18px', borderRadius: '10px', backgroundColor: aviso.ok ? '#f0fdf4' : '#fef2f2', border: `1px solid ${aviso.ok ? '#10b981' : '#ef4444'}`, borderLeft: `4px solid ${aviso.ok ? '#10b981' : '#ef4444'}`, fontSize: '14px', maxWidth: '360px', boxShadow: '0 4px 16px rgba(0,0,0,0.10)' }}>
-          {aviso.texto}
-        </div>
-      )}
-
       {vista?.modo === 'nueva' && (
         <Modal onClose={() => setVista(null)}>
           <FormFactura inicial={null} toast={toast} onClose={() => setVista(null)} onGuardado={() => { setVista(null); void cargar(); }} />

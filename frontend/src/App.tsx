@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { AuthProvider, useAuth } from './features/auth/contexts/AuthContext';
 import { DataProvider } from './contexts/DataContext';
+import { FeedbackHost } from './components/ui/feedback';
 import { Login } from './features/auth/pages/Login';
 import { Register } from './features/auth/pages/Register';
 import { ForgotPassword } from './features/auth/pages/ForgotPassword';
@@ -196,6 +197,7 @@ export default function App() {
     <AuthProvider>
       <DataProvider>
         <AppContent />
+        <FeedbackHost />
       </DataProvider>
     </AuthProvider>
   );

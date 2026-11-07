@@ -5,48 +5,13 @@ import { useCartera, CarteraItem, TipoCartera } from '../../hooks/useCartera';
 import { useSocios } from '../../hooks/useSocios';
 import { carteraService } from '../../services/carteraService';
 import { formatCurrency, formatDateShort, hoyLocal } from '../../utils/format';
+import { useToast, confirmar } from '../../components/ui/feedback';
 
 interface AdminCarteraProps {
   onNavigate?: (tab: string) => void;
 }
 
 const CLUB_GREEN = '#10b981';
-
-// ─── Toast ────────────────────────────────────────────────────────────────────
-type ToastType = 'success' | 'error' | 'warning';
-interface Toast { id: number; message: string; type: ToastType; }
-
-function useToast() {
-  const [toasts, setToasts] = useState<Toast[]>([]);
-  const show = useCallback((message: string, type: ToastType = 'success') => {
-    const id = Date.now();
-    setToasts(prev => [...prev, { id, message, type }]);
-    setTimeout(() => setToasts(prev => prev.filter(t => t.id !== id)), 3500);
-  }, []);
-  return { toasts, show };
-}
-
-function ToastContainer({ toasts }: { toasts: Toast[] }) {
-  const colors: Record<ToastType, { bg: string; border: string; icon: string }> = {
-    success: { bg: '#f0fdf4', border: '#10b981', icon: '✓' },
-    error:   { bg: '#fef2f2', border: '#ef4444', icon: '✕' },
-    warning: { bg: '#fffbeb', border: '#f59e0b', icon: '⚠' },
-  };
-  return (
-    <div style={{ position: 'fixed', top: '24px', right: '24px', zIndex: 9999, display: 'flex', flexDirection: 'column', gap: '10px' }}>
-      {toasts.map(t => {
-        const c = colors[t.type];
-        return (
-          <div key={t.id} style={{ display: 'flex', alignItems: 'center', gap: '12px', backgroundColor: c.bg, border: `1px solid ${c.border}`, borderLeft: `4px solid ${c.border}`, borderRadius: '10px', padding: '14px 18px', boxShadow: '0 4px 16px rgba(0,0,0,0.10)', minWidth: '280px', maxWidth: '360px', animation: 'slideIn 0.25s ease' }}>
-            <span style={{ width: '22px', height: '22px', borderRadius: '50%', backgroundColor: c.border, color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '13px', fontWeight: '700', flexShrink: 0 }}>{c.icon}</span>
-            <span style={{ fontSize: '14px', color: '#1f2937', fontWeight: '500' }}>{t.message}</span>
-          </div>
-        );
-      })}
-      <style>{`@keyframes slideIn { from { opacity: 0; transform: translateX(24px); } to { opacity: 1; transform: translateX(0); } }`}</style>
-    </div>
-  );
-}
 
 function Modal({ children, onClose }: { children: React.ReactNode; onClose: () => void }) {
   useEffect(() => {
@@ -104,7 +69,7 @@ export function AdminCartera({ onNavigate }: AdminCarteraProps) {
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState<FormState>(emptyForm);
   const [submitting, setSubmitting] = useState(false);
-  const { toasts, show: showToast } = useToast();
+  const { show: showToast } = useToast();
 
   // Tipos de cartera (RF-081)
   const [tipos, setTipos] = useState<TipoCartera[]>([]);
@@ -131,7 +96,7 @@ export function AdminCartera({ onNavigate }: AdminCarteraProps) {
   };
 
   const handleEliminarTipo = async (t: TipoCartera) => {
-    if (!window.confirm(`¿Eliminar el tipo "${t.nombre}"?`)) return;
+    if (!await confirmar({ title: '¿Eliminar tipo de cartera?', message: `Se eliminará el tipo "${t.nombre}".` })) return;
     try {
       const r = await carteraService.removeTipo(t.id_tipo);
       showToast(r.message, r.success ? 'success' : 'error');
@@ -234,14 +199,13 @@ export function AdminCartera({ onNavigate }: AdminCarteraProps) {
   };
 
   const anular = async (c: CarteraItem) => {
-    if (!window.confirm(`¿Anular "${c.concepto}" de ${c.socio_nombre ?? 'este socio'}? Un registro anulado ya no se puede editar.`)) return;
+    if (!await confirmar({ title: '¿Anular este registro?', message: `"${c.concepto}" de ${c.socio_nombre ?? 'este socio'}. Un registro anulado ya no se puede editar.`, icon: '🚫', confirmLabel: 'Anular' })) return;
     const result = await updateCartera(c.id_cartera, { estado: 'anulado' });
     showToast(result.success ? 'Registro anulado' : result.message, result.success ? 'warning' : 'error');
   };
 
   return (
     <div className="app">
-      <ToastContainer toasts={toasts} />
 
       {pagoModalId !== null && (
         <Modal onClose={() => setPagoModalId(null)}>

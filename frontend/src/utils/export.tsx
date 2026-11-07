@@ -1,9 +1,10 @@
 import { pdf } from '@react-pdf/renderer';
 import { ReportePDF, ReportePDFData, ComprobantePagoPDF, ComprobantePagoData } from './pdfDocuments';
+import { toast } from '../components/ui/feedback';
 
 export function exportToCSV(data: any[], filename: string) {
   if (data.length === 0) {
-    alert('No hay datos para exportar');
+    toast('No hay datos para exportar', 'warning');
     return;
   }
 
@@ -36,7 +37,7 @@ export async function exportReportePDF(reporte: ReportePDFData, filename: string
     descargarBlob(await pdf(<ReportePDF {...reporte} />).toBlob(), filename);
   } catch (error) {
     console.error('Error generating PDF:', error);
-    alert('Error al generar el PDF');
+    toast('Error al generar el PDF', 'error');
   }
 }
 
@@ -61,6 +62,6 @@ export async function descargarComprobantePago(pago: ComprobantePagoData) {
     descargarBlob(await pdf(<ComprobantePagoPDF pago={pago} />).toBlob(), `comprobante-${pago.referencia}.pdf`);
   } catch (error) {
     console.error('Error al generar el comprobante:', error);
-    alert('No se pudo generar el comprobante en PDF');
+    toast('No se pudo generar el comprobante en PDF', 'error');
   }
 }

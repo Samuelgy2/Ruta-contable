@@ -1,52 +1,17 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 import { usePaginacion } from '../../hooks/usePaginacion';
 import { Paginacion } from '../../components/ui/Paginacion';
 import { usePagosMensuales, PagoMensualItem } from '../../hooks/usePagosMensuales';
 import { usePeriodos } from '../../hooks/usePeriodos';
 import { useSocios } from '../../hooks/useSocios';
 import { formatCurrency, formatDateShort } from '../../utils/format';
+import { useToast } from '../../components/ui/feedback';
 
 interface AdminMonthlyPaymentsProps {
   onNavigate?: (tab: string) => void;
 }
 
 const CLUB_GREEN = '#10b981';
-
-// ─── Toast ────────────────────────────────────────────────────────────────────
-type ToastType = 'success' | 'error' | 'warning';
-interface Toast { id: number; message: string; type: ToastType; }
-
-function useToast() {
-  const [toasts, setToasts] = useState<Toast[]>([]);
-  const show = useCallback((message: string, type: ToastType = 'success') => {
-    const id = Date.now();
-    setToasts(prev => [...prev, { id, message, type }]);
-    setTimeout(() => setToasts(prev => prev.filter(t => t.id !== id)), 3500);
-  }, []);
-  return { toasts, show };
-}
-
-function ToastContainer({ toasts }: { toasts: Toast[] }) {
-  const colors: Record<ToastType, { bg: string; border: string; icon: string }> = {
-    success: { bg: '#f0fdf4', border: '#10b981', icon: '✓' },
-    error:   { bg: '#fef2f2', border: '#ef4444', icon: '✕' },
-    warning: { bg: '#fffbeb', border: '#f59e0b', icon: '⚠' },
-  };
-  return (
-    <div style={{ position: 'fixed', top: '24px', right: '24px', zIndex: 9999, display: 'flex', flexDirection: 'column', gap: '10px' }}>
-      {toasts.map(t => {
-        const c = colors[t.type];
-        return (
-          <div key={t.id} style={{ display: 'flex', alignItems: 'center', gap: '12px', backgroundColor: c.bg, border: `1px solid ${c.border}`, borderLeft: `4px solid ${c.border}`, borderRadius: '10px', padding: '14px 18px', boxShadow: '0 4px 16px rgba(0,0,0,0.10)', minWidth: '280px', maxWidth: '360px', animation: 'slideIn 0.25s ease' }}>
-            <span style={{ width: '22px', height: '22px', borderRadius: '50%', backgroundColor: c.border, color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '13px', fontWeight: '700', flexShrink: 0 }}>{c.icon}</span>
-            <span style={{ fontSize: '14px', color: '#1f2937', fontWeight: '500' }}>{t.message}</span>
-          </div>
-        );
-      })}
-      <style>{`@keyframes slideIn { from { opacity: 0; transform: translateX(24px); } to { opacity: 1; transform: translateX(0); } }`}</style>
-    </div>
-  );
-}
 
 function Modal({ children, onClose }: { children: React.ReactNode; onClose: () => void }) {
   useEffect(() => {
@@ -108,7 +73,7 @@ export function AdminMonthlyPayments({ onNavigate }: AdminMonthlyPaymentsProps) 
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState<FormState>(emptyForm);
   const [submitting, setSubmitting] = useState(false);
-  const { toasts, show: showToast } = useToast();
+  const { show: showToast } = useToast();
 
   useEffect(() => {
     const t = setTimeout(() => fetchPagosMensuales({
@@ -187,7 +152,6 @@ export function AdminMonthlyPayments({ onNavigate }: AdminMonthlyPaymentsProps) 
 
   return (
     <div className="app">
-      <ToastContainer toasts={toasts} />
 
       {pagoModalId !== null && (
         <Modal onClose={() => setPagoModalId(null)}>

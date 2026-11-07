@@ -2,7 +2,7 @@
 // en una sola vista con barra de navegación interna.
 import React, { useState } from 'react';
 import { Building2, Users, Globe } from 'lucide-react';
-import { CLUB_GREEN, ToastContainer, useToast } from './system/shared';
+import { CLUB_GREEN, useToast } from './system/shared';
 import { ClubDataPanel } from './system/ClubDataPanel';
 import { UsersPanel } from './system/UsersPanel';
 import { LandingPanel } from './system/LandingPanel';
@@ -22,11 +22,10 @@ const tabs = [
 
 export function AdminSystem({ onNavigate, initialTab = 'club-data' }: AdminSystemProps) {
   const [activeTab, setActiveTab] = useState<SystemTab>(initialTab);
-  const { toasts, show: showToast } = useToast();
+  const { show: showToast } = useToast();
 
   return (
     <div className="app">
-      <ToastContainer toasts={toasts} />
 
       <div className="container">
         {/* Encabezado del módulo */}

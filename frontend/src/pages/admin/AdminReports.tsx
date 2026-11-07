@@ -4,6 +4,7 @@ import { formatCurrency, formatDateShort, hoyLocal } from '../../utils/format';
 import { exportToCSV, exportToJSON, exportReportePDF } from '../../utils/export';
 import { ColumnaReporte } from '../../utils/pdfDocuments';
 import { API_URL } from '../../services/apiConfig';
+import { useToast, confirmar } from '../../components/ui/feedback';
 
 interface AdminReportsProps {
   onNavigate?: (tab: string) => void;
@@ -16,63 +17,6 @@ const MONTH_NAMES = ['enero','febrero','marzo','abril','mayo','junio','julio','a
 
 function getToken(): string {
   return localStorage.getItem('clubfinance_token') ?? '';
-}
-
-// ─── Toast ────────────────────────────────────────────────────────────────────
-type ToastType = 'success' | 'error' | 'warning';
-
-interface Toast {
-  id: number;
-  message: string;
-  type: ToastType;
-}
-
-function useToast() {
-  const [toasts, setToasts] = useState<Toast[]>([]);
-  const show = useCallback((message: string, type: ToastType = 'success') => {
-    const id = Date.now();
-    setToasts(prev => [...prev, { id, message, type }]);
-    setTimeout(() => setToasts(prev => prev.filter(t => t.id !== id)), 4000);
-  }, []);
-  return { toasts, show };
-}
-
-function ToastContainer({ toasts }: { toasts: Toast[] }) {
-  const colors: Record<ToastType, { bg: string; border: string; icon: string }> = {
-    success: { bg: '#f0fdf4', border: '#10b981', icon: '✓' },
-    error:   { bg: '#fef2f2', border: '#ef4444', icon: '✕' },
-    warning: { bg: '#fffbeb', border: '#f59e0b', icon: '⚠' },
-  };
-  return (
-    <div style={{ position: 'fixed', top: '24px', right: '24px', zIndex: 9999, display: 'flex', flexDirection: 'column', gap: '10px' }}>
-      {toasts.map(t => {
-        const c = colors[t.type];
-        return (
-          <div key={t.id} style={{
-            display: 'flex', alignItems: 'center', gap: '12px',
-            backgroundColor: c.bg, border: `1px solid ${c.border}`,
-            borderLeft: `4px solid ${c.border}`, borderRadius: '10px',
-            padding: '14px 18px', boxShadow: '0 4px 16px rgba(0,0,0,0.10)',
-            minWidth: '280px', maxWidth: '400px', animation: 'slideIn 0.25s ease',
-          }}>
-            <span style={{
-              width: '22px', height: '22px', borderRadius: '50%',
-              backgroundColor: c.border, color: 'white',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              fontSize: '13px', fontWeight: '700', flexShrink: 0,
-            }}>{c.icon}</span>
-            <span style={{ fontSize: '14px', color: '#1f2937', fontWeight: '500' }}>{t.message}</span>
-          </div>
-        );
-      })}
-      <style>{`
-        @keyframes slideIn {
-          from { opacity: 0; transform: translateX(24px); }
-          to   { opacity: 1; transform: translateX(0); }
-        }
-      `}</style>
-    </div>
-  );
 }
 
 // ─── Overview real (balance del club) ──────────────────────────────────────────
@@ -188,7 +132,7 @@ export function AdminReports({ onNavigate }: AdminReportsProps) {
   const { periodos, loading: periodosLoading, refetch: refetchPeriodos } = usePeriodos();
 
   const [cierreLoading, setCierreLoading] = useState(false);
-  const { toasts, show: showToast } = useToast();
+  const { show: showToast } = useToast();
 
   const currency = clubData?.moneda ?? 'COP';
 
@@ -251,9 +195,13 @@ export function AdminReports({ onNavigate }: AdminReportsProps) {
   );
 
   const handleCierreMensual = async () => {
-    const confirmed = window.confirm(
-      `¿Cerrar definitivamente el periodo de ${prevMonthName} ${prevYearNum}?\n\nUna vez cerrado el periodo contable, no podrá sobrescribirse.`
-    );
+    const confirmed = await confirmar({
+      title: `¿Cerrar el periodo de ${prevMonthName} ${prevYearNum}?`,
+      message: 'Una vez cerrado el periodo contable, no podrá sobrescribirse.',
+      icon: '🔒',
+      confirmLabel: 'Cerrar periodo',
+      confirmColor: '#10b981',
+    });
     if (!confirmed) return;
 
     setCierreLoading(true);
@@ -347,7 +295,6 @@ export function AdminReports({ onNavigate }: AdminReportsProps) {
         @keyframes skeletonPulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
       `}</style>
 
-      <ToastContainer toasts={toasts} />
 
       <div className="container">
 
