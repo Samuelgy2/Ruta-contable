@@ -8,10 +8,17 @@ export function formatCurrency(amount: number, currency: string = '$'): string {
 // fecha de calendario. Los timestamps reales sí se convierten a hora local.
 const SOLO_FECHA = /^(\d{4})-(\d{2})-(\d{2})(?:T00:00:00(?:\.000)?(?:Z|[+-]00:?00)?)?$/;
 
-function aFecha(dateString: string): Date {
+export function aFecha(dateString: string): Date {
   const m = SOLO_FECHA.exec(String(dateString ?? '').trim());
   if (m) return new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]));
   return new Date(dateString);
+}
+
+// Fecha de hoy como 'AAAA-MM-DD' en la zona del navegador. toISOString() da la de
+// UTC y, en Colombia (UTC-5), después de las 7 p. m. devuelve la fecha de mañana.
+export function hoyLocal(): string {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 }
 
 export function formatDate(dateString: string): string {

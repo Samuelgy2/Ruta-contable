@@ -4,7 +4,7 @@ import { Paginacion } from '../../components/ui/Paginacion';
 import { useCartera, CarteraItem, TipoCartera } from '../../hooks/useCartera';
 import { useSocios } from '../../hooks/useSocios';
 import { carteraService } from '../../services/carteraService';
-import { formatCurrency, formatDateShort } from '../../utils/format';
+import { formatCurrency, formatDateShort, hoyLocal } from '../../utils/format';
 
 interface AdminCarteraProps {
   onNavigate?: (tab: string) => void;
@@ -92,7 +92,7 @@ function estadoBadge(estado: string): JSX.Element {
   return <span style={{ padding: '4px 12px', borderRadius: '9999px', fontSize: '12px', fontWeight: '600', backgroundColor: s.bg, color: s.color }}>{s.label}</span>;
 }
 
-const emptyForm = { idSocio: '', idTipoCartera: '', fecha: new Date().toISOString().split('T')[0], concepto: '', valor: '', observaciones: '' };
+const emptyForm = { idSocio: '', idTipoCartera: '', fecha: hoyLocal(), concepto: '', valor: '', observaciones: '' };
 type FormState = typeof emptyForm;
 
 export function AdminCartera({ onNavigate }: AdminCarteraProps) {

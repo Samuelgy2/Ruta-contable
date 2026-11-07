@@ -2,7 +2,7 @@ import React, { useState, useCallback, useEffect } from 'react';
 import { useData } from '../../contexts/DataContext';
 import { useCartera } from '../../hooks/useCartera';
 import { useClubData } from '../../hooks/useClubData';
-import { formatCurrency, formatDateShort } from '../../utils/format';
+import { formatCurrency, formatDateShort, hoyLocal } from '../../utils/format';
 import { exportToCSV, exportToJSON, exportMembersReportPDF, exportTransactionsReportPDF } from '../../utils/export';
 import { API_URL } from '../../services/apiConfig';
 
@@ -154,7 +154,7 @@ export function AdminReports({ onNavigate }: AdminReportsProps) {
   const currency = clubData?.moneda ?? systemData.currency;
 
   // ── Cuotas reales (tabla cartera) ──────────────────────────────────────────
-  const hoy = new Date().toISOString().split('T')[0];
+  const hoy = hoyLocal();
   const cuotasPagadas    = cartera.filter(c => c.estado === 'pagado').length;
   const cuotasVencidas   = cartera.filter(c => c.estado === 'pendiente' && c.fecha < hoy).length;
   const cuotasPendientes = cartera.filter(c => c.estado === 'pendiente' && c.fecha >= hoy).length;

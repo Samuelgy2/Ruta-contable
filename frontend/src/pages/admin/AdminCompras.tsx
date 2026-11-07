@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { usePaginacion } from '../../hooks/usePaginacion';
 import { Paginacion } from '../../components/ui/Paginacion';
 import { useCompras, Compra, DetalleCompra } from '../../hooks/useCompras';
-import { formatCurrency, formatDateShort } from '../../utils/format';
+import { formatCurrency, formatDateShort, hoyLocal } from '../../utils/format';
 
 interface AdminComprasProps {
   onNavigate?: (tab: string) => void;
@@ -97,7 +97,7 @@ const f = (label: string, children: React.ReactNode, required = false): JSX.Elem
 );
 
 const emptyForm = {
-  concepto: '', tipo: '', fecha: new Date().toISOString().split('T')[0],
+  concepto: '', tipo: '', fecha: hoyLocal(),
   proveedorNombre: '', factura: '', observaciones: '',
 };
 type FormState = typeof emptyForm;

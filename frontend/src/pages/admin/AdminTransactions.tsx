@@ -2,7 +2,7 @@ import React, { useState, useCallback, useEffect } from 'react';
 import { usePaginacion } from '../../hooks/usePaginacion';
 import { Paginacion } from '../../components/ui/Paginacion';
 import { useCategories } from '../../hooks/useCategories';
-import { formatCurrency, formatDateShort } from '../../utils/format';
+import { formatCurrency, formatDateShort, hoyLocal } from '../../utils/format';
 import { emitDataChanged } from '../../lib/dataEvents';
 import { API_URL } from '../../services/apiConfig';
 
@@ -124,7 +124,7 @@ const emptyForm = {
   amount:      '',
   categoryId:  '',
   description: '',
-  date:        new Date().toISOString().split('T')[0],
+  date:        hoyLocal(),
   metodoPago:  'efectivo' as 'efectivo' | 'transferencia' | 'tarjeta' | 'cheque',
 };
 
@@ -416,7 +416,7 @@ export function AdminTransactions({ onNavigate }: AdminTransactionsProps) {
                   type="date"
                   value={form.date}
                   onChange={e => setForm({ ...form, date: e.target.value })}
-                  max={new Date().toISOString().split('T')[0]}
+                  max={hoyLocal()}
                   style={inputStyle}
                   required
                 />

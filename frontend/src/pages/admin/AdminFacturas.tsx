@@ -3,7 +3,7 @@ import { usePaginacion } from '../../hooks/usePaginacion';
 import { Paginacion } from '../../components/ui/Paginacion';
 import { useSocios } from '../../hooks/useSocios';
 import { facturaService } from '../../services/facturaService';
-import { formatCurrency, formatDateShort } from '../../utils/format';
+import { formatCurrency, formatDateShort, hoyLocal } from '../../utils/format';
 
 // Facturación (RF-055 / RF-058): registrar, consultar, editar (sin pagos), anular y registrar pagos.
 
@@ -29,7 +29,7 @@ interface Pago { id_pago_factura: number; fecha: string; monto: string; metodo_p
 type FacturaDetalle = Factura & { detalles: Detalle[]; pagos: Pago[] };
 
 const CLUB_GREEN = '#10b981';
-const hoy = () => new Date().toISOString().split('T')[0];
+const hoy = () => hoyLocal();
 const num = (v: string | number | null | undefined) => parseFloat(String(v ?? 0)) || 0;
 const errorMsg = (err: any) => err.response?.data?.message || err.message || 'Error inesperado';
 
