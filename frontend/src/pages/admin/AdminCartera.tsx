@@ -206,6 +206,39 @@ export function AdminCartera({ onNavigate }: AdminCarteraProps) {
     }
   };
 
+  // ── Editar / anular (RF-079) ───────────────────────────────────────────────
+  // Pendiente: concepto, valor y observaciones. Pagado: solo concepto y
+  // observaciones (el valor ya está en su transacción). Anulado: nada.
+  const [editItem, setEditItem] = useState<CarteraItem | null>(null);
+  const [editForm, setEditForm] = useState({ concepto: '', valor: '', observaciones: '' });
+
+  const abrirEdicion = (c: CarteraItem) => {
+    setEditItem(c);
+    setEditForm({ concepto: c.concepto, valor: String(parseFloat(c.valor)), observaciones: c.observaciones ?? '' });
+  };
+
+  const guardarEdicion = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editItem) return;
+    setSubmitting(true);
+    try {
+      const cambios = editItem.estado === 'pendiente'
+        ? { concepto: editForm.concepto, valor: editForm.valor, observaciones: editForm.observaciones }
+        : { concepto: editForm.concepto, observaciones: editForm.observaciones };
+      const result = await updateCartera(editItem.id_cartera, cambios as any);
+      showToast(result.message, result.success ? 'success' : 'error');
+      if (result.success) setEditItem(null);
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const anular = async (c: CarteraItem) => {
+    if (!window.confirm(`¿Anular "${c.concepto}" de ${c.socio_nombre ?? 'este socio'}? Un registro anulado ya no se puede editar.`)) return;
+    const result = await updateCartera(c.id_cartera, { estado: 'anulado' });
+    showToast(result.success ? 'Registro anulado' : result.message, result.success ? 'warning' : 'error');
+  };
+
   return (
     <div className="app">
       <ToastContainer toasts={toasts} />
@@ -234,6 +267,34 @@ export function AdminCartera({ onNavigate }: AdminCarteraProps) {
               <button type="button" onClick={() => setPagoModalId(null)} disabled={submitting} style={{ padding: '10px 20px', borderRadius: '8px', border: '1.5px solid #e5e7eb', backgroundColor: 'white', color: '#374151', fontSize: '14px', cursor: 'pointer' }}>Cancelar</button>
               <button type="submit" disabled={submitting} style={{ padding: '10px 24px', borderRadius: '8px', border: 'none', backgroundColor: CLUB_GREEN, color: 'white', fontSize: '14px', fontWeight: '600', cursor: 'pointer' }}>
                 {submitting ? ' Procesando...' : 'Confirmar Pago'}
+              </button>
+            </div>
+          </form>
+        </Modal>
+      )}
+
+      {editItem && (
+        <Modal onClose={() => setEditItem(null)}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px' }}>
+            <h3 style={{ margin: 0, fontSize: '18px', fontWeight: '700', color: '#1f2937' }}>✏️ Editar registro de cartera</h3>
+            <button onClick={() => setEditItem(null)} style={{ background: '#f3f4f6', border: 'none', borderRadius: '8px', width: '34px', height: '34px', cursor: 'pointer', fontSize: '18px', color: '#6b7280' }}>×</button>
+          </div>
+          <p style={{ margin: '0 0 16px', fontSize: '13px', color: '#6b7280' }}>
+            Socio: <strong>{editItem.socio_nombre ?? '—'}</strong> (no se puede cambiar)
+          </p>
+          <form onSubmit={(e) => { void guardarEdicion(e); }}>
+            <div style={{ display: 'grid', gap: '16px', marginBottom: '20px' }}>
+              {f('Concepto', <input value={editForm.concepto} onChange={e => setEditForm({ ...editForm, concepto: e.target.value })} style={inputStyle} required />, true)}
+              {f(editItem.estado === 'pagado' ? 'Valor (fijo: el registro ya está pagado)' : 'Valor', (
+                <input type="number" min="1" step="any" value={editForm.valor} onChange={e => setEditForm({ ...editForm, valor: e.target.value })}
+                  style={inputStyle} required disabled={editItem.estado === 'pagado'} />
+              ), editItem.estado === 'pendiente')}
+              {f('Observaciones', <textarea value={editForm.observaciones} onChange={e => setEditForm({ ...editForm, observaciones: e.target.value })} rows={3} style={{ ...inputStyle, resize: 'vertical' }} />)}
+            </div>
+            <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
+              <button type="button" onClick={() => setEditItem(null)} disabled={submitting} style={{ padding: '10px 20px', borderRadius: '8px', border: '1.5px solid #e5e7eb', backgroundColor: 'white', color: '#374151', fontSize: '14px', cursor: 'pointer' }}>Cancelar</button>
+              <button type="submit" disabled={submitting} style={{ padding: '10px 24px', borderRadius: '8px', border: 'none', backgroundColor: CLUB_GREEN, color: 'white', fontSize: '14px', fontWeight: '600', cursor: 'pointer' }}>
+                {submitting ? 'Guardando...' : 'Guardar cambios'}
               </button>
             </div>
           </form>
@@ -387,9 +448,15 @@ export function AdminCartera({ onNavigate }: AdminCarteraProps) {
                   <td style={{ padding: '14px 16px', fontSize: '14px', color: '#6b7280' }}>{c.tipo_cartera_nombre ?? '—'}</td>
                   <td style={{ padding: '14px 16px', fontSize: '14px', color: '#1f2937', fontWeight: '600' }}>{formatCurrency(parseFloat(c.valor), 'COP')}</td>
                   <td style={{ padding: '14px 16px' }}>{estadoBadge(c.estado)}</td>
-                  <td style={{ padding: '14px 16px' }}>
+                  <td style={{ padding: '14px 16px', display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
                     {c.estado === 'pendiente' && (
                       <button onClick={() => { void handlePagar(c.id_cartera); }} style={{ padding: '6px 12px', borderRadius: '6px', border: 'none', backgroundColor: CLUB_GREEN, color: 'white', fontSize: '12px', cursor: 'pointer' }}>Registrar Pago</button>
+                    )}
+                    {c.estado !== 'anulado' && (
+                      <button onClick={() => abrirEdicion(c)} style={{ padding: '6px 12px', borderRadius: '6px', border: '1px solid #e5e7eb', backgroundColor: 'white', color: '#374151', fontSize: '12px', cursor: 'pointer' }}>Editar</button>
+                    )}
+                    {c.estado === 'pendiente' && (
+                      <button onClick={() => { void anular(c); }} style={{ padding: '6px 12px', borderRadius: '6px', border: '1px solid #fecaca', backgroundColor: '#fef2f2', color: '#dc2626', fontSize: '12px', cursor: 'pointer' }}>Anular</button>
                     )}
                   </td>
                 </tr>

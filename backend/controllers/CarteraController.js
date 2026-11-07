@@ -125,6 +125,21 @@ async function update(req, res) {
     if (estado && !['pendiente', 'pagado', 'anulado'].includes(estado)) {
       return res.status(400).json({ success: false, message: "estado debe ser 'pendiente', 'pagado' o 'anulado'" });
     }
+    const traeValor = valor !== undefined && valor !== null && valor !== '';
+    if (traeValor && !(Number(valor) > 0)) {
+      return res.status(400).json({ success: false, message: 'El valor debe ser un número mayor que cero' });
+    }
+    if (concepto !== undefined && !String(concepto).trim()) {
+      return res.status(400).json({ success: false, message: 'El concepto no puede quedar vacío' });
+    }
+    // RF-079: un registro pagado ya tiene su asiento en transactions (registrar_pago_cartera).
+    // Cambiar su valor, devolverlo a pendiente o anularlo dejaría esa transacción descuadrada.
+    if (existing.rows[0].estado === 'pagado' && (traeValor || (estado && estado !== 'pagado'))) {
+      return res.status(409).json({
+        success: false,
+        message: 'El registro ya está pagado: solo se pueden editar el concepto y las observaciones',
+      });
+    }
     if (metodoPago && !METODOS_PAGO_VALIDOS.includes(metodoPago)) {
       return res.status(400).json({ success: false, message: `metodoPago debe ser uno de: ${METODOS_PAGO_VALIDOS.join(', ')}` });
     }
