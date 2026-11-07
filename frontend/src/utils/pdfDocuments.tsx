@@ -1,6 +1,7 @@
 import React from 'react';
 import { Document, Page, Text, View, StyleSheet } from '@react-pdf/renderer';
 import { Transaction, SystemData, Member, Fee } from '../types';
+import { aFecha } from './format';
 
 // Define styles for the PDF
 const styles = StyleSheet.create({
@@ -121,7 +122,7 @@ export function TransactionReportPDF({ transactions, systemData }: TransactionRe
   };
 
   const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('es-CO');
+    return aFecha(dateString).toLocaleDateString('es-CO');
   };
 
   return (
@@ -327,7 +328,7 @@ export function MonthlyClosePDF({ periodo, resumen, transacciones, systemData }:
   };
 
   const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('es-CO');
+    return aFecha(dateString).toLocaleDateString('es-CO');
   };
 
   return (

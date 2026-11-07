@@ -5,7 +5,7 @@ import { useSocios } from '../../hooks/useSocios';
 import {
   jerseyService, JerseyCampana, JerseyPedido, JerseyEstado, JERSEY_ESTADOS,
 } from '../../services/jerseyService';
-import { formatCurrency, formatDateShort } from '../../utils/format';
+import { formatCurrency, formatDateShort, hoyLocal } from '../../utils/format';
 
 interface AdminJerseyProps {
   onNavigate?: (tab: string) => void;
@@ -25,7 +25,7 @@ const campanaVacia = {
 const pedidoVacio = {
   idSocio: '',
   idCampana: '',
-  fecha: new Date().toISOString().split('T')[0],
+  fecha: hoyLocal(),
   tipo: 'Jersey' as (typeof TIPOS)[number],
   talla: '',
   estampado: '',
@@ -270,7 +270,7 @@ export function AdminJersey({ onNavigate }: AdminJerseyProps) {
     }
   };
 
-  const hoy = new Date().toISOString().slice(0, 10);
+  const hoy = hoyLocal();
   const estadoCampana = (c: JerseyCampana) => {
     if (!c.activa) return { label: 'Cerrada', bg: '#f3f4f6', color: '#374151' };
     if (c.fechaFin && c.fechaFin.slice(0, 10) < hoy) return { label: 'Vencida', bg: '#fef3c7', color: '#92400e' };

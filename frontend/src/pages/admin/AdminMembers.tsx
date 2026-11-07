@@ -4,6 +4,7 @@ import { Paginacion } from '../../components/ui/Paginacion';
 import { useSocios } from '../../hooks/useSocios';
 import { userService } from '../../services/userService';
 import { SocioDocumentos } from './SocioDocumentos';
+import { hoyLocal } from '../../utils/format';
 
 // ─── Tipos ────────────────────────────────────────────────────────────────────
 interface Socio {
@@ -201,7 +202,7 @@ const emptyForm = {
   telefono:         '',
   direccion:        '',
   fecha_nacimiento: '',
-  fecha_ingreso:    new Date().toISOString().split('T')[0],
+  fecha_ingreso:    hoyLocal(),
   tipo_membresia:   'Media' as 'Media' | 'Completa' | 'Beca',
   nivel_aprendizaje: '' as '' | 'Iniciación' | 'Rider School' | 'Club',
   estado:           'activo' as 'activo' | 'inactivo' | 'suspendido',
