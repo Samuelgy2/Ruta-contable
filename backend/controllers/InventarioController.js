@@ -224,7 +224,8 @@ async function removeProduct(req, res) {
 
     res.json({ success: true, message: 'Producto eliminado correctamente' });
   } catch (error) {
-    if (error.code === '23503') {
+    // ON DELETE RESTRICT lanza 23001 (restrict_violation); NO ACTION lanzaría 23503.
+    if (error.code === '23001' || error.code === '23503') {
       return res.status(409).json({
         success: false,
         message: 'No se puede eliminar un producto que tiene compras o movimientos registrados',

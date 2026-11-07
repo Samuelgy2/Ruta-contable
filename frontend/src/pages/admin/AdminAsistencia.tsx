@@ -250,7 +250,8 @@ export function AdminAsistencia({ onNavigate }: AdminAsistenciaProps) {
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = 'Asistencia.xlsx';
+      // El nombre lo pone el backend con el periodo (Asistencia_AAAA-MM-DD_AAAA-MM-DD.xlsx).
+      a.download = res.headers.get('Content-Disposition')?.match(/filename=([^;]+)/)?.[1] ?? 'Asistencia.xlsx';
       a.click();
       window.URL.revokeObjectURL(url);
       showToast('Reporte exportado correctamente', 'success');

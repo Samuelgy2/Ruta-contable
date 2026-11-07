@@ -15,6 +15,9 @@ function tipoToCategoryType(tipoNormalizado) {
   return null;
 }
 
+// AAAA-MM-DD que exista en el calendario (rechaza 2026-02-30).
+const fechaIsoValida = (s) => /^\d{4}-\d{2}-\d{2}$/.test(s) && !isNaN(Date.parse(s)) && new Date(s).toISOString().slice(0, 10) === s;
+
 // Busca una categoría por id, validando que exista, esté activa y coincida en tipo.
 // Devuelve la fila de categories o null.
 async function findValidCategory(categoriaId, tipoNormalizado) {
@@ -43,7 +46,9 @@ async function resolveCategoryByName(categoriaNombre, tipoNormalizado) {
      LIMIT 1`,
     [categoriaNombre.trim(), categoryType]
   );
-  return result.rows[0] || null;
+  const cat = result.rows[0];
+  if (cat && !cat.active) return { ...cat, _error: 'inactive' }; // mismo criterio que findValidCategory
+  return cat || null;
 }
 
 // El LEFT JOIN con pagos_pasarela distingue los movimientos que entraron por la
@@ -77,7 +82,15 @@ async function resolveMemberId(memberId) {
 // GET /api/transactions
 async function getAll(req, res) {
   try {
-    const { tipo, mes, anio, categoriaId, search = '' } = req.query;
+    const { tipo, mes, anio, categoriaId, fechaInicio, fechaFin, search = '' } = req.query;
+
+    // RF-028 RN-006.2: rango de fechas válido.
+    if ([fechaInicio, fechaFin].some(f => f && !fechaIsoValida(f))) {
+      return res.status(400).json({ success: false, message: 'Las fechas deben tener el formato AAAA-MM-DD' });
+    }
+    if (fechaInicio && fechaFin && fechaFin < fechaInicio) {
+      return res.status(400).json({ success: false, message: 'La fecha final no puede ser menor que la fecha inicial' });
+    }
 
     let conditions = [];
     let params = [];
@@ -98,6 +111,14 @@ async function getAll(req, res) {
     if (categoriaId) {
       conditions.push(`t.categoria_id = $${i++}`);
       params.push(parseInt(categoriaId));
+    }
+    if (fechaInicio) {
+      conditions.push(`t.fecha >= $${i++}`);
+      params.push(fechaInicio);
+    }
+    if (fechaFin) {
+      conditions.push(`t.fecha <= $${i++}`);
+      params.push(fechaFin);
     }
     if (search) {
       conditions.push(`(t.descripcion ILIKE $${i} OR c.name ILIKE $${i})`);

@@ -40,10 +40,13 @@ export function UsersPanel({ showToast }: UsersPanelProps) {
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [form, setForm] = useState<FormState>(emptyForm);
+  const [confirmPassword, setConfirmPassword] = useState(''); // RF-001 Rn4: se digita dos veces
   const [confirmDelete, setConfirmDelete] = useState<number | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
   const [searchTerm, setSearchTerm] = useState('');
+  const [filterRole, setFilterRole] = useState<'all' | UserRole>('all');                  // RF-018
+  const [filterEstado, setFilterEstado] = useState<'all' | 'activo' | 'inactivo'>('all'); // RF-018
   const allVisibleUsers = users.filter((u: any) => u.username !== 'admin');
   const q = searchTerm.trim().toLowerCase();
   const visibleUsers = q
@@ -53,13 +56,18 @@ export function UsersPanel({ showToast }: UsersPanelProps) {
         (u.email || '').toLowerCase().includes(q)
       )
     : allVisibleUsers;
-  const pagUsuarios = usePaginacion(visibleUsers);
+  const filteredUsers = visibleUsers.filter((u: any) =>
+    (filterRole === 'all' || u.role === filterRole) &&
+    (filterEstado === 'all' || u.active === (filterEstado === 'activo'))
+  );
+  const pagUsuarios = usePaginacion(filteredUsers);
   const inactivos = visibleUsers.filter((u: any) => !u.active);
   const admins = visibleUsers.filter((u: any) => u.role === 'admin');
 
-  const openCreate = () => { setEditingId(null); setForm(emptyForm); setShowForm(true); };
+  const openCreate = () => { setEditingId(null); setForm(emptyForm); setConfirmPassword(''); setShowForm(true); };
   const openEdit = (user: User) => {
     setForm({ username: user.username, password: '', fullName: user.fullName, email: user.email, role: user.role, active: user.active });
+    setConfirmPassword('');
     setEditingId(user.id);
     setShowForm(true);
   };
@@ -69,6 +77,10 @@ export function UsersPanel({ showToast }: UsersPanelProps) {
     e.preventDefault();
     if (!form.username || (!editingId && !form.password) || !form.fullName || !form.email) {
       showToast('Usuario, nombre completo, email y contraseña son obligatorios', 'error');
+      return;
+    }
+    if (form.password && form.password !== confirmPassword) {
+      showToast('Las contraseñas no coinciden', 'error');
       return;
     }
     setSubmitting(true);
@@ -109,6 +121,9 @@ export function UsersPanel({ showToast }: UsersPanelProps) {
               {f('Usuario', <input value={form.username} onChange={e => setForm({ ...form, username: e.target.value })} style={inputStyle} required />, true)}
               {f(editingId !== null ? 'Contraseña (dejar vacío para no cambiar)' : 'Contraseña', (
                 <PasswordInput value={form.password} onChange={e => setForm({ ...form, password: e.target.value })} style={inputStyle} required={editingId === null} />
+              ), editingId === null)}
+              {f('Confirmar contraseña', (
+                <PasswordInput value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} style={inputStyle} required={editingId === null || form.password !== ''} />
               ), editingId === null)}
               {f('Nombre Completo', <input value={form.fullName} onChange={e => setForm({ ...form, fullName: e.target.value })} style={inputStyle} required />, true)}
               {f('Email', <input type="email" value={form.email} onChange={e => setForm({ ...form, email: e.target.value })} style={inputStyle} required />, true)}
@@ -158,7 +173,7 @@ export function UsersPanel({ showToast }: UsersPanelProps) {
         </div>
       )}
 
-      <div style={{ marginBottom: '20px' }}>
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px', marginBottom: '20px' }}>
         <input
           type="text"
           placeholder="Buscar por usuario, nombre o correo..."
@@ -166,6 +181,16 @@ export function UsersPanel({ showToast }: UsersPanelProps) {
           onChange={e => setSearchTerm(e.target.value)}
           style={{ ...inputStyle, maxWidth: '360px' }}
         />
+        <select aria-label="Filtrar por rol" value={filterRole} onChange={e => setFilterRole(e.target.value as 'all' | UserRole)} style={{ ...inputStyle, width: 'auto' }}>
+          <option value="all">Todos los roles</option>
+          <option value="admin">Administrador</option>
+          <option value="user">Usuario</option>
+        </select>
+        <select aria-label="Filtrar por estado" value={filterEstado} onChange={e => setFilterEstado(e.target.value as 'all' | 'activo' | 'inactivo')} style={{ ...inputStyle, width: 'auto' }}>
+          <option value="all">Todos los estados</option>
+          <option value="activo">Activo</option>
+          <option value="inactivo">Inactivo</option>
+        </select>
       </div>
 
       <div style={{ backgroundColor: 'white', borderRadius: '14px', border: '1px solid #e5e7eb', overflow: 'hidden' }}>
@@ -180,7 +205,7 @@ export function UsersPanel({ showToast }: UsersPanelProps) {
           <tbody>
             {loading ? (
               <tr><td colSpan={6} style={{ textAlign: 'center', padding: '32px', color: '#9ca3af' }}>Cargando...</td></tr>
-            ) : visibleUsers.length === 0 ? (
+            ) : filteredUsers.length === 0 ? (
               <tr><td colSpan={6} style={{ textAlign: 'center', padding: '32px', color: '#9ca3af' }}>No hay usuarios registrados</td></tr>
             ) : pagUsuarios.itemsPagina.map((user: User) => (
               <tr key={user.id} style={{ borderBottom: '1px solid #f3f4f6' }}>

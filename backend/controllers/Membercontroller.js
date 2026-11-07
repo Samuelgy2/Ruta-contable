@@ -1,5 +1,7 @@
 const pool = require('../db');
 
+const FORMATO_EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/; // mismo criterio que AuthController y PortalController
+
 // El vínculo con la cuenta de acceso vive en socio_perfil.id_socio. Se expone
 // como usuarioVinculado: { id, username, email } | null en cada socio.
 const SELECT_CON_USUARIO = `
@@ -67,6 +69,10 @@ async function create(req, res) {
         message: 'nombre, documento, fecha_ingreso y fecha_nacimiento son obligatorios',
       });
     }
+    // RN-003: el correo es opcional, pero si viene debe tener formato válido.
+    if (email && !FORMATO_EMAIL.test(email)) {
+      return res.status(400).json({ success: false, message: 'El correo electrónico no tiene un formato válido' });
+    }
 
     const fnac = new Date(fecha_nacimiento);
     const hoy = new Date();
@@ -133,6 +139,9 @@ async function update(req, res) {
       return res.status(404).json({ success: false, message: 'Socio no encontrado' });
     }
 
+    if (email && !FORMATO_EMAIL.test(email)) {
+      return res.status(400).json({ success: false, message: 'El correo electrónico no tiene un formato válido' });
+    }
     if (fecha_nacimiento !== undefined) {
       if (!fecha_nacimiento || String(fecha_nacimiento).trim() === '') {
         return res.status(400).json({ success: false, message: 'La fecha de nacimiento no puede quedar vacía' });
@@ -209,6 +218,13 @@ async function remove(req, res) {
 
     res.json({ success: true, message: 'Socio eliminado correctamente' });
   } catch (error) {
+    // factura usa ON DELETE RESTRICT (23001); asistencia, cartera, pagos, etc. usan NO ACTION (23503).
+    if (error.code === '23001' || error.code === '23503') {
+      return res.status(409).json({
+        success: false,
+        message: 'No se puede eliminar el socio porque tiene registros asociados (asistencia, pagos, cartera, facturas u otros). Puedes marcarlo como inactivo.',
+      });
+    }
     console.error('Error delete socio:', error);
     res.status(500).json({ success: false, message: 'Error al eliminar socio' });
   }
