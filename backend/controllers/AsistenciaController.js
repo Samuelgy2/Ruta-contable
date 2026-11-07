@@ -252,8 +252,12 @@ async function saveChecklist(req, res) {
 // en los últimos 30 días.
 async function getAlertas(req, res) {
   try {
-    const umbralConsecutivas = parseInt(req.query.umbralConsecutivas) || 3;
-    const umbralAcumuladas   = parseInt(req.query.umbralAcumuladas)   || 5;
+    // RF-084 RN-003: umbrales configurados en system_data; la URL aún puede sobrescribirlos.
+    const config = await pool.query(
+      'SELECT umbral_inasistencia_consecutiva AS c, umbral_inasistencia_acumulada AS a FROM system_data WHERE id = 1'
+    );
+    const umbralConsecutivas = parseInt(req.query.umbralConsecutivas) || config.rows[0]?.c || 3;
+    const umbralAcumuladas   = parseInt(req.query.umbralAcumuladas)   || config.rows[0]?.a || 5;
     const dias               = parseInt(req.query.dias)               || 30;
 
     const historial = await pool.query(

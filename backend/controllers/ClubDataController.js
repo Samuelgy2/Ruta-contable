@@ -5,7 +5,19 @@ const FORMATO_EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const FORMATO_NIT = /^(\d{6,10}|\d{1,3}(\.\d{3}){2})(-\d)?$/;
 
 function validarDatosClub(body = {}) {
-  const { clubNombre, nit, email, diaVencimientoDefault, porcentajeMora } = body;
+  const { clubNombre, nit, email, diaVencimientoDefault, porcentajeMora,
+          umbralInasistenciaConsecutiva, umbralInasistenciaAcumulada } = body;
+
+  // RF-084 RN-003: umbrales de alerta de asistencia (columnas smallint de system_data).
+  for (const [campo, valor] of Object.entries({ umbralInasistenciaConsecutiva, umbralInasistenciaAcumulada })) {
+    if (valor !== undefined && valor !== null && valor !== '') {
+      const n = Number(valor);
+      // Las alertas miran los últimos 30 días: un umbral mayor nunca se alcanzaría.
+      if (!Number.isInteger(n) || n < 1 || n > 30) {
+        return { error: 'Los umbrales de inasistencia deben ser enteros entre 1 y 30', campo };
+      }
+    }
+  }
 
   if (clubNombre !== undefined && String(clubNombre).trim() === '') {
     return { error: 'El nombre del club no puede estar vacío', campo: 'clubNombre' };
@@ -70,6 +82,7 @@ async function update(req, res) {
     const {
       clubNombre, nit, direccion, telefono, email, logoUrl,
       moneda, diaVencimientoDefault, porcentajeMora,
+      umbralInasistenciaConsecutiva, umbralInasistenciaAcumulada,
     } = req.body;
 
     await pool.query(
@@ -87,10 +100,13 @@ async function update(req, res) {
         moneda                  = COALESCE($7, moneda),
         dia_vencimiento_default = COALESCE($8, dia_vencimiento_default),
         porcentaje_mora         = COALESCE($9, porcentaje_mora),
+        umbral_inasistencia_consecutiva = COALESCE($10, umbral_inasistencia_consecutiva),
+        umbral_inasistencia_acumulada   = COALESCE($11, umbral_inasistencia_acumulada),
         updated_at              = CURRENT_TIMESTAMP
        WHERE id = 1
        RETURNING *`,
-      [clubNombre, nit, direccion, telefono, email, logoUrl, moneda, diaVencimientoDefault, porcentajeMora]
+      [clubNombre, nit, direccion, telefono, email, logoUrl, moneda, diaVencimientoDefault, porcentajeMora,
+       umbralInasistenciaConsecutiva || null, umbralInasistenciaAcumulada || null]
     );
 
     res.json({ success: true, data: result.rows[0], message: 'Datos del club actualizados correctamente' });

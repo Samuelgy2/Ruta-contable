@@ -12,10 +12,20 @@ const SELECT_PEDIDOS = `
   SELECT p.*,
          s.nombre    AS socio_nombre,
          s.documento AS socio_documento,
-         c.titulo    AS campana_titulo
+         c.titulo    AS campana_titulo,
+         u.unidades_solicitadas,
+         u.unidades_entregadas
   FROM pedido_jersey p
   LEFT JOIN socio s          ON s.id_socio = p.id_socio
   LEFT JOIN jersey_campana c ON c.id = p.id_campana
+  -- RF-064 (RN-084/085/086): unidades de inventario del pedido y cuántas están
+  -- entregadas. Al contar un subconjunto, entregadas nunca supera solicitadas.
+  LEFT JOIN LATERAL (
+    SELECT COUNT(*)::int                                              AS unidades_solicitadas,
+           COUNT(*) FILTER (WHERE ij.estado_entrega = 'Entregado')::int AS unidades_entregadas
+    FROM inventario_jersey ij
+    WHERE ij.id_pedido = p.id_pedido
+  ) u ON true
 `;
 
 // Normaliza la lista de tallas que llega del cliente: array de strings no
@@ -65,6 +75,8 @@ function mapPedido(fila) {
     aplique:       fila.aplique,
     estampado:     fila.estampado,
     cantidad:      Number(fila.cantidad ?? 1),
+    unidadesSolicitadas: Number(fila.unidades_solicitadas ?? 0),
+    unidadesEntregadas:  Number(fila.unidades_entregadas ?? 0),
     valor:         Number(fila.valor),
     estado:        fila.estado,
     fechaEntrega:  fila.fecha_entrega,

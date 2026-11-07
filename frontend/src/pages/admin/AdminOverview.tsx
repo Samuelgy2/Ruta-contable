@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { useAutoRefresh } from '../../hooks/useAutoRefresh';
 import { API_URL } from '../../services/apiConfig';
+import { hoyLocal } from '../../utils/format';
 
 // ─── TIPOS ────────────────────────────────────────────────────────────────────
 
@@ -39,7 +40,7 @@ interface AdminOverviewProps {
 }
 
 // ─── HOOK PERSONALIZADO — capa de acceso al backend ───────────────────────────
-function useOverviewData() {
+function useOverviewData(anio: number, mes: number) {
   const [data,       setData]       = useState<OverviewData | null>(null);
   const [loading,    setLoading]    = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -53,7 +54,7 @@ function useOverviewData() {
     try {
       const token = localStorage.getItem('clubfinance_token');
 
-      const res = await fetch(`${API_URL}/admin/overview`, {
+      const res = await fetch(`${API_URL}/admin/overview?anio=${anio}&mes=${mes}`, {
         headers: token ? { Authorization: `Bearer ${token}` } : undefined,
       });
 
@@ -73,7 +74,7 @@ function useOverviewData() {
       setLoading(false);
       setRefreshing(false);
     }
-  }, []);
+  }, [anio, mes]);
 
   useEffect(() => { void fetchData(); }, [fetchData]);
 
@@ -202,11 +203,16 @@ function SkeletonCard() {
 // ─── COMPONENTE PRINCIPAL ─────────────────────────────────────────────────────
 
 export function AdminOverview({ onNavigate, adminName = '' }: AdminOverviewProps) {
-  const { data, loading, refreshing, error, refetch } = useOverviewData();
+  // RF-030 RN-010.3: periodo seleccionado (AAAA-MM), el mes en curso por defecto.
+  const [periodo, setPeriodo] = useState(hoyLocal().slice(0, 7));
+  const periodoValido = /^\d{4}-\d{2}$/.test(periodo) ? periodo : hoyLocal().slice(0, 7);
+  const anio = Number(periodoValido.slice(0, 4));
+  const mes  = Number(periodoValido.slice(5, 7));
+  const { data, loading, refreshing, error, refetch } = useOverviewData(anio, mes);
   const busy = loading || refreshing;
 
   const MONTH_NAMES = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
-  const currentMonthName = MONTH_NAMES[new Date().getMonth()];
+  const currentMonthName = MONTH_NAMES[mes - 1];
 
   return (
     <div style={{ minHeight: '100vh', background: '#f3f4f6', padding: '32px 24px' }}>
@@ -247,9 +253,13 @@ export function AdminOverview({ onNavigate, adminName = '' }: AdminOverviewProps
             <p style={{ color: '#6b7280', margin: 0, fontSize: '15px' }}>
               Bienvenido de vuelta, <strong style={{ color: '#374151' }}>{adminName}</strong>
               {' · '}
-              <span style={{ color: '#9ca3af' }}>
-                {currentMonthName.charAt(0).toUpperCase() + currentMonthName.slice(1)} {new Date().getFullYear()}
-              </span>
+              <input
+                type="month"
+                aria-label="Periodo del resumen"
+                value={periodo}
+                onChange={e => setPeriodo(e.target.value)}
+                style={{ border: '1px solid #e5e7eb', borderRadius: '8px', padding: '4px 8px', fontSize: '14px', color: '#374151', background: 'white' }}
+              />
             </p>
           </div>
 
@@ -338,7 +348,7 @@ export function AdminOverview({ onNavigate, adminName = '' }: AdminOverviewProps
                   Estadísticas Generales
                 </h3>
               </div>
-              <InfoRow label="Transacciones del mes" value={data.stats.totalTransactions} />
+              <InfoRow label={`Transacciones · ${currentMonthName} ${anio}`} value={data.stats.totalTransactions} />
               <InfoRow label="Total socios"         value={data.stats.totalMembers} />
               <InfoRow
                 label="Cuotas pagadas"

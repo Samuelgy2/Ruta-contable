@@ -1,9 +1,11 @@
 import api from './api';
 
 export const carteraService = {
-  getAll: async (params: { estado?: string; idSocio?: string | number; search?: string } = {}) => {
+  getAll: async (params: { estado?: string; idSocio?: string | number; search?: string; anio?: number; mes?: number } = {}) => {
     const qs = new URLSearchParams();
     if (params.estado) qs.set('estado', params.estado);
+    if (params.anio) qs.set('anio', String(params.anio));
+    if (params.mes) qs.set('mes', String(params.mes));
     if (params.idSocio) qs.set('idSocio', String(params.idSocio));
     if (params.search) qs.set('search', params.search);
     const query = qs.toString() ? `?${qs.toString()}` : '';

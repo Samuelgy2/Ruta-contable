@@ -633,7 +633,7 @@ export function AdminJersey({ onNavigate }: AdminJerseyProps) {
                 <th>Fecha</th>
                 <th>Socio</th>
                 <th>Campaña</th>
-                <th>Cant.</th>
+                <th title="Unidades entregadas / unidades solicitadas">Entregadas</th>
                 <th>Talla</th>
                 <th>Estampado</th>
                 <th>Valor</th>
@@ -657,7 +657,7 @@ export function AdminJersey({ onNavigate }: AdminJerseyProps) {
                     <td>{formatDateShort(pedido.fecha)}</td>
                     <td>{pedido.socioNombre ?? 'Socio no encontrado'}</td>
                     <td>{pedido.campanaTitulo ?? <span style={{ color: '#9ca3af' }}>Manual · {pedido.tipo}</span>}</td>
-                    <td>{pedido.cantidad}</td>
+                    <td>{pedido.unidadesEntregadas} / {pedido.unidadesSolicitadas}</td>
                     <td>{pedido.talla || '-'}</td>
                     <td>{pedido.estampado || pedido.aplique || '-'}</td>
                     <td>{formatCurrency(pedido.valor, 'COP')}</td>

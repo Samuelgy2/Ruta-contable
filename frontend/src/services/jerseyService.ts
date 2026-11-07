@@ -32,6 +32,8 @@ export interface JerseyPedido {
   aplique: string | null;
   estampado: string | null;
   cantidad: number;
+  unidadesSolicitadas: number; // RF-064: unidades de inventario del pedido
+  unidadesEntregadas: number;  // RF-064: unidades con estado 'Entregado'
   valor: number;
   estado: JerseyEstado;
   fechaEntrega: string | null;
