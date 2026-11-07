@@ -9,6 +9,7 @@ router.get('/alertas',         asistenciaController.getAlertas);      // GET    
 router.get('/exportar-excel',  asistenciaController.exportarExcel);   // GET    /api/asistencia/exportar-excel
 router.get('/',                asistenciaController.getAll);          // GET    /api/asistencia
 router.get('/:id',             asistenciaController.getById);         // GET    /api/asistencia/:id
+router.post('/checklist',      asistenciaController.saveChecklist);   // POST   /api/asistencia/checklist
 router.post('/',               asistenciaController.create);          // POST   /api/asistencia
 router.put('/:id',             asistenciaController.update);          // PUT    /api/asistencia/:id
 router.delete('/:id',          asistenciaController.remove);          // DELETE /api/asistencia/:id

@@ -32,6 +32,11 @@ export const asistenciaService = {
     return response.data;
   },
 
+  saveChecklist: async (data: { fecha: string; tipoEntrenamiento?: string; registros: { idSocio: number; estado: string; observacion?: string }[] }) => {
+    const response = await api.post('/asistencia/checklist', data);
+    return response.data;
+  },
+
   getAlertas: async () => {
     const response = await api.get('/asistencia/alertas');
     return response.data;

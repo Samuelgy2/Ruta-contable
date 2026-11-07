@@ -100,11 +100,18 @@ async function create(req, res) {
 async function update(req, res) {
   try {
     const { id } = req.params;
-    const { fecha, tipoEntrenamiento, estado, observacion } = req.body;
+    const { idSocio, fecha, tipoEntrenamiento, estado, observacion } = req.body;
 
-    const exists = await pool.query('SELECT id_asistencia FROM asistencia WHERE id_asistencia = $1', [id]);
+    const exists = await pool.query('SELECT id_asistencia, id_socio FROM asistencia WHERE id_asistencia = $1', [id]);
     if (exists.rows.length === 0) {
       return res.status(404).json({ success: false, message: 'Registro de asistencia no encontrado' });
+    }
+    // El socio de un registro no se cambia: si es otro socio, se elimina y se registra de nuevo.
+    if (idSocio !== undefined && idSocio !== null && idSocio !== '' && Number(idSocio) !== exists.rows[0].id_socio) {
+      return res.status(400).json({
+        success: false,
+        message: 'No se puede cambiar el socio de un registro de asistencia. Elimínalo y registra uno nuevo.',
+      });
     }
     if (estado && !['Presente', 'Ausente', 'Justificado', 'Tarde'].includes(estado)) {
       return res.status(400).json({
@@ -170,6 +177,17 @@ async function saveChecklist(req, res) {
           message: "Cada registro debe tener idSocio y estado ('Presente', 'Ausente', 'Justificado' o 'Tarde')",
         });
       }
+    }
+    const ids = registros.map(r => Number(r.idSocio));
+    if (new Set(ids).size !== ids.length) {
+      return res.status(400).json({ success: false, message: 'Hay socios repetidos en la lista' });
+    }
+    // Solo socios existentes y activos (mismo criterio que el formulario).
+    const activos = await client.query(
+      `SELECT id_socio FROM socio WHERE id_socio = ANY($1::int[]) AND estado = 'activo'`, [ids]
+    );
+    if (activos.rows.length !== ids.length) {
+      return res.status(400).json({ success: false, message: 'La lista incluye socios inexistentes o inactivos' });
     }
 
     await client.query('BEGIN');

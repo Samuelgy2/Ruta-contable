@@ -32,6 +32,13 @@ interface UseAsistenciaResult {
   createAsistencia: (data: Partial<AsistenciaItem>) => Promise<{ success: boolean; message: string }>;
   updateAsistencia: (id: number, data: Partial<AsistenciaItem>) => Promise<{ success: boolean; message: string }>;
   removeAsistencia: (id: number) => Promise<{ success: boolean; message: string }>;
+  saveChecklist: (data: ChecklistPayload) => Promise<{ success: boolean; message: string }>;
+}
+
+export interface ChecklistPayload {
+  fecha: string;
+  tipoEntrenamiento?: string;
+  registros: { idSocio: number; estado: AsistenciaItem['estado']; observacion?: string }[];
 }
 
 export function useAsistencia(): UseAsistenciaResult {
@@ -110,5 +117,19 @@ export function useAsistencia(): UseAsistenciaResult {
     }
   };
 
-  return { asistencia, alertas, loading, error, fetchAsistencia, fetchAlertas, createAsistencia, updateAsistencia, removeAsistencia };
+  const saveChecklist = async (data: ChecklistPayload) => {
+    try {
+      const response = await asistenciaService.saveChecklist(data);
+      if (response.success) {
+        await fetchAsistencia();
+        await fetchAlertas();
+        return { success: true, message: response.message || 'Lista guardada' };
+      }
+      return { success: false, message: response.message || 'Error al guardar la lista' };
+    } catch (err: any) {
+      return { success: false, message: err.response?.data?.message || err.message };
+    }
+  };
+
+  return { asistencia, alertas, loading, error, fetchAsistencia, fetchAlertas, createAsistencia, updateAsistencia, removeAsistencia, saveChecklist };
 }

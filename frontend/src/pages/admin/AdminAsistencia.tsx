@@ -5,6 +5,7 @@ import { useAsistencia, AsistenciaItem } from '../../hooks/useAsistencia';
 import { useSocios } from '../../hooks/useSocios';
 import { asistenciaService } from '../../services/asistenciaService';
 import { formatDateShort } from '../../utils/format';
+import type { ChecklistPayload } from '../../hooks/useAsistencia';
 import { API_URL } from '../../services/apiConfig';
 
 interface AdminAsistenciaProps {
@@ -110,8 +111,14 @@ function estadoBadge(estado: string): JSX.Element {
   return <span style={{ padding: '4px 12px', borderRadius: '9999px', fontSize: '12px', fontWeight: '600', backgroundColor: s.bg, color: s.color }}>{estado}</span>;
 }
 
+// Fecha de hoy en la zona del navegador (toISOString daría la de UTC).
+function hoyLocal(): string {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
 const emptyForm = {
-  idSocio: '', fecha: new Date().toISOString().split('T')[0],
+  idSocio: '', fecha: hoyLocal(),
   tipoEntrenamiento: '', estado: 'Presente' as AsistenciaItem['estado'], observacion: '',
 };
 type FormState = typeof emptyForm;
@@ -121,7 +128,7 @@ function getToken(): string {
 }
 
 export function AdminAsistencia({ onNavigate }: AdminAsistenciaProps) {
-  const { asistencia, alertas, loading, fetchAsistencia, createAsistencia, updateAsistencia, removeAsistencia } = useAsistencia();
+  const { asistencia, alertas, loading, fetchAsistencia, createAsistencia, updateAsistencia, removeAsistencia, saveChecklist } = useAsistencia();
   const { socios } = useSocios();
   const [searchTerm, setSearchTerm] = useState('');
   const [filterEstado, setFilterEstado] = useState<string>('all');
@@ -133,6 +140,11 @@ export function AdminAsistencia({ onNavigate }: AdminAsistenciaProps) {
   const [confirmDelete, setConfirmDelete] = useState<number | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [exporting, setExporting] = useState(false);
+  // Lista del día: un estado por socio activo ('' = no registrar).
+  const [showChecklist, setShowChecklist] = useState(false);
+  const [checkFecha, setCheckFecha] = useState(hoyLocal());
+  const [checkTipo, setCheckTipo] = useState('');
+  const [checkEstados, setCheckEstados] = useState<Record<number, string>>({});
   const { toasts, show: showToast } = useToast();
 
   useEffect(() => {
@@ -146,6 +158,46 @@ export function AdminAsistencia({ onNavigate }: AdminAsistenciaProps) {
 
   const filtered = asistencia.filter(a => (a.socio_nombre ?? '').toLowerCase().includes(searchTerm.toLowerCase()));
   const pagAsistencia = usePaginacion(filtered);
+
+  const sociosActivos = socios.filter(s => s.estado === 'activo');
+  const editingSocioNombre = editingId !== null
+    ? (asistencia.find(a => a.id_asistencia === editingId)?.socio_nombre ?? '—')
+    : '';
+
+  const openChecklist = () => {
+    const inicial: Record<number, string> = {};
+    sociosActivos.forEach(s => { inicial[s.id_socio] = 'Presente'; });
+    setCheckEstados(inicial);
+    setCheckFecha(hoyLocal());
+    setCheckTipo('');
+    setShowChecklist(true);
+  };
+
+  const marcarTodos = (estado: string) => {
+    const todos: Record<number, string> = {};
+    sociosActivos.forEach(s => { todos[s.id_socio] = estado; });
+    setCheckEstados(todos);
+  };
+
+  const handleChecklistSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    const registros = Object.entries(checkEstados)
+      .filter(([, estado]) => estado !== '')
+      .map(([id, estado]) => ({ idSocio: Number(id), estado: estado as AsistenciaItem['estado'] }));
+    if (!checkFecha || registros.length === 0) {
+      showToast('Elige la fecha y al menos un socio', 'error');
+      return;
+    }
+    setSubmitting(true);
+    try {
+      const payload: ChecklistPayload = { fecha: checkFecha, tipoEntrenamiento: checkTipo || undefined, registros };
+      const result = await saveChecklist(payload);
+      showToast(result.message, result.success ? 'success' : 'error');
+      if (result.success) setShowChecklist(false);
+    } finally {
+      setSubmitting(false);
+    }
+  };
 
   const openCreate = () => { setEditingId(null); setForm(emptyForm); setShowForm(true); };
   const openEdit = (a: AsistenciaItem) => {
@@ -166,8 +218,10 @@ export function AdminAsistencia({ onNavigate }: AdminAsistenciaProps) {
     }
     setSubmitting(true);
     try {
+      // Al editar no se envía el socio: el registro conserva el suyo.
       const payload = {
-        idSocio: parseInt(form.idSocio), fecha: form.fecha,
+        ...(editingId === null ? { idSocio: parseInt(form.idSocio) } : {}),
+        fecha: form.fecha,
         tipoEntrenamiento: form.tipoEntrenamiento || undefined,
         estado: form.estado, observacion: form.observacion || undefined,
       };
@@ -223,10 +277,12 @@ export function AdminAsistencia({ onNavigate }: AdminAsistenciaProps) {
           </div>
           <form onSubmit={(e) => { void handleSubmit(e); }}>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '16px', marginBottom: '16px' }}>
-              {f('Socio', (
+              {editingId !== null ? f('Socio', (
+                <input value={editingSocioNombre} readOnly disabled title="El socio de un registro no se puede cambiar" style={{ ...inputStyle, backgroundColor: '#f3f4f6', color: '#6b7280' }} />
+              )) : f('Socio', (
                 <select value={form.idSocio} onChange={e => setForm({ ...form, idSocio: e.target.value })} style={inputStyle} required>
                   <option value="">Seleccionar socio...</option>
-                  {socios.filter(s => s.estado === 'activo').map(s => (
+                  {sociosActivos.map(s => (
                     <option key={s.id_socio} value={s.id_socio}>{s.nombre} — {s.documento}</option>
                   ))}
                 </select>
@@ -253,6 +309,48 @@ export function AdminAsistencia({ onNavigate }: AdminAsistenciaProps) {
         </Modal>
       )}
 
+      {showChecklist && (
+        <Modal onClose={() => setShowChecklist(false)}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px' }}>
+            <h3 style={{ margin: 0, fontSize: '20px', fontWeight: '700', color: '#1f2937' }}>📋 Lista del día</h3>
+            <button onClick={() => setShowChecklist(false)} style={{ background: '#f3f4f6', border: 'none', borderRadius: '8px', width: '34px', height: '34px', cursor: 'pointer', fontSize: '18px', color: '#6b7280' }}>×</button>
+          </div>
+          <form onSubmit={(e) => { void handleChecklistSubmit(e); }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '16px', marginBottom: '16px' }}>
+              {f('Fecha', <input type="date" value={checkFecha} onChange={e => setCheckFecha(e.target.value)} style={inputStyle} required />, true)}
+              {f('Tipo de Entrenamiento', <input value={checkTipo} onChange={e => setCheckTipo(e.target.value)} style={inputStyle} placeholder="Físico, técnico..." />)}
+            </div>
+            <div style={{ display: 'flex', gap: '8px', marginBottom: '10px', fontSize: '12px' }}>
+              <button type="button" onClick={() => marcarTodos('Presente')} style={{ padding: '6px 12px', borderRadius: '6px', border: '1px solid #e5e7eb', backgroundColor: 'white', cursor: 'pointer' }}>Todos presentes</button>
+              <button type="button" onClick={() => marcarTodos('')} style={{ padding: '6px 12px', borderRadius: '6px', border: '1px solid #e5e7eb', backgroundColor: 'white', cursor: 'pointer' }}>Ninguno</button>
+            </div>
+            <p style={{ margin: '0 0 10px', fontSize: '12px', color: '#6b7280' }}>Si un socio ya tiene registro en esa fecha, se actualiza su estado.</p>
+            <div style={{ maxHeight: '320px', overflowY: 'auto', border: '1px solid #e5e7eb', borderRadius: '10px' }}>
+              {sociosActivos.length === 0 ? (
+                <div style={{ padding: '20px', textAlign: 'center', color: '#9ca3af', fontSize: '14px' }}>No hay socios activos</div>
+              ) : sociosActivos.map(s => (
+                <div key={s.id_socio} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px', padding: '8px 12px', borderBottom: '1px solid #f3f4f6' }}>
+                  <span style={{ fontSize: '14px', color: '#1f2937' }}>{s.nombre}</span>
+                  <select value={checkEstados[s.id_socio] ?? ''} onChange={e => setCheckEstados({ ...checkEstados, [s.id_socio]: e.target.value })} style={{ ...inputStyle, width: '150px', padding: '6px 10px' }}>
+                    <option value="">No registrar</option>
+                    <option value="Presente">Presente</option>
+                    <option value="Ausente">Ausente</option>
+                    <option value="Justificado">Justificado</option>
+                    <option value="Tarde">Tarde</option>
+                  </select>
+                </div>
+              ))}
+            </div>
+            <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end', paddingTop: '16px', borderTop: '1px solid #f3f4f6', marginTop: '16px' }}>
+              <button type="button" onClick={() => setShowChecklist(false)} disabled={submitting} style={{ padding: '11px 24px', borderRadius: '8px', border: '1.5px solid #e5e7eb', backgroundColor: 'white', color: '#374151', fontSize: '14px', fontWeight: '500', cursor: 'pointer' }}>Cancelar</button>
+              <button type="submit" disabled={submitting} style={{ padding: '11px 28px', borderRadius: '8px', border: 'none', backgroundColor: submitting ? '#6ee7b7' : CLUB_GREEN, color: 'white', fontSize: '14px', fontWeight: '600', cursor: submitting ? 'default' : 'pointer' }}>
+                {submitting ? 'Guardando...' : 'Guardar lista'}
+              </button>
+            </div>
+          </form>
+        </Modal>
+      )}
+
       <div className="container">
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
           <div>
@@ -262,6 +360,9 @@ export function AdminAsistencia({ onNavigate }: AdminAsistenciaProps) {
           <div style={{ display: 'flex', gap: '10px' }}>
             <button onClick={() => { void handleExport(); }} disabled={exporting} style={{ padding: '11px 18px', borderRadius: '10px', border: '1.5px solid #e5e7eb', backgroundColor: 'white', color: '#374151', fontSize: '14px', fontWeight: '600', cursor: exporting ? 'default' : 'pointer' }}>
               {exporting ? 'Exportando...' : '⬇ Exportar Excel'}
+            </button>
+            <button onClick={openChecklist} style={{ padding: '11px 18px', borderRadius: '10px', border: `1.5px solid ${CLUB_GREEN}`, backgroundColor: 'white', color: CLUB_GREEN, fontSize: '14px', fontWeight: '600', cursor: 'pointer' }}>
+              📋 Lista del día
             </button>
             <button onClick={openCreate} style={{ padding: '11px 20px', borderRadius: '10px', border: 'none', backgroundColor: CLUB_GREEN, color: 'white', fontSize: '14px', fontWeight: '600', cursor: 'pointer' }}>
               + Registrar Asistencia
