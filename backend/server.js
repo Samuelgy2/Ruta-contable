@@ -104,6 +104,7 @@ const dns = require('dns').promises;
     credentials:    true,
     methods:        ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization'],
+    exposedHeaders: ['Content-Disposition'], // el frontend lee el nombre del Excel de asistencia
   }));
   app.use(express.json());
 

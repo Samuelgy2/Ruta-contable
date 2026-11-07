@@ -1,6 +1,8 @@
 const pool = require('../db');
 const ExcelJS = require('exceljs');
 
+const fechaIsoValida = (s) => /^\d{4}-\d{2}-\d{2}$/.test(s) && !isNaN(Date.parse(s)) && new Date(s).toISOString().slice(0, 10) === s;
+
 const SELECT_WITH_SOCIO = `
   SELECT a.*, s.nombre AS socio_nombre, s.documento AS socio_documento
   FROM asistencia a
@@ -309,6 +311,14 @@ async function exportarExcel(req, res) {
   try {
     const { idSocio, fechaInicio, fechaFin } = req.query;
 
+    // Las fechas van al nombre del archivo: se exige AAAA-MM-DD real (rechaza 2026-02-30).
+    if ([fechaInicio, fechaFin].some(f => f && !fechaIsoValida(f))) {
+      return res.status(400).json({ success: false, message: 'Las fechas deben tener el formato AAAA-MM-DD' });
+    }
+    if (fechaInicio && fechaFin && fechaFin < fechaInicio) {
+      return res.status(400).json({ success: false, message: 'La fecha final no puede ser menor que la fecha inicial' });
+    }
+
     let conditions = [];
     let params = [];
     let i = 1;
@@ -355,8 +365,13 @@ async function exportarExcel(req, res) {
       });
     });
 
+    // RN2 (RF-087): el periodo consultado va encima de la tabla y en el nombre del archivo.
+    const desde = fechaInicio || 'inicio';
+    const hasta = fechaFin || 'fin';
+    sheet.spliceRows(1, 0, [`Periodo consultado: ${fechaInicio || 'sin fecha inicial'} a ${fechaFin || 'sin fecha final'}`], []);
+
     res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
-    res.setHeader('Content-Disposition', 'attachment; filename=Asistencia.xlsx');
+    res.setHeader('Content-Disposition', `attachment; filename=Asistencia_${desde}_${hasta}.xlsx`);
 
     await workbook.xlsx.write(res);
     res.end();
