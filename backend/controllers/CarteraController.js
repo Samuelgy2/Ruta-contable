@@ -250,7 +250,8 @@ async function removeTipo(req, res) {
     }
     res.json({ success: true, message: 'Tipo de cartera eliminado' });
   } catch (error) {
-    if (error.code === '23503') {
+    // cartera_id_tipo_cartera_fkey es ON DELETE RESTRICT: lanza 23001, no 23503.
+    if (error.code === '23001' || error.code === '23503') {
       return res.status(409).json({ success: false, message: 'No se puede eliminar: el tipo tiene registros de cartera asociados' });
     }
     console.error('Error removeTipo cartera:', error);
