@@ -2,7 +2,6 @@
 const express = require('express');
 const router  = express.Router();
 const pool    = require('../db');
-const ExcelJS = require('exceljs'); // Única librería de exportación requerida
 const { requireAdmin } = require('../middleware/auth');
 const { formatCurrency } = require('../utils/format');
 
@@ -255,105 +254,6 @@ router.put('/alertas-sistema/:id/leida', requireAdmin, async (req, res) => {
     res.json({ success: true });
   } catch (err) {
     res.status(500).json({ success: false, error: 'Error al actualizar alerta del sistema' });
-  }
-});
-
-// ─── EXPORTAR REPORTE MENSUAL A EXCEL (.XLSX) ──────────────────────────────
-router.get('/periodos/:id/exportar-excel', requireAdmin, async (req, res) => {
-  try {
-    const { id } = req.params;
-
-    // 1. Validar existencia del periodo contable
-    // "ultimo" (o cualquier id no numérico) resuelve al periodo cerrado más reciente.
-    const periodoQuery = /^\d+$/.test(id)
-      ? await pool.query(
-          `SELECT mp.*, u.username AS cerrado_by_username
-           FROM meses_periodo mp
-           LEFT JOIN users u ON u.id = mp.cerrado_by
-           WHERE mp.id_periodo = $1`,
-          [id]
-        )
-      : await pool.query(
-          `SELECT mp.*, u.username AS cerrado_by_username
-           FROM meses_periodo mp
-           LEFT JOIN users u ON u.id = mp.cerrado_by
-           WHERE mp.cerrado = true
-           ORDER BY mp.fecha_cierre DESC
-           LIMIT 1`
-        );
-
-    if (periodoQuery.rows.length === 0) {
-      return res.status(404).json({ success: false, error: 'Periodo contable no encontrado' });
-    }
-    const p = periodoQuery.rows[0];
-
-    // 2. Extraer el histórico de transacciones cruzando mes y año
-    const txQuery = await pool.query(
-      `SELECT t.fecha, t.tipo, t.monto, c.name AS categoria, t.metodo_pago, u.username AS creado_por, t.descripcion
-       FROM transactions t
-       LEFT JOIN categories c ON c.id = t.categoria_id
-       LEFT JOIN users u ON u.id = t.created_by
-       WHERE t.estado = 'confirmada' AND EXTRACT(MONTH FROM t.fecha) = $1 AND EXTRACT(YEAR FROM t.fecha) = $2
-       ORDER BY t.fecha ASC`,
-      [p.mes, p.anio]
-    );
-
-    // 3. Estructurar el libro con ExcelJS
-    const workbook = new ExcelJS.Workbook();
-    
-    // Hoja A: Resumen Ejecutivo
-    const resumenSheet = workbook.addWorksheet('Resumen Financiero');
-    resumenSheet.appendRow([`REPORTE FINANCIERO - ${p.nombre_mes.toUpperCase()} ${p.anio}`]);
-    resumenSheet.appendRow([]);
-    resumenSheet.appendRow(['Concepto', 'Valor']);
-    resumenSheet.appendRow(['Total Ingresos', Number(p.total_ingresos)]);
-    resumenSheet.appendRow(['Total Gastos', Number(p.total_gastos)]);
-    resumenSheet.appendRow(['Balance Neto', Number(p.balance)]);
-    resumenSheet.appendRow([]);
-    resumenSheet.appendRow(['Cerrado por', p.cerrado_by_username || 'Sistema']);
-    resumenSheet.appendRow(['Fecha Cierre', p.fecha_cierre]);
-    resumenSheet.appendRow(['Observaciones', p.observaciones || '']);
-
-    // Formatear columna de saldos como moneda local
-    resumenSheet.getColumn(2).numFmt = '"$"#,##0.00';
-
-    // Hoja B: Auditoría de Transacciones
-    const txSheet = workbook.addWorksheet('Detalle Transacciones');
-    txSheet.columns = [
-      { header: 'Fecha', key: 'fecha', width: 15 },
-      { header: 'Tipo', key: 'tipo', width: 12 },
-      { header: 'Categoría', key: 'categoria', width: 20 },
-      { header: 'Monto', key: 'monto', width: 15 },
-      { header: 'Método Pago', key: 'metodo_pago', width: 15 },
-      { header: 'Ejecutado Por', key: 'creado_por', width: 18 },
-      { header: 'Descripción', key: 'descripcion', width: 35 },
-    ];
-
-    txQuery.rows.forEach(tx => {
-      txSheet.addRow({
-        fecha: new Date(tx.fecha).toISOString().split('T')[0],
-        tipo: tx.tipo.toUpperCase(),
-        categoria: tx.categoria || 'General',
-        monto: Number(tx.monto),
-        metodo_pago: tx.metodo_pago || 'N/A',
-        creado_por: tx.creado_por || 'N/A',
-        descripcion: tx.descripcion || ''
-      });
-    });
-
-    txSheet.getColumn('monto').numFmt = '"$"#,##0.00';
-
-    // 4. Stream de descarga binaria directa (.xlsx)
-    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
-    res.setHeader('Content-Disposition', `attachment; filename=Reporte_${p.nombre_mes}_${p.anio}.xlsx`);
-
-    await workbook.xlsx.write(res);
-    res.end();
-  } catch (error) {
-    console.error('Error exportando Excel:', error);
-    if (!res.headersSent) {
-      res.status(500).json({ success: false, error: 'Error al generar el archivo Excel' });
-    }
   }
 });
 
