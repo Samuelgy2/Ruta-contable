@@ -218,6 +218,13 @@ async function remove(req, res) {
 
     res.json({ success: true, message: 'Socio eliminado correctamente' });
   } catch (error) {
+    // factura usa ON DELETE RESTRICT (23001); asistencia, cartera, pagos, etc. usan NO ACTION (23503).
+    if (error.code === '23001' || error.code === '23503') {
+      return res.status(409).json({
+        success: false,
+        message: 'No se puede eliminar el socio porque tiene registros asociados (asistencia, pagos, cartera, facturas u otros). Puedes marcarlo como inactivo.',
+      });
+    }
     console.error('Error delete socio:', error);
     res.status(500).json({ success: false, message: 'Error al eliminar socio' });
   }
