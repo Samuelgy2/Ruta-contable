@@ -61,8 +61,9 @@ export function UsersPanel({ showToast }: UsersPanelProps) {
     (filterEstado === 'all' || u.active === (filterEstado === 'activo'))
   );
   const pagUsuarios = usePaginacion(filteredUsers);
-  const inactivos = visibleUsers.filter((u: any) => !u.active);
-  const admins = visibleUsers.filter((u: any) => u.role === 'admin');
+  // Los avisos describen el sistema completo: no deben depender de la búsqueda ni de los filtros.
+  const inactivos = allVisibleUsers.filter((u: any) => !u.active);
+  const admins = allVisibleUsers.filter((u: any) => u.role === 'admin');
 
   const openCreate = () => { setEditingId(null); setForm(emptyForm); setConfirmPassword(''); setShowForm(true); };
   const openEdit = (user: User) => {
