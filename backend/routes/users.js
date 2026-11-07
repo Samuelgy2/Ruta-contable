@@ -188,8 +188,12 @@ router.put('/:id', requireAdmin, async (req, res) => {
     }
 
     if (email) {
+      if (!FORMATO_EMAIL.test(email)) {
+        return res.status(400).json({ success: false, message: 'El correo electrónico no tiene un formato válido' });
+      }
+      // UNIQUE(email) distingue mayúsculas; aquí no, para no admitir "Ana@x.com" junto a "ana@x.com".
       const duplicateEmail = await pool.query(
-        'SELECT id FROM users WHERE email = $1 AND id != $2',
+        'SELECT id FROM users WHERE LOWER(email) = LOWER($1) AND id != $2',
         [email, id]
       );
       if (duplicateEmail.rows.length > 0) {
