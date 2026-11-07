@@ -261,6 +261,10 @@ export function AdminTransactions({ onNavigate }: AdminTransactionsProps) {
   );
 
   // ── Filtros ────────────────────────────────────────────────────────────────
+  const inicioISO = parseFechaInput(fechaInicio);
+  const finISO    = parseFechaInput(fechaFin);
+  const rangoInvalido = !!inicioISO && !!finISO && finISO < inicioISO; // RF-028 RN-006.2
+
   const filteredTransactions = transactions
     .filter(t => {
       if (filterType === 'all') return true;
@@ -272,10 +276,8 @@ export function AdminTransactions({ onNavigate }: AdminTransactionsProps) {
       (t.categoria_nombre ?? '').toLowerCase().includes(searchTerm.toLowerCase())
     )
     .filter(t => {
-      // RF-017: consultar transacciones por rango de fechas (dd/mm/aaaa)
+      // RF-028: consultar transacciones por rango de fechas (dd/mm/aaaa)
       const fechaTransaccion = t.fecha.slice(0, 10); // 'YYYY-MM-DD'
-      const inicioISO = parseFechaInput(fechaInicio);
-      const finISO    = parseFechaInput(fechaFin);
       if (inicioISO && fechaTransaccion < inicioISO) return false;
       if (finISO    && fechaTransaccion > finISO)    return false;
       return true;
@@ -584,7 +586,7 @@ export function AdminTransactions({ onNavigate }: AdminTransactionsProps) {
             <option value="expense">Solo gastos</option>
           </select>
 
-          {/* RF-017: filtro por rango de fechas (dd/mm/aaaa) */}
+          {/* RF-028: filtro por rango de fechas (dd/mm/aaaa) */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
             <label style={{ fontSize: '12px', color: '#6b7280', fontWeight: 600 }}>Desde</label>
             <input
@@ -628,6 +630,11 @@ export function AdminTransactions({ onNavigate }: AdminTransactionsProps) {
             >
               Limpiar fechas
             </button>
+          )}
+          {rangoInvalido && (
+            <span role="alert" style={{ fontSize: '13px', fontWeight: 600, color: '#dc2626' }}>
+              La fecha final no puede ser menor que la fecha inicial
+            </span>
           )}
         </div>
 
