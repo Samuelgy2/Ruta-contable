@@ -272,9 +272,13 @@ async function createPedido(req, res) {
       return res.status(400).json({ success: false, message: 'La fecha de entrega no es válida' });
     }
 
-    const socio = await pool.query('SELECT id_socio FROM socio WHERE id_socio = $1', [idSocio]);
+    const socio = await pool.query('SELECT id_socio, estado FROM socio WHERE id_socio = $1', [idSocio]);
     if (socio.rows.length === 0) {
       return res.status(404).json({ success: false, message: 'Socio no encontrado' });
+    }
+    // RF-061: solo los socios activos pueden pedir jersey.
+    if (socio.rows[0].estado !== 'activo') {
+      return res.status(409).json({ success: false, message: `El socio está ${socio.rows[0].estado} y no puede hacer pedidos de jersey` });
     }
 
     // Con campaña el valor sale de ella; sin campaña lo fija el administrador.
@@ -458,6 +462,12 @@ async function portalCrearPedido(req, res) {
     if (idSocio === null) {
       await client.query('ROLLBACK');
       return res.status(409).json({ success: false, message: 'Tu cuenta aún no está vinculada a un socio. Contacta al administrador.' });
+    }
+    // RF-061: solo los socios activos pueden pedir jersey.
+    const estadoSocio = await client.query('SELECT estado FROM socio WHERE id_socio = $1', [idSocio]);
+    if (estadoSocio.rows[0]?.estado !== 'activo') {
+      await client.query('ROLLBACK');
+      return res.status(409).json({ success: false, message: 'Tu membresía no está activa; no puedes hacer pedidos de jersey. Contacta al administrador.' });
     }
 
     const campana = await client.query('SELECT * FROM jersey_campana WHERE id = $1', [idCampanaNum]);

@@ -255,12 +255,12 @@ const dns = require('dns').promises;
         const [inc, exp] = await Promise.all([
           pool.query(
             `SELECT COALESCE(SUM(monto),0) AS total FROM transactions
-             WHERE tipo = 'ingreso' AND EXTRACT(MONTH FROM fecha)=$1 AND EXTRACT(YEAR FROM fecha)=$2`,
+             WHERE tipo = 'ingreso' AND estado = 'confirmada' AND EXTRACT(MONTH FROM fecha)=$1 AND EXTRACT(YEAR FROM fecha)=$2`,
             [monthNum, yearNum]
           ),
           pool.query(
             `SELECT COALESCE(SUM(monto),0) AS total FROM transactions
-             WHERE tipo = 'gasto' AND EXTRACT(MONTH FROM fecha)=$1 AND EXTRACT(YEAR FROM fecha)=$2`,
+             WHERE tipo = 'gasto' AND estado = 'confirmada' AND EXTRACT(MONTH FROM fecha)=$1 AND EXTRACT(YEAR FROM fecha)=$2`,
             [monthNum, yearNum]
           ),
         ]);

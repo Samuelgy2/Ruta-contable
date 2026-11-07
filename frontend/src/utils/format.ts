@@ -2,8 +2,20 @@ export function formatCurrency(amount: number, currency: string = '$'): string {
   return `${currency}${amount.toFixed(2)}`;
 }
 
+// Las columnas DATE llegan como 'AAAA-MM-DD' o como medianoche UTC
+// ('AAAA-MM-DDT00:00:00.000Z'). Convertirlas con new Date() a la zona del
+// navegador (Colombia, UTC-5) las corre un día atrás, así que se toman como
+// fecha de calendario. Los timestamps reales sí se convierten a hora local.
+const SOLO_FECHA = /^(\d{4})-(\d{2})-(\d{2})(?:T00:00:00(?:\.000)?(?:Z|[+-]00:?00)?)?$/;
+
+function aFecha(dateString: string): Date {
+  const m = SOLO_FECHA.exec(String(dateString ?? '').trim());
+  if (m) return new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]));
+  return new Date(dateString);
+}
+
 export function formatDate(dateString: string): string {
-  const date = new Date(dateString);
+  const date = aFecha(dateString);
   return date.toLocaleDateString('es-ES', {
     year: 'numeric',
     month: 'long',
@@ -12,7 +24,7 @@ export function formatDate(dateString: string): string {
 }
 
 export function formatDateShort(dateString: string): string {
-  const date = new Date(dateString);
+  const date = aFecha(dateString);
   return date.toLocaleDateString('es-ES', {
     year: 'numeric',
     month: '2-digit',
