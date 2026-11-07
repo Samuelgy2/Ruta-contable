@@ -45,6 +45,8 @@ export function UsersPanel({ showToast }: UsersPanelProps) {
   const [submitting, setSubmitting] = useState(false);
 
   const [searchTerm, setSearchTerm] = useState('');
+  const [filterRole, setFilterRole] = useState<'all' | UserRole>('all');                  // RF-018
+  const [filterEstado, setFilterEstado] = useState<'all' | 'activo' | 'inactivo'>('all'); // RF-018
   const allVisibleUsers = users.filter((u: any) => u.username !== 'admin');
   const q = searchTerm.trim().toLowerCase();
   const visibleUsers = q
@@ -54,7 +56,11 @@ export function UsersPanel({ showToast }: UsersPanelProps) {
         (u.email || '').toLowerCase().includes(q)
       )
     : allVisibleUsers;
-  const pagUsuarios = usePaginacion(visibleUsers);
+  const filteredUsers = visibleUsers.filter((u: any) =>
+    (filterRole === 'all' || u.role === filterRole) &&
+    (filterEstado === 'all' || u.active === (filterEstado === 'activo'))
+  );
+  const pagUsuarios = usePaginacion(filteredUsers);
   const inactivos = visibleUsers.filter((u: any) => !u.active);
   const admins = visibleUsers.filter((u: any) => u.role === 'admin');
 
@@ -167,7 +173,7 @@ export function UsersPanel({ showToast }: UsersPanelProps) {
         </div>
       )}
 
-      <div style={{ marginBottom: '20px' }}>
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px', marginBottom: '20px' }}>
         <input
           type="text"
           placeholder="Buscar por usuario, nombre o correo..."
@@ -175,6 +181,16 @@ export function UsersPanel({ showToast }: UsersPanelProps) {
           onChange={e => setSearchTerm(e.target.value)}
           style={{ ...inputStyle, maxWidth: '360px' }}
         />
+        <select aria-label="Filtrar por rol" value={filterRole} onChange={e => setFilterRole(e.target.value as 'all' | UserRole)} style={{ ...inputStyle, width: 'auto' }}>
+          <option value="all">Todos los roles</option>
+          <option value="admin">Administrador</option>
+          <option value="user">Usuario</option>
+        </select>
+        <select aria-label="Filtrar por estado" value={filterEstado} onChange={e => setFilterEstado(e.target.value as 'all' | 'activo' | 'inactivo')} style={{ ...inputStyle, width: 'auto' }}>
+          <option value="all">Todos los estados</option>
+          <option value="activo">Activo</option>
+          <option value="inactivo">Inactivo</option>
+        </select>
       </div>
 
       <div style={{ backgroundColor: 'white', borderRadius: '14px', border: '1px solid #e5e7eb', overflow: 'hidden' }}>
@@ -189,7 +205,7 @@ export function UsersPanel({ showToast }: UsersPanelProps) {
           <tbody>
             {loading ? (
               <tr><td colSpan={6} style={{ textAlign: 'center', padding: '32px', color: '#9ca3af' }}>Cargando...</td></tr>
-            ) : visibleUsers.length === 0 ? (
+            ) : filteredUsers.length === 0 ? (
               <tr><td colSpan={6} style={{ textAlign: 'center', padding: '32px', color: '#9ca3af' }}>No hay usuarios registrados</td></tr>
             ) : pagUsuarios.itemsPagina.map((user: User) => (
               <tr key={user.id} style={{ borderBottom: '1px solid #f3f4f6' }}>
