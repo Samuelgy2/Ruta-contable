@@ -32,7 +32,7 @@ Aplicación web full-stack para la gestión financiera y administrativa de un cl
 
 Ruta Contable gestiona los procesos contables y administrativos de un club:
 
-- **Panel de administración:** resumen financiero, transacciones (ingresos y egresos) con categorías, reportes, socios, mensualidades, cartera morosa con tipos de cartera, asistencia, jersey, compras, inventario con kardex de movimientos, facturación y datos del club.
+- **Panel de administración:** resumen financiero por periodo, transacciones (ingresos y egresos) con categorías, reportes por periodo y tipo (CSV, PDF y JSON), socios, mensualidades, cartera morosa con tipos de cartera (editar y anular), asistencia con umbrales de alerta configurables, jersey, compras, inventario con kardex de movimientos, facturación y datos del club.
 - **Usuarios y seguridad:** usuarios con rol Usuario o Administrador, recuperación de contraseña por correo, bloqueo de cuenta tras intentos fallidos y alertas del sistema para errores del servidor.
 - **Portal del socio:** consulta de pagos y documentos, y pago en línea con PayPal (solo entorno de pruebas).
 - **Landing editable:** página pública del club que el administrador puede editar desde el panel.
@@ -113,6 +113,7 @@ Existe **una sola base de datos, en Supabase**. No hay un Postgres local ni en D
 | express-rate-limit | 8.x | Rate limiting |
 | morgan | 1.x | Logging de peticiones |
 | nodemailer | 9.x | Envío de correo (recuperación de contraseña) |
+| exceljs | 3.x | Excel de asistencia (la única exportación a Excel del sistema) |
 | nodemon | — | Hot-reload (solo desarrollo) |
 
 ### Infraestructura
@@ -259,23 +260,33 @@ Rutas montadas en `server.js` bajo `/api` (con límite general de peticiones), m
 | `/api/auth` | `auth.js`, `forgotPassword.js` | Inicio de sesión, registro y recuperación de contraseña |
 | `/api/users` | `users.js` | Usuarios (administración) |
 | `/api/socios` | `Member.js` | Socios |
-| `/api/admin` | `admin.js` | Resumen financiero, alertas del sistema y reportes |
+| `/api/admin` | `admin.js` | Resumen financiero (`overview?anio=&mes=`, el mes en curso por defecto), cierre mensual, periodos cerrados y alertas del sistema |
 | `/api/admin/landing` | `landingAdmin.js` | Edición de la landing (administrador) |
 | `/api/landing` | `landing.js` | Landing pública |
-| `/api/transactions` | `Transaction.js` | Transacciones y exportación |
+| `/api/transactions` | `Transaction.js` | Transacciones (filtros `anio`, `mes`, `fechaInicio` y `fechaFin`; 400 si la fecha final es menor que la inicial) |
 | `/api/compras` | `compras.js` | Compras y detalle de compra |
 | `/api/inventario` | `inventario.js` | Productos, categorías de producto y movimientos (kardex) |
-| `/api/cartera` | `cartera.js` | Cartera morosa y tipos de cartera |
-| `/api/asistencia` | `asistencia.js` | Control de asistencia |
+| `/api/cartera` | `cartera.js` | Cartera morosa y tipos de cartera (filtros `anio` y `mes`; un registro pagado solo admite editar concepto y observaciones) |
+| `/api/asistencia` | `asistencia.js` | Control de asistencia, alertas de inasistencia y Excel con el periodo consultado (`exportar-excel?fechaInicio=&fechaFin=`) |
 | `/api/periodos` | `periodos.js` | Meses de periodo (tabla `meses_periodo`) |
 | `/api/pagos-mensuales` | `pagosMensuales.js` | Mensualidades |
 | `/api/categories` | `categories.js` | Categorías de ingresos y egresos |
-| `/api/club-data` | `clubData.js` | Datos del club (`system_data`) |
+| `/api/club-data` | `clubData.js` | Datos del club y umbrales de alerta de asistencia (`system_data`) |
 | `/api/portal` | `portal.js` | Portal del socio |
 | `/api/pagos` | `pagos.js` | Pagos en línea con PayPal y webhook |
-| `/api/jersey` | `jersey.js` | Pedidos de jersey |
+| `/api/jersey` | `jersey.js` | Pedidos de jersey, con unidades solicitadas y entregadas por pedido |
 | `/api/facturas` | `facturas.js` | Facturas y detalle de factura |
 | `GET /health` | `server.js` | Estado del servidor y de la base de datos (503 si la base no responde) |
+
+### Exportaciones
+
+| Pantalla | Formatos | Dónde se genera |
+|---|---|---|
+| Reportes (resumen financiero, transacciones o cartera de un mes) | CSV, PDF y JSON | En el navegador, con las mismas filas que muestra la pantalla; los datos salen de `overview`, `transactions` y `cartera` con `anio` y `mes` |
+| Portal del socio, pagos | PDF (comprobante) | En el navegador |
+| Asistencia | Excel (`.xlsx`) | En el backend: `GET /api/asistencia/exportar-excel` |
+
+Los reportes financieros no se exportan a Excel. El detalle con archivos y líneas está en [`docs/exportaciones-implementadas.md`](docs/exportaciones-implementadas.md).
 
 ---
 
@@ -286,7 +297,7 @@ Rutas montadas en `server.js` bajo `/api` (con límite general de peticiones), m
 | Capa | Implementación |
 |---|---|
 | Cabeceras | `helmet` |
-| CORS | Lista de orígenes desde `CORS_ORIGIN` |
+| CORS | Lista de orígenes desde `CORS_ORIGIN`; expone `Content-Disposition` para el nombre del Excel de asistencia |
 | Límite de peticiones | General en `/api`; inicio de sesión 10 por 15 min; registro 5 por 15 min; recuperación de contraseña 5 y 10 por 15 min |
 | Contraseñas | bcrypt (coste 12 en inicio de sesión y registro; 10 para el código OTP) |
 | JWT | Expira a 1 día; se firma y verifica con algoritmo, emisor y audiencia fijos |
@@ -480,6 +491,7 @@ Recomendación: code-splitting con lazy loading de rutas para bajar el chunk pri
 | `docs/bd/` | Diccionario, diagrama ER y estándar de la base de datos |
 | `docs/pruebas/` y `docs/fuentes/planes/` | Planes de prueba y evidencia |
 | `docs/fuentes/plantillas/` | Plantillas de los manuales y del plan de pruebas |
+| `docs/exportaciones-implementadas.md` | Inventario de las exportaciones (pantalla, función, endpoint, formato, archivo y línea) |
 
 ---
 
@@ -494,5 +506,8 @@ Recomendación: code-splitting con lazy loading de rutas para bajar el chunk pri
 - [ ] Documentación de la API con OpenAPI.
 - [ ] Code-splitting del frontend (el bundle principal supera 1,9 MB).
 - [ ] Contenedor de producción sin privilegios de root y con healthcheck.
+- [ ] Anular un registro de cartera ya pagado (hoy responde 409: habría que anular también su transacción).
+- [ ] Ventana configurable para las alertas de asistencia (hoy fija en 30 días; los umbrales sí se configuran).
+- [ ] Retirar `DataContext` (`localStorage`), que ya no usa ninguna pantalla.
 
-**Última actualización:** 2026-11-06
+**Última actualización:** 2026-11-07
