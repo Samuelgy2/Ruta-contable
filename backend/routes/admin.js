@@ -28,6 +28,7 @@ router.get('/overview', requireAdmin, async (req, res) => {
         COUNT(*)                                                              AS "totalTransactions"
       FROM transactions
       WHERE date_trunc('month', fecha) = date_trunc('month', $1::date)
+        AND estado = 'confirmada'  -- RF-008/044: pendientes y anuladas no cuentan
     `, [`${year}-${String(month).padStart(2, '0')}-01`]).catch(() => ({
       rows: [{ monthlyIncome: 0, monthlyExpenses: 0, totalTransactions: 0 }]
     }));
@@ -143,11 +144,11 @@ router.post('/cierre-mensual', requireAdmin, async (req, res) => {
     }
 
     const incomeResult = await pool.query(
-      `SELECT COALESCE(SUM(monto), 0) as total FROM transactions WHERE tipo = 'ingreso' AND EXTRACT(MONTH FROM fecha) = $1 AND EXTRACT(YEAR FROM fecha) = $2`,
+      `SELECT COALESCE(SUM(monto), 0) as total FROM transactions WHERE tipo = 'ingreso' AND estado = 'confirmada' AND EXTRACT(MONTH FROM fecha) = $1 AND EXTRACT(YEAR FROM fecha) = $2`,
       [month, year]
     );
     const expenseResult = await pool.query(
-      `SELECT COALESCE(SUM(monto), 0) as total FROM transactions WHERE tipo = 'gasto' AND EXTRACT(MONTH FROM fecha) = $1 AND EXTRACT(YEAR FROM fecha) = $2`,
+      `SELECT COALESCE(SUM(monto), 0) as total FROM transactions WHERE tipo = 'gasto' AND estado = 'confirmada' AND EXTRACT(MONTH FROM fecha) = $1 AND EXTRACT(YEAR FROM fecha) = $2`,
       [month, year]
     );
 
@@ -180,8 +181,17 @@ router.post('/cierre-mensual', requireAdmin, async (req, res) => {
       [year, month, MONTH_NAMES[month - 1], fechaInicio, fechaFin, ingresos, gastos, balance, observaciones || 'Cierre manual desde panel de reportes', cerradoPorId]
     );
 
+    // RF-034: si otro cierre (manual o el automático) ganó la carrera entre la
+    // comprobación y el INSERT, el WHERE del ON CONFLICT no actualiza nada.
+    if (periodoResult.rows.length === 0) {
+      return res.status(409).json({
+        success: false,
+        error: `El periodo de ${MONTH_NAMES[month - 1]} ${year} ya se encuentra cerrado y no puede sobrescribirse`,
+      });
+    }
+
     const transaccionesResult = await pool.query(
-      `SELECT id, tipo, monto, fecha, descripcion FROM transactions WHERE EXTRACT(MONTH FROM fecha) = $1 AND EXTRACT(YEAR FROM fecha) = $2 ORDER BY fecha DESC`,
+      `SELECT id, tipo, monto, fecha, descripcion FROM transactions WHERE estado = 'confirmada' AND EXTRACT(MONTH FROM fecha) = $1 AND EXTRACT(YEAR FROM fecha) = $2 ORDER BY fecha DESC`,
       [month, year]
     );
 
@@ -283,7 +293,7 @@ router.get('/periodos/:id/exportar-excel', requireAdmin, async (req, res) => {
        FROM transactions t
        LEFT JOIN categories c ON c.id = t.categoria_id
        LEFT JOIN users u ON u.id = t.created_by
-       WHERE EXTRACT(MONTH FROM t.fecha) = $1 AND EXTRACT(YEAR FROM t.fecha) = $2
+       WHERE t.estado = 'confirmada' AND EXTRACT(MONTH FROM t.fecha) = $1 AND EXTRACT(YEAR FROM t.fecha) = $2
        ORDER BY t.fecha ASC`,
       [p.mes, p.anio]
     );
