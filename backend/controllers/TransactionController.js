@@ -46,7 +46,9 @@ async function resolveCategoryByName(categoriaNombre, tipoNormalizado) {
      LIMIT 1`,
     [categoriaNombre.trim(), categoryType]
   );
-  return result.rows[0] || null;
+  const cat = result.rows[0];
+  if (cat && !cat.active) return { ...cat, _error: 'inactive' }; // mismo criterio que findValidCategory
+  return cat || null;
 }
 
 // El LEFT JOIN con pagos_pasarela distingue los movimientos que entraron por la

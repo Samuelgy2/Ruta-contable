@@ -224,10 +224,11 @@ export function AdminCategories({ onNavigate }: AdminCategoriesProps) {
           </div>
         </div>
 
-        {expenseCategories.length === 0 && (
+        {/* RF-065: solo las activas se pueden elegir en una transacción */}
+        {!expenseCategories.some(c => c.active) && (
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '12px 16px', borderRadius: '10px', backgroundColor: '#fef2f2', border: '1px solid #fecaca', marginBottom: '20px' }}>
             <span style={{ fontSize: '18px' }}>🔴</span>
-            <span style={{ fontSize: '13px', color: '#991b1b', fontWeight: '600' }}>No hay categorías de gasto configuradas — las transacciones de egreso no podrán clasificarse</span>
+            <span style={{ fontSize: '13px', color: '#991b1b', fontWeight: '600' }}>No hay categorías de gasto activas — las transacciones de egreso no podrán clasificarse</span>
           </div>
         )}
         {inactivas.length > 0 && (
