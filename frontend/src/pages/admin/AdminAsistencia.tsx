@@ -4,6 +4,7 @@ import { Paginacion } from '../../components/ui/Paginacion';
 import { useAsistencia, AsistenciaItem } from '../../hooks/useAsistencia';
 import { useSocios } from '../../hooks/useSocios';
 import { asistenciaService } from '../../services/asistenciaService';
+import { clubDataService } from '../../services/clubDataService';
 import { formatDateShort } from '../../utils/format';
 import type { ChecklistPayload } from '../../hooks/useAsistencia';
 import { API_URL } from '../../services/apiConfig';
@@ -128,7 +129,7 @@ function getToken(): string {
 }
 
 export function AdminAsistencia({ onNavigate }: AdminAsistenciaProps) {
-  const { asistencia, alertas, loading, fetchAsistencia, createAsistencia, updateAsistencia, removeAsistencia, saveChecklist } = useAsistencia();
+  const { asistencia, alertas, loading, fetchAsistencia, fetchAlertas, createAsistencia, updateAsistencia, removeAsistencia, saveChecklist } = useAsistencia();
   const { socios } = useSocios();
   const [searchTerm, setSearchTerm] = useState('');
   const [filterEstado, setFilterEstado] = useState<string>('all');
@@ -146,6 +147,37 @@ export function AdminAsistencia({ onNavigate }: AdminAsistenciaProps) {
   const [checkTipo, setCheckTipo] = useState('');
   const [checkEstados, setCheckEstados] = useState<Record<number, string>>({});
   const { toasts, show: showToast } = useToast();
+
+  // ── Umbrales de alerta (RF-084 RN-003), guardados en system_data ────────────
+  const [umbrales, setUmbrales] = useState<{ consecutiva: string; acumulada: string } | null>(null);
+  const abrirUmbrales = async () => {
+    try {
+      const r = await clubDataService.get();
+      setUmbrales({
+        consecutiva: String(r.data?.umbral_inasistencia_consecutiva ?? 3),
+        acumulada:   String(r.data?.umbral_inasistencia_acumulada ?? 5),
+      });
+    } catch {
+      showToast('No se pudieron cargar los umbrales', 'error');
+    }
+  };
+  const guardarUmbrales = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!umbrales) return;
+    setSubmitting(true);
+    try {
+      const r = await clubDataService.update({
+        umbralInasistenciaConsecutiva: Number(umbrales.consecutiva),
+        umbralInasistenciaAcumulada:   Number(umbrales.acumulada),
+      });
+      showToast(r.success ? 'Umbrales de alerta actualizados' : r.message, r.success ? 'success' : 'error');
+      if (r.success) { setUmbrales(null); await fetchAlertas(); }
+    } catch (err: any) {
+      showToast(err.response?.data?.message || 'Error al guardar los umbrales', 'error');
+    } finally {
+      setSubmitting(false);
+    }
+  };
 
   useEffect(() => {
     const t = setTimeout(() => fetchAsistencia({
@@ -309,6 +341,31 @@ export function AdminAsistencia({ onNavigate }: AdminAsistenciaProps) {
         </Modal>
       )}
 
+      {umbrales && (
+        <Modal onClose={() => setUmbrales(null)}>
+          <h3 style={{ margin: '0 0 8px', fontSize: '18px', fontWeight: '700', color: '#1f2937' }}>⚙ Umbrales de alerta de inasistencia</h3>
+          <p style={{ margin: '0 0 20px', fontSize: '13px', color: '#6b7280' }}>
+            Se marca un socio cuando alcanza cualquiera de los dos umbrales en los últimos 30 días.
+          </p>
+          <form onSubmit={(e) => { void guardarUmbrales(e); }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '20px' }}>
+              {f('Inasistencias consecutivas', (
+                <input type="number" min={1} max={30} step={1} value={umbrales.consecutiva} onChange={e => setUmbrales({ ...umbrales, consecutiva: e.target.value })} style={inputStyle} required />
+              ), true)}
+              {f('Inasistencias acumuladas', (
+                <input type="number" min={1} max={30} step={1} value={umbrales.acumulada} onChange={e => setUmbrales({ ...umbrales, acumulada: e.target.value })} style={inputStyle} required />
+              ), true)}
+            </div>
+            <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
+              <button type="button" onClick={() => setUmbrales(null)} disabled={submitting} style={{ padding: '10px 20px', borderRadius: '8px', border: '1.5px solid #e5e7eb', backgroundColor: 'white', color: '#374151', fontSize: '14px', cursor: 'pointer' }}>Cancelar</button>
+              <button type="submit" disabled={submitting} style={{ padding: '10px 24px', borderRadius: '8px', border: 'none', backgroundColor: CLUB_GREEN, color: 'white', fontSize: '14px', fontWeight: '600', cursor: 'pointer' }}>
+                {submitting ? 'Guardando...' : 'Guardar'}
+              </button>
+            </div>
+          </form>
+        </Modal>
+      )}
+
       {showChecklist && (
         <Modal onClose={() => setShowChecklist(false)}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px' }}>
@@ -360,6 +417,9 @@ export function AdminAsistencia({ onNavigate }: AdminAsistenciaProps) {
           <div style={{ display: 'flex', gap: '10px' }}>
             <button onClick={() => { void handleExport(); }} disabled={exporting} style={{ padding: '11px 18px', borderRadius: '10px', border: '1.5px solid #e5e7eb', backgroundColor: 'white', color: '#374151', fontSize: '14px', fontWeight: '600', cursor: exporting ? 'default' : 'pointer' }}>
               {exporting ? 'Exportando...' : '⬇ Exportar Excel'}
+            </button>
+            <button onClick={() => { void abrirUmbrales(); }} style={{ padding: '11px 18px', borderRadius: '10px', border: '1.5px solid #e5e7eb', backgroundColor: 'white', color: '#374151', fontSize: '14px', fontWeight: '600', cursor: 'pointer' }}>
+              ⚙ Umbrales de alerta
             </button>
             <button onClick={openChecklist} style={{ padding: '11px 18px', borderRadius: '10px', border: `1.5px solid ${CLUB_GREEN}`, backgroundColor: 'white', color: CLUB_GREEN, fontSize: '14px', fontWeight: '600', cursor: 'pointer' }}>
               📋 Lista del día
