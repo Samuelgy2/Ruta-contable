@@ -8,9 +8,13 @@ const { formatCurrency } = require('../utils/format');
 
 router.get('/overview', requireAdmin, async (req, res) => {
   try {
+    // Periodo opcional ?anio=&mes= (RF-030 / RF-023); por defecto, el mes en curso.
     const now    = new Date();
-    const year   = now.getFullYear();
-    const month  = now.getMonth() + 1;
+    const year   = req.query.anio !== undefined ? Number(req.query.anio) : now.getFullYear();
+    const month  = req.query.mes  !== undefined ? Number(req.query.mes)  : now.getMonth() + 1;
+    if (!Number.isInteger(year) || year < 2000 || year > 2100 || !Number.isInteger(month) || month < 1 || month > 12) {
+      return res.status(400).json({ success: false, error: 'Periodo inválido: anio entre 2000 y 2100, mes entre 1 y 12' });
+    }
 
     // Socios
     const memberStats = await pool.query(`

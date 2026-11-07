@@ -13,7 +13,7 @@ const SELECT_WITH_SOCIO = `
 // GET /api/cartera
 async function getAll(req, res) {
   try {
-    const { estado, idSocio, search = '' } = req.query;
+    const { estado, idSocio, anio, mes, search = '' } = req.query;
 
     let conditions = [];
     let params = [];
@@ -22,6 +22,15 @@ async function getAll(req, res) {
     if (estado) {
       conditions.push(`c.estado = $${i++}`);
       params.push(estado);
+    }
+    // Periodo (RF-023): mismo criterio que GET /api/transactions?anio=&mes=
+    if (anio) {
+      conditions.push(`EXTRACT(YEAR FROM c.fecha) = $${i++}`);
+      params.push(parseInt(anio));
+    }
+    if (mes) {
+      conditions.push(`EXTRACT(MONTH FROM c.fecha) = $${i++}`);
+      params.push(parseInt(mes));
     }
     if (idSocio) {
       conditions.push(`c.id_socio = $${i++}`);

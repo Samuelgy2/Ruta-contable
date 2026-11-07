@@ -1,9 +1,8 @@
 import React, { useState, useCallback, useEffect } from 'react';
-import { useData } from '../../contexts/DataContext';
-import { useCartera } from '../../hooks/useCartera';
 import { useClubData } from '../../hooks/useClubData';
 import { formatCurrency, formatDateShort, hoyLocal } from '../../utils/format';
-import { exportToCSV, exportToJSON, exportMembersReportPDF, exportTransactionsReportPDF } from '../../utils/export';
+import { exportToCSV, exportToJSON, exportReportePDF } from '../../utils/export';
+import { ColumnaReporte } from '../../utils/pdfDocuments';
 import { API_URL } from '../../services/apiConfig';
 
 interface AdminReportsProps {
@@ -12,6 +11,8 @@ interface AdminReportsProps {
 
 // ─── Config ───────────────────────────────────────────────────────────────────
 const CLUB_GREEN = '#10b981';
+const MONTH_NAMES = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto',
+  'septiembre','octubre','noviembre','diciembre'];
 
 function getToken(): string {
   return localStorage.getItem('clubfinance_token') ?? '';
@@ -94,28 +95,62 @@ interface PeriodoCerrado {
   cerrado_by_username: string | null;
 }
 
-function useOverviewSummary() {
+async function getJSON(path: string) {
+  const res = await fetch(`${API_URL}${path}`, { headers: { Authorization: `Bearer ${getToken()}` } });
+  return res.json();
+}
+
+// Balance, transacciones confirmadas y cartera del periodo elegido (RF-023/033/036).
+function useDatosPeriodo(anio: number, mes: number) {
   const [summary, setSummary] = useState<OverviewSummary | null>(null);
+  const [transacciones, setTransacciones] = useState<any[]>([]);
+  const [cartera, setCartera] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const fetchSummary = useCallback(async () => {
+  const fetchDatos = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await fetch(`${API_URL}/admin/overview`, {
-        headers: { Authorization: `Bearer ${getToken()}` },
-      });
-      const json = await res.json();
-      if (json.success) setSummary(json.data.summary);
+      const qs = `anio=${anio}&mes=${mes}`;
+      const [ov, tx, ca] = await Promise.all([
+        getJSON(`/admin/overview?${qs}`), getJSON(`/transactions?${qs}`), getJSON(`/cartera?${qs}`),
+      ]);
+      setSummary(ov.success ? ov.data.summary : null);
+      // Solo información contable válida (RF-026 RN-002.1), igual que el balance del overview.
+      setTransacciones(tx.success ? tx.data.filter((t: any) => t.estado === 'confirmada') : []);
+      setCartera(ca.success ? ca.data : []);
     } catch {
-      // silencioso: no bloquea el resto de la página
+      setSummary(null); setTransacciones([]); setCartera([]);
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [anio, mes]);
 
-  useEffect(() => { void fetchSummary(); }, [fetchSummary]);
-  return { summary, loading, refetch: fetchSummary };
+  useEffect(() => { void fetchDatos(); }, [fetchDatos]);
+  return { summary, transacciones, cartera, loading, refetch: fetchDatos };
 }
+
+type TipoReporte = 'resumen' | 'transacciones' | 'cartera';
+
+const REPORTES: Record<TipoReporte, { titulo: string; columnas: ColumnaReporte[] }> = {
+  resumen: {
+    titulo: 'Resumen financiero',
+    columnas: [{ clave: 'concepto', titulo: 'Concepto' }, { clave: 'valor', titulo: 'Valor', moneda: true }],
+  },
+  transacciones: {
+    titulo: 'Transacciones',
+    columnas: [
+      { clave: 'fecha', titulo: 'Fecha' }, { clave: 'tipo', titulo: 'Tipo' }, { clave: 'categoria', titulo: 'Categoría' },
+      { clave: 'descripcion', titulo: 'Descripción' }, { clave: 'metodo', titulo: 'Método' }, { clave: 'monto', titulo: 'Monto', moneda: true },
+    ],
+  },
+  cartera: {
+    titulo: 'Cartera',
+    columnas: [
+      { clave: 'fecha', titulo: 'Fecha' }, { clave: 'socio', titulo: 'Socio' }, { clave: 'concepto', titulo: 'Concepto' },
+      { clave: 'tipo', titulo: 'Tipo' }, { clave: 'estado', titulo: 'Estado' }, { clave: 'valor', titulo: 'Valor', moneda: true },
+    ],
+  },
+};
 
 function usePeriodos() {
   const [periodos, setPeriodos] = useState<PeriodoCerrado[]>([]);
@@ -142,16 +177,20 @@ function usePeriodos() {
 
 // ─── Componente principal ─────────────────────────────────────────────────────
 export function AdminReports({ onNavigate }: AdminReportsProps) {
-  const { transactions, members, fees, systemData } = useData();
-  const { cartera } = useCartera();
   const { clubData } = useClubData();
-  const { summary, loading: summaryLoading, refetch: refetchSummary } = useOverviewSummary();
+  // Criterios del reporte: periodo (AAAA-MM, mes en curso por defecto) y tipo.
+  const [periodo, setPeriodo] = useState(hoyLocal().slice(0, 7));
+  const [tipo, setTipo] = useState<TipoReporte>('resumen');
+  const periodoValido = /^\d{4}-\d{2}$/.test(periodo) ? periodo : hoyLocal().slice(0, 7);
+  const anio = Number(periodoValido.slice(0, 4));
+  const mes  = Number(periodoValido.slice(5, 7));
+  const { summary, transacciones, cartera, loading: summaryLoading, refetch: refetchSummary } = useDatosPeriodo(anio, mes);
   const { periodos, loading: periodosLoading, refetch: refetchPeriodos } = usePeriodos();
 
   const [cierreLoading, setCierreLoading] = useState(false);
   const { toasts, show: showToast } = useToast();
 
-  const currency = clubData?.moneda ?? systemData.currency;
+  const currency = clubData?.moneda ?? 'COP';
 
   // ── Cuotas reales (tabla cartera) ──────────────────────────────────────────
   const hoy = hoyLocal();
@@ -163,48 +202,46 @@ export function AdminReports({ onNavigate }: AdminReportsProps) {
   const pctPendientes = totalCuotas > 0 ? (cuotasPendientes / totalCuotas) * 100 : 0;
   const pctVencidas   = totalCuotas > 0 ? (cuotasVencidas / totalCuotas) * 100 : 0;
 
-  // ── Exportaciones (formato/backup — sin cambios) ───────────────────────────
-  const handleExportTransactions = () => {
-    const data = transactions.map(t => ({
-      fecha:      t.date,
-      tipo:       t.type === 'income' ? 'Ingreso' : 'Gasto',
-      categoria:  t.category,
-      monto:      t.amount,
-      descripcion: t.description,
-      creadoPor:  t.createdBy,
+  // ── Reporte seleccionado: mismas filas en pantalla, CSV, PDF y JSON (RF-036 RN-004) ──
+  const sumaCartera = (estado: string) => cartera.filter(c => c.estado === estado).reduce((s, c) => s + Number(c.valor), 0);
+  const filas: Record<string, string | number | null>[] =
+    tipo === 'resumen' ? (summary ? [
+      { concepto: 'Ingresos', valor: summary.monthlyIncome.raw },
+      { concepto: 'Gastos', valor: summary.monthlyExpenses.raw },
+      { concepto: 'Balance', valor: summary.clubBalance.raw },
+      { concepto: 'Cartera cobrada', valor: sumaCartera('pagado') },
+      { concepto: 'Cartera pendiente', valor: sumaCartera('pendiente') },
+    ] : [])
+    : tipo === 'transacciones' ? transacciones.map(t => ({
+      fecha: formatDateShort(t.fecha), tipo: t.tipo === 'ingreso' ? 'Ingreso' : 'Gasto',
+      categoria: t.categoria_nombre ?? '', descripcion: t.descripcion ?? '', metodo: t.metodo_pago ?? '', monto: Number(t.monto),
+    }))
+    : cartera.map(c => ({
+      fecha: formatDateShort(c.fecha), socio: c.socio_nombre ?? '', concepto: c.concepto ?? '',
+      tipo: c.tipo_cartera_nombre ?? '', estado: c.estado, valor: Number(c.valor),
     }));
-    exportToCSV(data, `transacciones-${new Date().toISOString().split('T')[0]}.csv`);
-    showToast('Transacciones exportadas en CSV', 'success');
+  const reporte = REPORTES[tipo];
+  // RF-026 RN-002.3: el reporte lleva periodo consultado y fecha de generación.
+  const periodoLabel = `${MONTH_NAMES[mes - 1]} ${anio}`;
+  const archivo = `reporte-${tipo}-${periodoValido}`;
+  const conTitulos = () => filas.map(f => Object.fromEntries(reporte.columnas.map(c => [c.titulo, f[c.clave]])));
+
+  const handleExportCSV = () => {
+    exportToCSV(conTitulos(), `${archivo}.csv`);
   };
-
-  const handleExportMembers = async () => {
-    await exportMembersReportPDF(members, fees, systemData);
-    showToast('Reporte de socios generado en PDF', 'success');
+  const handleExportPDF = async () => {
+    await exportReportePDF({
+      club: clubData?.club_nombre || 'Club', titulo: reporte.titulo, periodo: periodoLabel,
+      generado: new Date().toLocaleString('es-CO'), moneda: currency, columnas: reporte.columnas, filas,
+    }, `${archivo}.pdf`);
+    showToast(`${reporte.titulo} generado en PDF`, 'success');
   };
-
-  const handleExportReport = async () => {
-    await exportTransactionsReportPDF(transactions, systemData);
-    showToast('Reporte financiero generado en PDF', 'success');
+  const handleExportJSON = () => {
+    exportToJSON({ reporte: reporte.titulo, periodo: periodoLabel, generado: new Date().toISOString(), filas: conTitulos() }, `${archivo}.json`);
+    showToast(`${reporte.titulo} exportado en JSON`, 'success');
   };
-
-  const handleExportAllData = () => {
-    const data = {
-      transactions,
-      members,
-      fees,
-      systemData,
-      exportDate: new Date().toISOString(),
-    };
-    exportToJSON(data, `backup-completo-${new Date().toISOString().split('T')[0]}.json`);
-    showToast('Backup completo exportado en JSON', 'success');
-  };
-
-
 
   // ── Cierre mensual (RF-034) ────────────────────────────────────────────────
-  const MONTH_NAMES = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto',
-    'septiembre','octubre','noviembre','diciembre'];
-
   const nowDate = new Date();
   const prevMonthNum  = nowDate.getMonth() === 0 ? 12 : nowDate.getMonth();
   const prevYearNum   = nowDate.getMonth() === 0 ? nowDate.getFullYear() - 1 : nowDate.getFullYear();
@@ -315,13 +352,29 @@ export function AdminReports({ onNavigate }: AdminReportsProps) {
       <div className="container">
 
         {/* ── Header ──────────────────────────────────────────────── */}
-        <div className="fade-up" style={{ marginBottom: '28px' }}>
-          <h3 style={{ margin: 0, marginBottom: '4px', fontSize: '24px', fontWeight: '700', color: '#1f2937' }}>
-            Reportes y Estadísticas
-          </h3>
-          <p style={{ color: '#6b7280', margin: 0, fontSize: '14px' }}>
-            Resumen financiero y herramientas de exportación
-          </p>
+        <div className="fade-up" style={{ marginBottom: '28px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', flexWrap: 'wrap', gap: '16px' }}>
+          <div>
+            <h3 style={{ margin: 0, marginBottom: '4px', fontSize: '24px', fontWeight: '700', color: '#1f2937' }}>
+              Reportes y Estadísticas
+            </h3>
+            <p style={{ color: '#6b7280', margin: 0, fontSize: '14px' }}>
+              Elige el periodo y el tipo de reporte; se exporta lo mismo que ves
+            </p>
+          </div>
+          <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
+            <label style={{ display: 'flex', flexDirection: 'column', gap: '4px', fontSize: '12px', fontWeight: 600, color: '#6b7280' }}>
+              Periodo
+              <input type="month" value={periodo} onChange={e => setPeriodo(e.target.value)} required
+                style={{ padding: '9px 12px', border: '1.5px solid #e5e7eb', borderRadius: '10px', fontSize: '14px' }} />
+            </label>
+            <label style={{ display: 'flex', flexDirection: 'column', gap: '4px', fontSize: '12px', fontWeight: 600, color: '#6b7280' }}>
+              Tipo de reporte
+              <select value={tipo} onChange={e => setTipo(e.target.value as TipoReporte)}
+                style={{ padding: '9px 12px', border: '1.5px solid #e5e7eb', borderRadius: '10px', fontSize: '14px', backgroundColor: 'white' }}>
+                {(Object.keys(REPORTES) as TipoReporte[]).map(k => <option key={k} value={k}>{REPORTES[k].titulo}</option>)}
+              </select>
+            </label>
+          </div>
         </div>
 
         {/* ── Balance general + Cuotas ───────────────────────────────── */}
@@ -345,7 +398,7 @@ export function AdminReports({ onNavigate }: AdminReportsProps) {
                 <h3 style={{ fontSize: '16px', fontWeight: 700, margin: 0, color: '#111827' }}>Balance General</h3>
               </div>
               <span style={{ fontSize: '11px', fontWeight: 600, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                {MONTH_NAMES[new Date().getMonth()]} {new Date().getFullYear()}
+                {periodoLabel}
               </span>
             </div>
 
@@ -388,7 +441,7 @@ export function AdminReports({ onNavigate }: AdminReportsProps) {
               <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: '#ecfdf5', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '18px' }}>
                 🧾
               </div>
-              <h3 style={{ fontSize: '16px', fontWeight: 700, margin: 0, color: '#111827' }}>Cuotas (Cartera)</h3>
+              <h3 style={{ fontSize: '16px', fontWeight: 700, margin: 0, color: '#111827' }}>Cuotas (Cartera) · <span style={{ textTransform: 'capitalize' }}>{periodoLabel}</span></h3>
             </div>
 
             {/* Barra de proporción */}
@@ -418,16 +471,43 @@ export function AdminReports({ onNavigate }: AdminReportsProps) {
             <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: '#ecfdf5', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '18px' }}>
               💾
             </div>
-            <h3 style={{ fontSize: '16px', fontWeight: 700, margin: 0, color: '#111827' }}>Exportar Datos</h3>
+            <h3 style={{ fontSize: '16px', fontWeight: 700, margin: 0, color: '#111827' }}>
+              {reporte.titulo} · <span style={{ textTransform: 'capitalize' }}>{periodoLabel}</span>
+            </h3>
           </div>
-          <p style={{ color: '#6b7280', fontSize: '14px', margin: '0 0 20px' }}>
-            Descarga los datos del sistema en diferentes formatos
+          <p style={{ color: '#6b7280', fontSize: '14px', margin: '0 0 16px' }}>
+            {tipo === 'transacciones' ? 'Solo transacciones confirmadas.' : tipo === 'cartera' ? 'Registros de cartera con fecha en el periodo.' : 'Totales del periodo (transacciones confirmadas y cartera).'}
           </p>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '14px' }}>
-            <ExportBtn icon="📊" label="Transacciones CSV"     sub="Formato de texto"  onClick={handleExportTransactions} />
-            <ExportBtn icon="👥" label="Socios y Cuotas"       sub="Formato PDF"       onClick={handleExportMembers} />
-            <ExportBtn icon="📄" label="Reporte Financiero PDF" sub="Documento Oficial" onClick={handleExportReport} /> 
-            <ExportBtn icon="🗄️" label="Backup Completo" sub="Formato JSON" onClick={handleExportAllData} />
+          <div style={{ overflowX: 'auto', marginBottom: '20px', border: '1px solid #f3f4f6', borderRadius: '12px' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
+              <thead>
+                <tr style={{ backgroundColor: '#f9fafb' }}>
+                  {reporte.columnas.map(c => (
+                    <th key={c.clave} style={{ textAlign: c.moneda ? 'right' : 'left', padding: '10px 14px', color: '#6b7280', fontWeight: 600 }}>{c.titulo}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {summaryLoading ? (
+                  <tr><td colSpan={reporte.columnas.length} style={{ padding: '20px', textAlign: 'center', color: '#9ca3af' }}>Cargando...</td></tr>
+                ) : filas.length === 0 ? (
+                  <tr><td colSpan={reporte.columnas.length} style={{ padding: '20px', textAlign: 'center', color: '#9ca3af' }}>Sin registros en el periodo</td></tr>
+                ) : filas.map((f, i) => (
+                  <tr key={i} style={{ borderTop: '1px solid #f3f4f6' }}>
+                    {reporte.columnas.map(c => (
+                      <td key={c.clave} style={{ padding: '10px 14px', textAlign: c.moneda ? 'right' : 'left', color: '#374151' }}>
+                        {c.moneda ? formatCurrency(Number(f[c.clave] ?? 0), currency) : String(f[c.clave] ?? '')}
+                      </td>
+                    ))}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '14px' }}>
+            <ExportBtn icon="📊" label="Exportar CSV"  sub="Formato de texto" onClick={handleExportCSV} disabled={summaryLoading} />
+            <ExportBtn icon="📄" label="Exportar PDF"  sub="Documento"        onClick={() => { void handleExportPDF(); }} disabled={summaryLoading} />
+            <ExportBtn icon="🗄️" label="Exportar JSON" sub="Datos estructurados" onClick={handleExportJSON} disabled={summaryLoading} />
           </div>
         </div>
 
