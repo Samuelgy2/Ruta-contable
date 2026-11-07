@@ -92,12 +92,27 @@ async function update(req, res) {
     const { id } = req.params;
     const { name, type, description, active } = req.body;
 
-    const exists = await pool.query('SELECT id FROM categories WHERE id = $1', [id]);
+    const exists = await pool.query('SELECT id, name, type FROM categories WHERE id = $1', [id]);
     if (exists.rows.length === 0) {
       return res.status(404).json({ success: false, message: 'Categoría no encontrada' });
     }
     if (type && !['income', 'expense'].includes(type)) {
       return res.status(400).json({ success: false, message: "type debe ser 'income' o 'expense'" });
+    }
+    // RF-042/043: si llega el nombre, no puede quedar vacío.
+    if (name !== undefined && (name === null || String(name).trim() === '')) {
+      return res.status(400).json({ success: false, message: 'El nombre de la categoría es obligatorio' });
+    }
+    const nombreFinal = name !== undefined ? String(name).trim() : exists.rows[0].name;
+    const tipoFinal = type || exists.rows[0].type;
+
+    // RF-068: no puede haber dos categorías con el mismo nombre y tipo.
+    const duplicada = await pool.query(
+      'SELECT id FROM categories WHERE LOWER(name) = LOWER($1) AND type = $2 AND id <> $3',
+      [nombreFinal, tipoFinal, id]
+    );
+    if (duplicada.rows.length > 0) {
+      return res.status(409).json({ success: false, message: 'Ya existe una categoría con ese nombre y tipo' });
     }
 
     const result = await pool.query(
@@ -109,7 +124,7 @@ async function update(req, res) {
         updated_at  = CURRENT_TIMESTAMP
        WHERE id = $5
        RETURNING *`,
-      [name, type, description, active, id]
+      [nombreFinal, tipoFinal, description, active, id]
     );
 
     res.json({ success: true, data: result.rows[0], message: 'Categoría actualizada correctamente' });
