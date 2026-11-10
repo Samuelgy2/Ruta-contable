@@ -87,7 +87,6 @@ function estadoBadge(estado: string) {
 // ─── Formulario (crear / editar) ──────────────────────────────────────────────
 interface LineaForm { servicio: string; descripcion: string; cantidad: string; valorUnitario: string; descuento: string; iva: string; }
 const lineaVacia = (): LineaForm => ({ servicio: '', descripcion: '', cantidad: '1', valorUnitario: '', descuento: '0', iva: '0' });
-// Igual que el backend (totalLineaCentavos): descuento e IVA son porcentajes.
 const calcLinea = (cantidad: number, valor: number, desc: number, iva: number) =>
   Math.round(Math.round(cantidad * Math.round(valor * 100) * (1 - desc / 100)) * (1 + iva / 100)) / 100;
 const totalLinea = (l: LineaForm) => calcLinea(num(l.cantidad), num(l.valorUnitario), num(l.descuento), num(l.iva));
@@ -99,13 +98,11 @@ function FormFactura({ inicial, onGuardado, onClose, toast }: {
   toast: (m: string, ok: boolean) => void;
 }) {
   const { socios } = useSocios();
-  const [tercero, setTercero] = useState<'socio' | 'proveedor'>(inicial?.proveedor_nombre ? 'proveedor' : 'socio');
   const [cab, setCab] = useState({
     fecha: inicial?.fecha?.slice(0, 10) ?? hoy(),
     fechaVencimiento: inicial?.fecha_vencimiento?.slice(0, 10) ?? '',
     concepto: inicial?.concepto ?? '',
     idSocio: inicial?.id_socio ? String(inicial.id_socio) : '',
-    proveedorNombre: inicial?.proveedor_nombre ?? '',
     nroFactura: inicial?.nro_factura ?? '',
     observaciones: inicial?.observaciones ?? '',
   });
@@ -126,8 +123,7 @@ function FormFactura({ inicial, onGuardado, onClose, toast }: {
       fecha: cab.fecha,
       fechaVencimiento: cab.fechaVencimiento || null,
       concepto: cab.concepto,
-      idSocio: tercero === 'socio' && cab.idSocio ? Number(cab.idSocio) : null,
-      proveedorNombre: tercero === 'proveedor' ? cab.proveedorNombre : null,
+      idSocio: cab.idSocio ? Number(cab.idSocio) : null,
       nroFactura: cab.nroFactura || null,
       observaciones: cab.observaciones || null,
       detalles: lineas.map(l => ({ servicio: l.servicio, descripcion: l.descripcion, cantidad: Number(l.cantidad), valorUnitario: Number(l.valorUnitario), descuento: Number(l.descuento || 0), iva: Number(l.iva || 0) })),
@@ -154,21 +150,12 @@ function FormFactura({ inicial, onGuardado, onClose, toast }: {
       </div>
       <div style={{ display: 'grid', gap: '14px', marginBottom: '14px' }}>
         <Campo label="Concepto" required><input value={cab.concepto} maxLength={200} onChange={e => setCab({ ...cab, concepto: e.target.value })} required style={inputStyle} /></Campo>
-        <fieldset style={{ border: 'none', padding: 0, margin: 0, display: 'flex', gap: '18px', fontSize: '14px' }}>
-          <legend style={{ fontSize: '13px', fontWeight: 600, color: '#374151', marginBottom: '6px' }}>Asociada a <span style={{ color: '#ef4444' }}>*</span></legend>
-          <label><input type="radio" checked={tercero === 'socio'} onChange={() => setTercero('socio')} /> Socio</label>
-          <label><input type="radio" checked={tercero === 'proveedor'} onChange={() => setTercero('proveedor')} /> Proveedor</label>
-        </fieldset>
-        {tercero === 'socio' ? (
-          <Campo label="Socio" required>
-            <select value={cab.idSocio} onChange={e => setCab({ ...cab, idSocio: e.target.value })} required style={inputStyle}>
-              <option value="">Seleccionar socio...</option>
-              {socios.map(s => <option key={s.id_socio} value={s.id_socio}>{s.nombre} — {s.documento}</option>)}
-            </select>
-          </Campo>
-        ) : (
-          <Campo label="Proveedor" required><input value={cab.proveedorNombre} maxLength={150} onChange={e => setCab({ ...cab, proveedorNombre: e.target.value })} required style={inputStyle} /></Campo>
-        )}
+        <Campo label="Socio" required>
+          <select value={cab.idSocio} onChange={e => setCab({ ...cab, idSocio: e.target.value })} required style={inputStyle}>
+            <option value="">Seleccionar socio...</option>
+            {socios.map(s => <option key={s.id_socio} value={s.id_socio}>{s.nombre} — {s.documento}</option>)}
+          </select>
+        </Campo>
       </div>
 
       <h4 style={{ margin: '18px 0 8px', fontSize: '15px', color: '#1f2937' }}>Detalle <span style={{ color: '#ef4444' }}>*</span></h4>
@@ -256,7 +243,7 @@ function VerFactura({ factura, onCambio, onEditar, onClose, toast }: {
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '10px', fontSize: '14px', marginBottom: '16px' }}>
         <div><strong>Fecha:</strong> {formatDateShort(factura.fecha)}</div>
         <div><strong>Vence:</strong> {factura.fecha_vencimiento ? formatDateShort(factura.fecha_vencimiento) : '—'}</div>
-        <div><strong>{factura.proveedor_nombre ? 'Proveedor' : 'Socio'}:</strong> {factura.proveedor_nombre ?? factura.socio_nombre ?? '—'}</div>
+        <div><strong>Socio:</strong> {factura.socio_nombre ?? '—'}</div>
         <div><strong>Estado:</strong> {estadoBadge(factura.estado)}</div>
         <div style={{ gridColumn: '1 / -1' }}><strong>Concepto:</strong> {factura.concepto}</div>
       </div>
@@ -400,7 +387,7 @@ export function AdminFacturas(_props: AdminFacturasProps) {
         </div>
 
         <div style={{ display: 'flex', gap: '16px', marginBottom: '20px', flexWrap: 'wrap' }}>
-          <input type="search" aria-label="Buscar facturas" placeholder="Buscar por número, concepto, socio o proveedor..." value={search} onChange={e => setSearch(e.target.value)} style={{ ...inputStyle, flex: 1, minWidth: '220px' }} />
+          <input type="search" aria-label="Buscar facturas" placeholder="Buscar por número, concepto o socio..." value={search} onChange={e => setSearch(e.target.value)} style={{ ...inputStyle, flex: 1, minWidth: '220px' }} />
           <select aria-label="Filtrar por estado" value={estado} onChange={e => setEstado(e.target.value)} style={{ ...inputStyle, width: '180px' }}>
             <option value="">Todos</option>
             <option value="Emitida">Emitida</option>
@@ -413,7 +400,7 @@ export function AdminFacturas(_props: AdminFacturasProps) {
           <table style={{ width: '100%', borderCollapse: 'collapse' }}>
             <thead>
               <tr style={{ backgroundColor: '#f9fafb', borderBottom: '1px solid #e5e7eb' }}>
-                {['N.º', 'Fecha', 'Socio / proveedor', 'Concepto', 'Total', 'Saldo', 'Estado', ''].map(h => <th key={h} style={th}>{h}</th>)}
+                {['N.º', 'Fecha', 'Socio', 'Concepto', 'Total', 'Saldo', 'Estado', ''].map(h => <th key={h} style={th}>{h}</th>)}
               </tr>
             </thead>
             <tbody>
@@ -425,7 +412,7 @@ export function AdminFacturas(_props: AdminFacturasProps) {
                 <tr key={fa.id_factura} style={{ borderBottom: '1px solid #f3f4f6' }}>
                   <td style={{ ...td, fontWeight: 600 }}>{fa.nro_factura ?? `#${fa.id_factura}`}</td>
                   <td style={td}>{formatDateShort(fa.fecha)}</td>
-                  <td style={td}>{fa.proveedor_nombre ?? fa.socio_nombre ?? '—'}</td>
+                  <td style={td}>{fa.socio_nombre ?? '—'}</td>
                   <td style={td}>{fa.concepto}</td>
                   <td style={{ ...td, fontWeight: 600 }}>{formatCurrency(num(fa.valor_total), 'COP')}</td>
                   <td style={td}>{formatCurrency(num(fa.saldo), 'COP')}</td>
