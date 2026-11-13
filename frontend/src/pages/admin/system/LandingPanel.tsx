@@ -4,6 +4,7 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { ArrowUp, ArrowDown, Eye, Monitor, Tablet, Smartphone, X, Upload } from 'lucide-react';
 import { CLUB_GREEN, ToastType, ConfirmDialog, inputStyle } from './shared';
+import { BotonArchivo } from './BotonArchivo';
 import { LandingVista } from '../../../features/landing';
 import {
   ContenidoLanding, SeccionLanding, RedSocial, LANDING_POR_DEFECTO, NOMBRES_SECCIONES, SECCIONES_CON_IMAGENES,
@@ -471,7 +472,7 @@ export function LandingPanel({ showToast }: LandingPanelProps) {
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '12px' }}>
               <div>
                 <label htmlFor="imagen-archivo" style={etiqueta}>Archivo <span style={{ color: '#ef4444' }}>*</span></label>
-                <input id="imagen-archivo" ref={inputArchivo} type="file" accept={TIPOS_IMAGEN.join(',')} onChange={e => setArchivo(e.target.files?.[0] ?? null)} aria-describedby={errorSubida ? 'error-subida' : undefined} style={{ fontSize: '13px' }} />
+                <BotonArchivo id="imagen-archivo" inputRef={inputArchivo} accept={TIPOS_IMAGEN.join(',')} archivo={archivo} onChange={setArchivo} describedBy={errorSubida ? 'error-subida' : undefined} />
               </div>
               <div>
                 <label htmlFor="imagen-alt" style={etiqueta}>Texto alternativo <span style={{ color: '#ef4444' }}>*</span></label>
