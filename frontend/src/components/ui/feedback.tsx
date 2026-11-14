@@ -8,7 +8,7 @@
 // <FeedbackHost /> se monta una sola vez en App.tsx.
 import { useEffect, useState } from 'react';
 
-export type ToastType = 'success' | 'error' | 'warning';
+export type ToastType = 'success' | 'error' | 'warning' | 'info';
 export interface Toast { id: number; message: string; type: ToastType; }
 
 export interface ConfirmOptions {
@@ -54,6 +54,26 @@ function cerrarConfirm(ok: boolean): void {
   p?.resolve(ok);
 }
 
+// Iguala lo que un formulario suele variar sin cambiar el dato: null/undefined
+// frente a '', 5 frente a '5', espacios sobrantes y el orden de las claves.
+const normalizar = (v: unknown): unknown =>
+  v == null ? ''
+  : Array.isArray(v) ? v.map(normalizar)
+  : typeof v === 'object'
+    ? Object.fromEntries(Object.entries(v).sort(([a], [b]) => a.localeCompare(b)).map(([k, x]) => [k, normalizar(x)]))
+    : String(v).trim();
+
+/**
+ * Para formularios de edición: si `actual` no difiere de `original`, muestra
+ * "No hay cambios para guardar" y devuelve true, para no llamar al backend.
+ *   if (editingId !== null && sinCambios(original, form)) return;
+ */
+export function sinCambios(original: unknown, actual: unknown): boolean {
+  const iguales = JSON.stringify(normalizar(original)) === JSON.stringify(normalizar(actual));
+  if (iguales) toast('No hay cambios para guardar', 'info');
+  return iguales;
+}
+
 /** Compatibilidad con las páginas que usaban `const { show } = useToast()`. */
 export function useToast() {
   return { show: toast };
@@ -64,6 +84,7 @@ const COLORS: Record<ToastType, { bg: string; border: string; icon: string }> = 
   success: { bg: '#f0fdf4', border: '#10b981', icon: '✓' },
   error:   { bg: '#fef2f2', border: '#ef4444', icon: '✕' },
   warning: { bg: '#fffbeb', border: '#f59e0b', icon: '⚠' },
+  info:    { bg: '#eff6ff', border: '#3b82f6', icon: 'i' },
 };
 
 export function ConfirmDialog({

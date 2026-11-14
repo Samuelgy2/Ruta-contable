@@ -2,6 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { useClubData } from '../../../hooks/useClubData';
 import { CLUB_GREEN, ToastType, inputStyle, f } from './shared';
+import { sinCambios } from '../../../components/ui/feedback';
 
 interface ClubDataPanelProps {
   showToast: (message: string, type?: ToastType) => void;
@@ -16,11 +17,12 @@ type FormState = typeof emptyForm;
 export function ClubDataPanel({ showToast }: ClubDataPanelProps) {
   const { clubData, loading, updateClubData } = useClubData();
   const [form, setForm] = useState<FormState>(emptyForm);
+  const [original, setOriginal] = useState<FormState>(emptyForm);
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
     if (clubData) {
-      setForm({
+      const datos: FormState = {
         clubNombre: clubData.club_nombre ?? '',
         nit: clubData.nit ?? '',
         direccion: clubData.direccion ?? '',
@@ -29,7 +31,9 @@ export function ClubDataPanel({ showToast }: ClubDataPanelProps) {
         moneda: clubData.moneda ?? 'COP',
         diaVencimientoDefault: clubData.dia_vencimiento_default ? String(clubData.dia_vencimiento_default) : '15',
         porcentajeMora: clubData.porcentaje_mora ?? '',
-      });
+      };
+      setForm(datos);
+      setOriginal(datos);
     }
   }, [clubData]);
 
@@ -41,6 +45,7 @@ export function ClubDataPanel({ showToast }: ClubDataPanelProps) {
       showToast('El nombre del club es obligatorio', 'error');
       return;
     }
+    if (sinCambios(original, form)) return;
     setSubmitting(true);
     try {
       const result = await updateClubData({
@@ -54,6 +59,7 @@ export function ClubDataPanel({ showToast }: ClubDataPanelProps) {
         porcentajeMora: form.porcentajeMora ? (form.porcentajeMora as any) : undefined,
       } as any);
       showToast(result.message, result.success ? 'success' : 'error');
+      if (result.success) setOriginal(form);
     } finally {
       setSubmitting(false);
     }

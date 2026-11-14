@@ -8,7 +8,7 @@ import { clubDataService } from '../../services/clubDataService';
 import { formatDateShort } from '../../utils/format';
 import type { ChecklistPayload } from '../../hooks/useAsistencia';
 import { API_URL } from '../../services/apiConfig';
-import { useToast, ConfirmDialog } from '../../components/ui/feedback';
+import { useToast, ConfirmDialog, sinCambios } from '../../components/ui/feedback';
 
 interface AdminAsistenciaProps {
   onNavigate?: (tab: string) => void;
@@ -87,6 +87,7 @@ export function AdminAsistencia({ onNavigate }: AdminAsistenciaProps) {
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [form, setForm] = useState<FormState>(emptyForm);
+  const [original, setOriginal] = useState<FormState>(emptyForm);
   const [confirmDelete, setConfirmDelete] = useState<number | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [exporting, setExporting] = useState(false);
@@ -99,20 +100,23 @@ export function AdminAsistencia({ onNavigate }: AdminAsistenciaProps) {
 
   // ── Umbrales de alerta (RF-084 RN-003), guardados en system_data ────────────
   const [umbrales, setUmbrales] = useState<{ consecutiva: string; acumulada: string } | null>(null);
+  const [umbralesOriginales, setUmbralesOriginales] = useState(umbrales);
   const abrirUmbrales = async () => {
     try {
       const r = await clubDataService.get();
-      setUmbrales({
+      const datos = {
         consecutiva: String(r.data?.umbral_inasistencia_consecutiva ?? 3),
         acumulada:   String(r.data?.umbral_inasistencia_acumulada ?? 5),
-      });
+      };
+      setUmbrales(datos);
+      setUmbralesOriginales(datos);
     } catch {
       showToast('No se pudieron cargar los umbrales', 'error');
     }
   };
   const guardarUmbrales = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!umbrales) return;
+    if (!umbrales || sinCambios(umbralesOriginales, umbrales)) return;
     setSubmitting(true);
     try {
       const r = await clubDataService.update({
@@ -182,10 +186,12 @@ export function AdminAsistencia({ onNavigate }: AdminAsistenciaProps) {
 
   const openCreate = () => { setEditingId(null); setForm(emptyForm); setShowForm(true); };
   const openEdit = (a: AsistenciaItem) => {
-    setForm({
+    const datos: FormState = {
       idSocio: String(a.id_socio), fecha: a.fecha.split('T')[0],
       tipoEntrenamiento: a.tipo_entrenamiento ?? '', estado: a.estado, observacion: a.observacion ?? '',
-    });
+    };
+    setForm(datos);
+    setOriginal(datos);
     setEditingId(a.id_asistencia);
     setShowForm(true);
   };
@@ -197,6 +203,7 @@ export function AdminAsistencia({ onNavigate }: AdminAsistenciaProps) {
       showToast('Socio y fecha son obligatorios', 'error');
       return;
     }
+    if (editingId !== null && sinCambios(original, form)) return;
     setSubmitting(true);
     try {
       // Al editar no se envía el socio: el registro conserva el suyo.

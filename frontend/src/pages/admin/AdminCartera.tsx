@@ -5,7 +5,7 @@ import { useCartera, CarteraItem, TipoCartera } from '../../hooks/useCartera';
 import { useSocios } from '../../hooks/useSocios';
 import { carteraService } from '../../services/carteraService';
 import { formatCurrency, formatDateShort, hoyLocal } from '../../utils/format';
-import { useToast, confirmar } from '../../components/ui/feedback';
+import { useToast, confirmar, sinCambios } from '../../components/ui/feedback';
 
 interface AdminCarteraProps {
   onNavigate?: (tab: string) => void;
@@ -177,14 +177,16 @@ export function AdminCartera({ onNavigate }: AdminCarteraProps) {
   const [editItem, setEditItem] = useState<CarteraItem | null>(null);
   const [editForm, setEditForm] = useState({ concepto: '', valor: '', observaciones: '' });
 
+  const formDeCartera = (c: CarteraItem) => ({ concepto: c.concepto, valor: String(parseFloat(c.valor)), observaciones: c.observaciones ?? '' });
+
   const abrirEdicion = (c: CarteraItem) => {
     setEditItem(c);
-    setEditForm({ concepto: c.concepto, valor: String(parseFloat(c.valor)), observaciones: c.observaciones ?? '' });
+    setEditForm(formDeCartera(c));
   };
 
   const guardarEdicion = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!editItem) return;
+    if (!editItem || sinCambios(formDeCartera(editItem), editForm)) return;
     setSubmitting(true);
     try {
       const cambios = editItem.estado === 'pendiente'

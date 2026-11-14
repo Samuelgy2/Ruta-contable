@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { usePortalJersey } from '../../hooks/usePortalJersey';
 import { jerseyService, PortalCampana } from '../../services/jerseyService';
 import { formatCurrency, formatDateShort } from '../../utils/format';
+import { sinCambios } from '../../components/ui/feedback';
 
 interface PortalJerseyProps {
   onNavigate?: (page: string) => void;
@@ -78,6 +79,8 @@ export function PortalJersey({ onNavigate }: PortalJerseyProps) {
       setErrores(prev => ({ ...prev, [c.id]: problema }));
       return;
     }
+    // Editar un pedido existente sin tocar nada no debe reenviarlo.
+    if (c.pedido && sinCambios(formDesdeCampana(c), f)) return;
 
     setEnviando(c.id);
     setErrores(prev => ({ ...prev, [c.id]: '' }));

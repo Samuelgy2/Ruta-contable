@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useCategories, Category } from '../../hooks/useCategories';
-import { useToast, ConfirmDialog } from '../../components/ui/feedback';
+import { useToast, ConfirmDialog, sinCambios } from '../../components/ui/feedback';
 
 interface AdminCategoriesProps {
   onNavigate?: (tab: string) => void;
@@ -50,6 +50,7 @@ export function AdminCategories({ onNavigate }: AdminCategoriesProps) {
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [form, setForm] = useState<FormState>(emptyForm);
+  const [original, setOriginal] = useState<FormState>(emptyForm);
   const [confirmDelete, setConfirmDelete] = useState<number | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const { show: showToast } = useToast();
@@ -60,7 +61,9 @@ export function AdminCategories({ onNavigate }: AdminCategoriesProps) {
 
   const openCreate = (type: 'income' | 'expense') => { setEditingId(null); setForm({ ...emptyForm, type }); setShowForm(true); };
   const openEdit = (c: Category) => {
-    setForm({ name: c.name, type: c.type, description: c.description ?? '', active: c.active });
+    const datos = { name: c.name, type: c.type, description: c.description ?? '', active: c.active };
+    setForm(datos);
+    setOriginal(datos);
     setEditingId(c.id);
     setShowForm(true);
   };
@@ -72,6 +75,7 @@ export function AdminCategories({ onNavigate }: AdminCategoriesProps) {
       showToast('El nombre de la categoría es obligatorio', 'error');
       return;
     }
+    if (editingId !== null && sinCambios(original, form)) return;
     setSubmitting(true);
     try {
       const result = editingId !== null

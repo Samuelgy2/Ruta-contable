@@ -5,7 +5,7 @@ import { useSocios } from '../../hooks/useSocios';
 import { userService } from '../../services/userService';
 import { SocioDocumentos } from './SocioDocumentos';
 import { hoyLocal } from '../../utils/format';
-import { useToast, ConfirmDialog } from '../../components/ui/feedback';
+import { useToast, ConfirmDialog, sinCambios } from '../../components/ui/feedback';
 
 // ─── Tipos ────────────────────────────────────────────────────────────────────
 interface Socio {
@@ -116,6 +116,7 @@ export function AdminMembers({ onNavigate }: AdminMembersProps) {
   const [showForm, setShowForm] = useState<boolean>(false);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [form, setForm] = useState<FormState>(emptyForm);
+  const [original, setOriginal] = useState<FormState>(emptyForm);
   const [confirmDelete, setConfirmDelete] = useState<number | null>(null);
   const [submitting, setSubmitting] = useState<boolean>(false);
   const { show: showToast } = useToast();
@@ -195,7 +196,7 @@ export function AdminMembers({ onNavigate }: AdminMembersProps) {
   };
 
   const openEdit = (socio: Socio) => {
-    setForm({
+    const datos: FormState = {
       nombre:           socio.nombre,
       documento:        socio.documento,
       tipo_documento:   (socio.tipo_documento as FormState['tipo_documento']) ?? 'CC',
@@ -208,7 +209,9 @@ export function AdminMembers({ onNavigate }: AdminMembersProps) {
       nivel_aprendizaje: (socio.nivel_aprendizaje as FormState['nivel_aprendizaje']) ?? '',
       estado:           socio.estado ?? 'activo',
       observaciones:    socio.observaciones ?? '',
-    });
+    };
+    setForm(datos);
+    setOriginal(datos);
     setEditingId(socio.id_socio);
     setShowForm(true);
   };
@@ -238,6 +241,7 @@ export function AdminMembers({ onNavigate }: AdminMembersProps) {
       showToast('Nombre, documento, fecha de nacimiento y fecha de ingreso son obligatorios', 'error');
       return;
     }
+    if (editingId !== null && sinCambios(original, form)) return;
     setSubmitting(true);
     try {
       const payload = { ...form, nivel_aprendizaje: form.nivel_aprendizaje || null };

@@ -3,7 +3,7 @@ import { usePaginacion } from '../../hooks/usePaginacion';
 import { Paginacion } from '../../components/ui/Paginacion';
 import { useInventario, Producto } from '../../hooks/useInventario';
 import { formatCurrency, formatDateShort } from '../../utils/format';
-import { useToast, ConfirmDialog } from '../../components/ui/feedback';
+import { useToast, ConfirmDialog, sinCambios } from '../../components/ui/feedback';
 
 interface AdminInventarioProps {
   onNavigate?: (tab: string) => void;
@@ -65,6 +65,7 @@ export function AdminInventario({ onNavigate }: AdminInventarioProps) {
   const [nuevaCategoria, setNuevaCategoria] = useState('');
   const [editingId, setEditingId] = useState<number | null>(null);
   const [form, setForm] = useState<FormState>(emptyForm);
+  const [original, setOriginal] = useState<FormState>(emptyForm);
   const [movForm, setMovForm] = useState<{
     idProducto: string;
     tipo: 'entrada' | 'salida' | 'ajuste';
@@ -89,10 +90,12 @@ export function AdminInventario({ onNavigate }: AdminInventarioProps) {
 
   const openCreate = () => { setEditingId(null); setForm(emptyForm); setShowForm(true); };
   const openEdit = (p: Producto) => {
-    setForm({
+    const datos: FormState = {
       name: p.name, price: p.price, description: p.description ?? '',
       categoriaId: p.categoria_id ? String(p.categoria_id) : '', stock: String(p.stock),
-    });
+    };
+    setForm(datos);
+    setOriginal(datos);
     setEditingId(p.id);
     setShowForm(true);
   };
@@ -115,6 +118,7 @@ export function AdminInventario({ onNavigate }: AdminInventarioProps) {
       showToast('El stock debe ser un número entero mayor o igual a 0', 'error');
       return;
     }
+    if (editingId !== null && sinCambios(original, form)) return;
     setSubmitting(true);
     try {
       const payload = {

@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { portalService } from '../../services/portalService';
 import { useAuth } from '../../features/auth/contexts/AuthContext';
+import { sinCambios } from '../../components/ui/feedback';
 
 interface PortalSettingsProps {
   onNavigate?: (page: string) => void;
@@ -12,6 +13,7 @@ const passwordVacia = { currentPassword: '', newPassword: '', confirmPassword: '
 export function PortalSettings({ onNavigate }: PortalSettingsProps) {
   const { currentUser } = useAuth();
   const [datos, setDatos] = useState(datosVacios);
+  const [datosOriginales, setDatosOriginales] = useState(datosVacios);
   const [password, setPassword] = useState(passwordVacia);
   const [guardandoDatos, setGuardandoDatos] = useState(false);
   const [guardandoPassword, setGuardandoPassword] = useState(false);
@@ -24,11 +26,13 @@ export function PortalSettings({ onNavigate }: PortalSettingsProps) {
   useEffect(() => {
     if (!currentUser) return;
 
-    setDatos({
+    const iniciales = {
       full_name: currentUser.name ?? '',
       email: currentUser.email ?? '',
       telefono: (currentUser as { telefono?: string }).telefono ?? '',
-    });
+    };
+    setDatos(iniciales);
+    setDatosOriginales(iniciales);
   }, [currentUser]);
 
   const cambiarDato = (campo: keyof typeof datosVacios, valor: string) => {
@@ -56,6 +60,7 @@ export function PortalSettings({ onNavigate }: PortalSettingsProps) {
       setErrorDatos('El correo electrónico no es válido');
       return;
     }
+    if (sinCambios(datosOriginales, datos)) return;
 
     setGuardandoDatos(true);
     try {
@@ -67,6 +72,7 @@ export function PortalSettings({ onNavigate }: PortalSettingsProps) {
 
       if (respuesta?.success) {
         setMensajeDatos('Tus datos se guardaron correctamente');
+        setDatosOriginales(datos);
       } else {
         setErrorDatos(respuesta?.message || 'No se pudieron guardar tus datos');
       }

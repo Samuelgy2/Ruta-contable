@@ -6,6 +6,7 @@ import { PasswordInput } from '../../../components/ui/password-input';
 import { useUsers } from '../../../hooks/useUsers';
 import { UserRole } from '../../../types';
 import { CLUB_GREEN, ToastType, Modal, ConfirmDialog, inputStyle, f } from './shared';
+import { sinCambios } from '../../../components/ui/feedback';
 
 interface User {
   id: number;
@@ -40,6 +41,7 @@ export function UsersPanel({ showToast }: UsersPanelProps) {
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [form, setForm] = useState<FormState>(emptyForm);
+  const [original, setOriginal] = useState<FormState>(emptyForm);
   const [confirmPassword, setConfirmPassword] = useState(''); // RF-001 Rn4: se digita dos veces
   const [confirmDelete, setConfirmDelete] = useState<number | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -66,7 +68,9 @@ export function UsersPanel({ showToast }: UsersPanelProps) {
 
   const openCreate = () => { setEditingId(null); setForm(emptyForm); setConfirmPassword(''); setShowForm(true); };
   const openEdit = (user: User) => {
-    setForm({ username: user.username, password: '', fullName: user.fullName, email: user.email, role: user.role, active: user.active });
+    const datos = { username: user.username, password: '', fullName: user.fullName, email: user.email, role: user.role, active: user.active };
+    setForm(datos);
+    setOriginal(datos);
     setConfirmPassword('');
     setEditingId(user.id);
     setShowForm(true);
@@ -83,6 +87,7 @@ export function UsersPanel({ showToast }: UsersPanelProps) {
       showToast('Las contraseñas no coinciden', 'error');
       return;
     }
+    if (editingId !== null && sinCambios(original, form)) return;
     setSubmitting(true);
     try {
       const result = editingId !== null

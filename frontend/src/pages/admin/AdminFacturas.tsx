@@ -4,7 +4,7 @@ import { Paginacion } from '../../components/ui/Paginacion';
 import { useSocios } from '../../hooks/useSocios';
 import { facturaService } from '../../services/facturaService';
 import { formatCurrency, formatDateShort, hoyLocal } from '../../utils/format';
-import { toast as mostrarToast, confirmar } from '../../components/ui/feedback';
+import { toast as mostrarToast, confirmar, sinCambios } from '../../components/ui/feedback';
 
 // Facturación (RF-055 / RF-058): registrar, consultar, editar (sin pagos), anular y registrar pagos.
 
@@ -112,6 +112,7 @@ function FormFactura({ inicial, onGuardado, onClose, toast }: {
       : [lineaVacia()]
   );
   const [guardando, setGuardando] = useState(false);
+  const [original] = useState({ cab, lineas }); // valores con los que se abrió, para detectar si hubo cambios
 
   const setLinea = (i: number, campo: keyof LineaForm, valor: string) =>
     setLineas(prev => prev.map((l, j) => (j === i ? { ...l, [campo]: valor } : l)));
@@ -119,6 +120,7 @@ function FormFactura({ inicial, onGuardado, onClose, toast }: {
 
   const guardar = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (inicial && sinCambios(original, { cab, lineas })) return;
     const payload = {
       fecha: cab.fecha,
       fechaVencimiento: cab.fechaVencimiento || null,
