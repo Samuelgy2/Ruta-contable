@@ -1,6 +1,9 @@
 import { useState, useRef, CSSProperties } from 'react';
 import { AppPage } from '../../../types/index';
 import { useToast } from '../../../components/ui/feedback';
+// En producción el frontend (Vercel) y el backend (Render) viven en dominios
+// distintos: una ruta relativa '/api/...' iría a Vercel y respondería 405.
+import { API_URL } from '../../../services/apiConfig';
 
 interface ForgotPasswordProps {
   onNavigate: (page: AppPage) => void;
@@ -38,7 +41,7 @@ export function ForgotPassword({ onNavigate }: ForgotPasswordProps) {
     if (!email) { showToast('Ingresa tu correo electrónico', 'error'); return; }
     setLoading(true);
     try {
-      const res  = await fetch('/api/auth/forgot-password', {
+      const res  = await fetch(`${API_URL}/auth/forgot-password`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email }),
@@ -89,7 +92,7 @@ export function ForgotPassword({ onNavigate }: ForgotPasswordProps) {
     if (code.length < 6) { showToast('Ingresa el código completo de 6 dígitos', 'error'); return; }
     setLoading(true);
     try {
-      const res  = await fetch('/api/auth/verify-otp', {
+      const res  = await fetch(`${API_URL}/auth/verify-otp`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, otp: code }),
@@ -125,7 +128,7 @@ export function ForgotPassword({ onNavigate }: ForgotPasswordProps) {
     if (newPassword !== confirmPass) { showToast('Las contraseñas no coinciden', 'error'); return; }
     setLoading(true);
     try {
-      const res  = await fetch('/api/auth/reset-password', {
+      const res  = await fetch(`${API_URL}/auth/reset-password`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ resetToken, newPassword }),
