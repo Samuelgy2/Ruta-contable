@@ -1,6 +1,6 @@
 # Desarrollo local. La base de datos es única y vive en Supabase: no hay servicio
 # postgres aquí. Crea backend/.env a partir de backend/.env.example (DB_*, JWT_SECRET,
-# EMAIL_*, PAYPAL_*) antes de levantar los contenedores.
+# BREVO_*, PAYPAL_*) antes de levantar los contenedores.
 services:
   backend:
     build:

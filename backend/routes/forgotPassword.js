@@ -2,31 +2,37 @@
 const express  = require('express');
 const router   = express.Router();
 const bcrypt   = require('bcryptjs');
-const nodemailer = require('nodemailer');
 const rateLimit  = require('express-rate-limit');
 const { randomInt } = require('crypto');
 
 const pool = require('../db');
 
+// ─── Correo: API HTTPS de Brevo ───────────────────────────────────────────────
+// Render (plan gratuito) bloquea el SMTP saliente, así que el código se envía por
+// HTTPS (puerto 443) con la API de Brevo. BREVO_SENDER es un remitente verificado
+// en Brevo; puede ser un Gmail, no hace falta dominio propio.
+if (!process.env.BREVO_API_KEY || !process.env.BREVO_SENDER) {
+  console.error('❌ Correo sin configurar: faltan BREVO_API_KEY o BREVO_SENDER');
+}
 
-
-// ─── Nodemailer ───────────────────────────────────────────────────────────────
-const transporter = nodemailer.createTransport({
-  host:   process.env.EMAIL_HOST,
-  port:   Number(process.env.EMAIL_PORT),
-  secure: false,
-  auth: {
-    user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_PASS,
-  },
-  tls: { rejectUnauthorized: false },
-});
-
-transporter.verify(err =>
-  err
-    ? console.error('❌ Error configuración email:', err.message)
-    : console.log('✅ Servidor de correo listo')
-);
+async function enviarCorreo({ to, subject, html }) {
+  const res = await fetch('https://api.brevo.com/v3/smtp/email', {
+    method: 'POST',
+    headers: {
+      'api-key': process.env.BREVO_API_KEY,
+      'Content-Type': 'application/json',
+      accept: 'application/json',
+    },
+    body: JSON.stringify({
+      sender: { name: 'Ruta Contable', email: process.env.BREVO_SENDER },
+      to: [{ email: to }],
+      subject,
+      htmlContent: html,
+    }),
+    signal: AbortSignal.timeout(10_000),
+  });
+  if (!res.ok) throw new Error(`Brevo respondió ${res.status}: ${await res.text()}`);
+}
 
 // ─── Rate limit: máx 5 solicitudes por IP cada 15 min ────────────────────────
 const otpLimiter = rateLimit({
@@ -115,8 +121,7 @@ router.post('/forgot-password', otpLimiter, async (req, res) => {
       [hashed, user.id]
     );
 
-    await transporter.sendMail({
-      from:    `"Ruta Contable" <${process.env.EMAIL_USER}>`,
+    await enviarCorreo({
       to:      email,
       subject: `${otp} es tu código de recuperación - Ruta Contable`,
       html:    buildEmailHTML(user.full_name, otp),

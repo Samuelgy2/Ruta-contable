@@ -112,7 +112,7 @@ Existe **una sola base de datos, en Supabase**. No hay un Postgres local ni en D
 | cors | 2.8.6 | Control de acceso entre orígenes |
 | express-rate-limit | 8.x | Rate limiting |
 | morgan | 1.x | Logging de peticiones |
-| nodemailer | 9.x | Envío de correo (recuperación de contraseña) |
+| fetch (Node) + API de Brevo | — | Envío de correo por HTTPS (recuperación de contraseña); Render bloquea el SMTP |
 | exceljs | 3.x | Excel de asistencia (la única exportación a Excel del sistema) |
 | nodemon | — | Hot-reload (solo desarrollo) |
 
@@ -146,7 +146,7 @@ Copia `backend/.env.example` a `backend/.env` y completa los valores. Nunca suba
 | `DB_HOST`, `DB_PORT`, `DB_USER`, `DB_PASSWORD`, `DB_NAME` | Sí | Conexión al pooler de Supabase. |
 | `DB_SSL` | No (true) | `false` solo para un Postgres local de pruebas. |
 | `JWT_SECRET` | Sí | Secreto aleatorio de 32 caracteres o más. |
-| `EMAIL_HOST`, `EMAIL_PORT`, `EMAIL_USER`, `EMAIL_PASS` | Para recuperar contraseña | Cuenta de correo saliente. |
+| `BREVO_API_KEY`, `BREVO_SENDER` | Para recuperar contraseña | Clave de la API de Brevo y remitente verificado en Brevo (sirve un Gmail). |
 | `PAYPAL_BASE_URL`, `PAYPAL_CLIENT_ID`, `PAYPAL_CLIENT_SECRET`, `PAYPAL_WEBHOOK_ID` | Sí | Solo entorno sandbox. El servidor no arranca sin estas cuatro. |
 | `CURRENCY`, `CLUB_NAME`, `FISCAL_YEAR` | No | Valores por defecto del resumen (`FISCAL_YEAR` toma el año en curso). |
 
