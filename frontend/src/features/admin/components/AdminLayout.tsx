@@ -277,7 +277,8 @@ export function AdminLayout({ children, currentPage, onNavigate }: AdminLayoutPr
       {/* ── MAIN ─────────────────────────────────────────────── */}
       <main style={{
         minHeight:   '100vh',
-        marginLeft:  isDesktop ? sidebarW : '64px',
+        // En móvil el sidebar está oculto (se abre encima), así que no reserva margen.
+        marginLeft:  isDesktop ? sidebarW : 0,
         marginTop:   isDesktop ? 0 : '60px',
         backgroundColor: '#f9fafb',
         transition:  'margin-left 300ms ease',

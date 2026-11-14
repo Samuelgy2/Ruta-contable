@@ -68,12 +68,22 @@
 
 /* ─── Tablas ─────────────────────────────────────────────────────────────── */
 
-/* Toda tabla de datos puede desplazarse en horizontal dentro de su tarjeta en
-   lugar de desbordar la página. */
-.tabla-responsive {
-  width: 100%;
-  overflow-x: auto;
+/* Toda tabla de datos se desplaza en horizontal dentro de su contenedor en
+   lugar de cortarse (muchos contenedores traen overflow: hidden en línea para
+   redondear las esquinas) o de ensanchar la página. El contenedor es el padre
+   directo de la tabla; el !important vence a esos estilos en línea. */
+.tabla-responsive,
+.table-container,
+:has(> table) {
+  max-width: 100%;
+  min-width: 0;
+  overflow-x: auto !important;
   -webkit-overflow-scrolling: touch;
+}
+
+/* Las cabeceras no se parten palabra a palabra al estrechar la pantalla. */
+th {
+  white-space: nowrap;
 }
 
 /* ─── Pantallas medianas ─────────────────────────────────────────────────── */
@@ -100,6 +110,18 @@
 
   .container {
     padding: 0 12px;
+  }
+
+  /* Las páginas del panel arman rejillas (tarjetas de totales, formularios) y
+     filas de botones con estilos en línea: en pantalla angosta las rejillas
+     pasan a una columna y las filas se reparten en varias líneas, para que
+     nada ensanche la página. */
+  .admin-layout main [style*="grid-template-columns"] {
+    grid-template-columns: minmax(0, 1fr) !important;
+  }
+
+  .admin-layout main [style*="display: flex"] {
+    flex-wrap: wrap;
   }
 
   .card,
@@ -166,16 +188,10 @@
     min-width: 0;
   }
 
-  /* Tablas: desplazamiento horizontal dentro de su contenedor, celdas
-     compactas y sin saltos de línea que rompan la lectura. */
-  table.table,
-  .tabla-responsive table,
-  .card table,
-  .container table {
-    display: block;
-    overflow-x: auto;
+  /* Tablas: celdas en una sola línea; lo que no quepa se desplaza dentro
+     del contenedor (regla :has(> table) de arriba). */
+  td {
     white-space: nowrap;
-    max-width: 100%;
   }
 
   .table th,
