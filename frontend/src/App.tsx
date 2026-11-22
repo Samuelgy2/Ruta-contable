@@ -23,7 +23,7 @@ type AdminPage = AdminPageType;
 type PortalPage = Extract<AdminPageType, 'overview' | 'my-payments' | 'settings' | 'jersey'>;
 
 function AppContent() {
-  const { isAuthenticated, currentUser, register } = useAuth();
+  const { isAuthenticated, currentUser } = useAuth();
   const [currentPage,      setCurrentPage]      = useState<Page>('home');
   const [currentAdminPage, setCurrentAdminPage] = useState<AdminPage>('overview');
   const [currentPortalPage, setCurrentPortalPage] = useState<PortalPage>('overview');
@@ -34,38 +34,6 @@ function AppContent() {
     // Sin router no hay reinicio de scroll: al pasar de la landing al registro
     // se conservaría la posición y el formulario se abriría por el footer.
     window.scrollTo(0, 0);
-  };
-
-  // Adaptador entre el formulario de registro y lo que espera la API: el
-  // formulario recoge nombre y apellido, el backend quiere username y full_name.
-  const handleRegister = async (data: {
-    firstName: string;
-    lastName: string;
-    email: string;
-    password: string;
-  }): Promise<boolean> => {
-    const email = data.email.trim().toLowerCase();
-
-    // El usuario se deriva del correo: la parte anterior a la arroba, en
-    // minúsculas y sin caracteres que el backend no acepta.
-    const username = email
-      .split('@')[0]
-      .replace(/[^a-z0-9._-]/g, '')
-      .slice(0, 50)
-      // Si el correo no deja ningún carácter utilizable, se genera uno.
-      || `socio${Date.now().toString(36)}`;
-
-    const name = `${data.firstName.trim()} ${data.lastName.trim()}`.trim();
-
-    // El tipo User llama al campo 'name', pero POST /api/auth/register lee
-    // 'full_name'; se envían los dos para no depender de cuál mire cada lado.
-    return register({
-      username,
-      email,
-      password: data.password,
-      name,
-      full_name: name,
-    } as Parameters<typeof register>[0]);
   };
 
   const handleAdminNavigate = (pageOrTab: string) => {
@@ -185,7 +153,7 @@ function AppContent() {
     case 'login':
       return <Login onNavigate={handleNavigate} />;
     case 'register':
-      return <Register onNavigate={handleNavigate} onRegister={handleRegister} />;
+      return <Register onNavigate={handleNavigate} />;
     case 'home':
     default:
       return <Home onNavigate={handleNavigate} />;

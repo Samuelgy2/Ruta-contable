@@ -3,36 +3,8 @@ const express  = require('express');
 const router   = express.Router();
 const bcrypt   = require('bcryptjs');
 const rateLimit  = require('express-rate-limit');
-const { randomInt } = require('crypto');
-
 const pool = require('../db');
-
-// ─── Correo: API HTTPS de Brevo ───────────────────────────────────────────────
-// Render (plan gratuito) bloquea el SMTP saliente, así que el código se envía por
-// HTTPS (puerto 443) con la API de Brevo. BREVO_SENDER es un remitente verificado
-// en Brevo; puede ser un Gmail, no hace falta dominio propio.
-if (!process.env.BREVO_API_KEY || !process.env.BREVO_SENDER) {
-  console.error('❌ Correo sin configurar: faltan BREVO_API_KEY o BREVO_SENDER');
-}
-
-async function enviarCorreo({ to, subject, html }) {
-  const res = await fetch('https://api.brevo.com/v3/smtp/email', {
-    method: 'POST',
-    headers: {
-      'api-key': process.env.BREVO_API_KEY,
-      'Content-Type': 'application/json',
-      accept: 'application/json',
-    },
-    body: JSON.stringify({
-      sender: { name: 'Ruta Contable', email: process.env.BREVO_SENDER },
-      to: [{ email: to }],
-      subject,
-      htmlContent: html,
-    }),
-    signal: AbortSignal.timeout(10_000),
-  });
-  if (!res.ok) throw new Error(`Brevo respondió ${res.status}: ${await res.text()}`);
-}
+const { enviarCorreo, generarOTP, correoRecuperacion } = require('../utils/correo');
 
 // ─── Rate limit: máx 5 solicitudes por IP cada 15 min ────────────────────────
 const otpLimiter = rateLimit({
@@ -47,44 +19,6 @@ const resetLimiter = rateLimit({
   max: 10,
   message: { success: false, message: 'Demasiados intentos. Espera 15 minutos.' },
 });
-
-// ─── Helpers ──────────────────────────────────────────────────────────────────
-
-/** Genera un OTP numérico de 6 dígitos */
-function generateOTP() {
-  return randomInt(100000, 1000000).toString();
-}
-
-/** Escapa texto para insertarlo en HTML (el nombre lo escribe el usuario) */
-function escaparHTML(texto) {
-  return String(texto ?? '').replace(/[&<>"']/g, (c) => ({
-    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;',
-  }[c]));
-}
-
-/** Plantilla HTML del email */
-function buildEmailHTML(fullName, otp) {
-  return `
-    <div style="font-family:Arial,sans-serif;max-width:520px;margin:0 auto;background:#fff;border-radius:16px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,0.08);">
-      <div style="background:#10b981;padding:32px 40px;">
-        <h1 style="color:white;margin:0;font-size:22px;letter-spacing:-0.5px;">Ruta Contable</h1>
-      </div>
-      <div style="padding:40px;">
-        <h2 style="color:#111827;margin:0 0 8px;font-size:20px;">Recuperación de contraseña</h2>
-        <p style="color:#6b7280;margin:0 0 32px;font-size:15px;">Hola <strong style="color:#111827;">${escaparHTML(fullName)}</strong>, aquí está tu código de verificación:</p>
-
-        <div style="background:#f9fafb;border:2px dashed #10b981;border-radius:12px;padding:28px;text-align:center;margin-bottom:32px;">
-          <p style="margin:0 0 8px;font-size:13px;color:#9ca3af;letter-spacing:0.08em;text-transform:uppercase;font-weight:600;">Tu código OTP</p>
-          <p style="margin:0;font-size:42px;font-weight:800;letter-spacing:14px;color:#111827;">${otp}</p>
-        </div>
-
-        <p style="color:#6b7280;font-size:13px;margin:0 0 8px;">⏱ Este código expira en <strong>10 minutos</strong>.</p>
-        <p style="color:#6b7280;font-size:13px;margin:0 0 8px;">🔒 Solo es válido para un uso.</p>
-        <p style="color:#9ca3af;font-size:12px;margin:24px 0 0;">Si no solicitaste este código, ignora este correo. Tu cuenta permanece segura.</p>
-      </div>
-    </div>
-  `;
-}
 
 // ─── POST /api/auth/forgot-password ──────────────────────────────────────────
 /**
@@ -108,7 +42,7 @@ router.post('/forgot-password', otpLimiter, async (req, res) => {
     }
 
     const user   = result.rows[0];
-    const otp    = generateOTP();
+    const otp    = generarOTP();
     const hashed = await bcrypt.hash(otp, 10);
 
     // Guardar OTP hasheado + expiración (usando LOCALTIMESTAMP de la BD) + resetear intentos del OTP.
@@ -124,7 +58,7 @@ router.post('/forgot-password', otpLimiter, async (req, res) => {
     await enviarCorreo({
       to:      email,
       subject: `${otp} es tu código de recuperación - Ruta Contable`,
-      html:    buildEmailHTML(user.full_name, otp),
+      html:    correoRecuperacion(user.full_name, otp),
     });
 
     console.log(`📧 OTP enviado a: ${email}`);

@@ -133,6 +133,17 @@ export function PortalOverview({ onNavigate }: PortalOverviewProps) {
         </div>
       )}
 
+      {/* Registro público aún sin aprobar por el club */}
+      {resumen.socio?.estado === 'pendiente' && (
+        <div className="card" role="status" style={{ background: '#fffbeb', borderColor: '#fde68a' }}>
+          <h3 style={{ color: '#92400e' }}>Inscripción pendiente de aprobación</h3>
+          <p style={{ margin: 0, color: '#92400e' }}>
+            El club está revisando tus datos. Cuando aprueben tu inscripción podrás pedir el jersey y
+            empezarán a registrarse tus mensualidades y asistencias.
+          </p>
+        </div>
+      )}
+
       {/* Estado de cuenta */}
       <div className="stats-grid">
         <div className="stat-card">

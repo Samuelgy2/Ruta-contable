@@ -3,6 +3,7 @@ const router = express.Router();
 const bcrypt = require('bcryptjs');
 const pool = require('../db');
 const { requireAdmin } = require('../middleware/auth');
+const { validarDatosSocio, insertarSocio, vincularPerfil, documentoRegistrado } = require('../utils/socio');
 
 const FORMATO_EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/; // mismo criterio que AuthController y PortalController
 const ROLES = ['user', 'admin']; // CHECK users_role_check
@@ -92,62 +93,109 @@ router.get('/:id', requireAdmin, async (req, res) => {
   }
 });
 
+// POST /api/users — crea una cuenta. Una cuenta con rol 'user' siempre queda
+// vinculada a una ficha de socio: la de un socio existente sin cuenta (idSocio)
+// o una nueva creada aquí mismo (socio). Todo va en una sola transacción.
 router.post('/', requireAdmin, async (req, res) => {
+  const { username, password, email, fullName, role, active, idSocio, socio } = req.body || {};
+
+  if (vacio(username) || !password || vacio(email) || vacio(fullName)) {
+    return res.status(400).json({
+      success: false,
+      message: 'Los campos username, password, email y fullName son requeridos'
+    });
+  }
+
+  if (password.length < 6) {
+    return res.status(400).json({
+      success: false,
+      message: 'La contraseña debe tener al menos 6 caracteres'
+    });
+  }
+
+  if (!FORMATO_EMAIL.test(email)) {
+    return res.status(400).json({ success: false, message: 'El correo electrónico no tiene un formato válido' });
+  }
+
+  if (role && !ROLES.includes(role)) {
+    return res.status(400).json({ success: false, message: "El rol debe ser 'user' o 'admin'" });
+  }
+
+  const rol = role || 'user';
+  const idSocioExistente = idSocio === undefined || idSocio === null || idSocio === '' ? null : parseInt(idSocio, 10);
+  let socioNuevo = null;
+
+  if (rol === 'user') {
+    if (idSocioExistente === null && !socio) {
+      return res.status(400).json({ success: false, message: 'Una cuenta de socio debe quedar vinculada a un socio: elige uno o registra uno nuevo' });
+    }
+    if (idSocioExistente !== null && socio) {
+      return res.status(400).json({ success: false, message: 'Elige un socio existente o registra uno nuevo, no ambos' });
+    }
+    if (idSocioExistente !== null && isNaN(idSocioExistente)) {
+      return res.status(400).json({ success: false, message: 'idSocio debe ser numérico' });
+    }
+    if (socio) {
+      const { datos, errores } = validarDatosSocio(socio);
+      if (errores.length > 0) {
+        return res.status(400).json({ success: false, message: errores[0], errors: errores });
+      }
+      socioNuevo = datos;
+    }
+  }
+
+  const cliente = await pool.connect();
   try {
-    const { username, password, email, fullName, role, active } = req.body;
+    await cliente.query('BEGIN');
 
-    if (vacio(username) || !password || vacio(email) || vacio(fullName)) {
-      return res.status(400).json({
-        success: false,
-        message: 'Los campos username, password, email y fullName son requeridos'
-      });
-    }
-
-    if (password.length < 6) {
-      return res.status(400).json({
-        success: false,
-        message: 'La contraseña debe tener al menos 6 caracteres'
-      });
-    }
-
-    if (!FORMATO_EMAIL.test(email)) {
-      return res.status(400).json({ success: false, message: 'El correo electrónico no tiene un formato válido' });
-    }
-
-    if (role && !ROLES.includes(role)) {
-      return res.status(400).json({ success: false, message: "El rol debe ser 'user' o 'admin'" });
-    }
-
-    const existingUser = await pool.query(
-      'SELECT id FROM users WHERE username = $1 OR email = $2',
+    const existingUser = await cliente.query(
+      'SELECT id FROM users WHERE LOWER(username) = LOWER($1) OR LOWER(email) = LOWER($2)',
       [username, email]
     );
-
     if (existingUser.rows.length > 0) {
-      return res.status(400).json({ 
-        success: false, 
-        message: 'El usuario o email ya existe' 
-      });
+      await cliente.query('ROLLBACK');
+      return res.status(400).json({ success: false, message: 'El usuario o email ya existe' });
+    }
+
+    let idSocioFinal = null;
+    if (rol === 'user' && idSocioExistente !== null) {
+      // FOR UPDATE: dos altas simultáneas no pueden tomar la misma ficha.
+      const ficha = await cliente.query('SELECT id_socio FROM socio WHERE id_socio = $1 FOR UPDATE', [idSocioExistente]);
+      if (ficha.rows.length === 0) {
+        await cliente.query('ROLLBACK');
+        return res.status(404).json({ success: false, message: 'Socio no encontrado' });
+      }
+      const ocupada = await cliente.query('SELECT 1 FROM socio_perfil WHERE id_socio = $1', [idSocioExistente]);
+      if (ocupada.rows.length > 0) {
+        await cliente.query('ROLLBACK');
+        return res.status(409).json({ success: false, message: 'Ese socio ya tiene una cuenta vinculada' });
+      }
+      idSocioFinal = idSocioExistente;
+    } else if (socioNuevo) {
+      if (await documentoRegistrado(cliente, socioNuevo.documento)) {
+        await cliente.query('ROLLBACK');
+        return res.status(409).json({ success: false, message: 'Ya existe un socio con ese documento: elígelo en la lista de socios sin cuenta' });
+      }
+      idSocioFinal = await insertarSocio(cliente, socioNuevo, { email, estado: 'activo', createdBy: req.user.id });
     }
 
     const hashedPassword = await bcrypt.hash(password, 10);
-
-    const result = await pool.query(
-      `INSERT INTO users (username, password, email, full_name, role, active) 
-       VALUES ($1, $2, $3, $4, $5, $6) 
+    const result = await cliente.query(
+      `INSERT INTO users (username, password, email, full_name, role, active)
+       VALUES ($1, $2, $3, $4, $5, $6)
        RETURNING id, username, email, full_name, role, active`,
-      [username, hashedPassword, email, fullName, role || 'user', active !== false]
+      [username, hashedPassword, email, fullName, rol, active !== false]
     );
-
     const user = result.rows[0];
 
-    // El trigger crear_perfil_por_rol ya creó admin_perfil; se registra quién lo creó.
+    // El trigger crear_perfil_por_rol ya creó admin_perfil o socio_perfil.
     if (user.role === 'admin') {
-      await pool.query(
-        'UPDATE admin_perfil SET creado_por = $1 WHERE user_id = $2',
-        [req.user.id, user.id]
-      );
+      await cliente.query('UPDATE admin_perfil SET creado_por = $1 WHERE user_id = $2', [req.user.id, user.id]);
+    } else {
+      await vincularPerfil(cliente, user.id, idSocioFinal, socioNuevo?.telefono);
     }
+
+    await cliente.query('COMMIT');
 
     res.status(201).json({
       success: true,
@@ -158,12 +206,19 @@ router.post('/', requireAdmin, async (req, res) => {
         email: user.email,
         fullName: user.full_name,
         role: user.role,
-        active: user.active
+        active: user.active,
+        idSocio: idSocioFinal,
       }
     });
   } catch (error) {
+    await cliente.query('ROLLBACK').catch(() => {});
+    if (error.code === '23505') {
+      return res.status(409).json({ success: false, message: 'El usuario, el correo, el documento o el socio ya están registrados' });
+    }
     console.error('Error al crear usuario:', error);
     res.status(500).json({ success: false, message: 'Error al crear usuario' });
+  } finally {
+    cliente.release();
   }
 });
 

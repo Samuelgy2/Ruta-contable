@@ -5,7 +5,6 @@ import { authService } from '../../../services/authService.js';
 interface AuthContextType extends AuthState {
   login: (username: string, password: string) => Promise<boolean>;
   logout: () => void;
-  register: (userData: Partial<User>) => Promise<boolean>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -70,24 +69,10 @@ export function AuthProvider({ children }: AuthProviderProps) {
     });
   };
 
-  // El registro no inicia sesión: sólo confirma si la cuenta se creó (201).
-  // La sesión actual se deja intacta y el formulario redirige al login.
-  const register = async (userData: Partial<User>): Promise<boolean> => {
-    try {
-      const response = await authService.register(userData);
-
-      return Boolean(response?.success && response.data?.user);
-    } catch (error) {
-      console.error('Register error in AuthContext:', error);
-      return false;
-    }
-  };
-
   const value: AuthContextType = {
     ...authState,
     login,
     logout,
-    register,
   };
 
   return (

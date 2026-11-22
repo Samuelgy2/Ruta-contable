@@ -1,5 +1,15 @@
 import api from './api';
 
+async function enviar(ruta, cuerpo) {
+  try {
+    const response = await api.post(ruta, cuerpo);
+    return response.data;
+  } catch (error) {
+    if (error.response?.data) return error.response.data;
+    return { success: false, message: 'No se pudo conectar con el servidor. Inténtalo de nuevo en un momento.' };
+  }
+}
+
 export const authService = {
   // Iniciar sesión con el backend
   login: async (username, password) => {
@@ -21,15 +31,12 @@ export const authService = {
 
   // Registrar usuario. No inicia sesión: el backend responde 201 sin token y el
   // usuario debe entrar después por el formulario de acceso.
-  register: async (userData) => {
-    try {
-      const response = await api.post('/auth/register', userData);
-      return response.data;
-    } catch (error) {
-      console.error('Register error:', error);
-      return { success: false, message: error.response?.data?.message || 'Error de registro' };
-    }
-  },
+  // Registro en tres pasos: código al correo, verificación y formulario de
+  // socio + cuenta. Devuelven el cuerpo del backend también en los errores
+  // (message, errors, attemptsLeft, invalidated, codigo) para mostrarlos.
+  solicitarCodigoRegistro: (email) => enviar('/auth/registro/solicitar-codigo', { email }),
+  verificarCodigoRegistro: (email, otp) => enviar('/auth/registro/verificar-codigo', { email, otp }),
+  register: (datos) => enviar('/auth/register', datos),
 
   // Verificar token (para mantener sesión)
   verify: async () => {

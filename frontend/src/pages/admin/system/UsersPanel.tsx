@@ -4,6 +4,8 @@ import { usePaginacion } from '../../../hooks/usePaginacion';
 import { Paginacion } from '../../../components/ui/Paginacion';
 import { PasswordInput } from '../../../components/ui/password-input';
 import { useUsers } from '../../../hooks/useUsers';
+import { useSocios } from '../../../hooks/useSocios';
+import { CamposSocio, DatosSocio, SOCIO_VACIO, socioParaEnviar, validarSocio } from '../../../components/socio/CamposSocio';
 import { UserRole } from '../../../types';
 import { CLUB_GREEN, ToastType, Modal, ConfirmDialog, inputStyle, f } from './shared';
 import { sinCambios } from '../../../components/ui/feedback';
@@ -45,6 +47,13 @@ export function UsersPanel({ showToast }: UsersPanelProps) {
   const [confirmPassword, setConfirmPassword] = useState(''); // RF-001 Rn4: se digita dos veces
   const [confirmDelete, setConfirmDelete] = useState<number | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  // Una cuenta con rol Usuario siempre queda vinculada a un socio: uno sin cuenta o uno nuevo.
+  const { socios, fetchSocios } = useSocios();
+  const [modoSocio, setModoSocio] = useState<'existente' | 'nuevo'>('existente');
+  const [idSocio, setIdSocio] = useState('');
+  const [socioNuevo, setSocioNuevo] = useState<DatosSocio>(SOCIO_VACIO);
+  const [erroresSocio, setErroresSocio] = useState<Partial<Record<keyof DatosSocio, string>>>({});
+  const sociosSinCuenta = socios.filter(s => s.usuarioVinculado === null);
 
   const [searchTerm, setSearchTerm] = useState('');
   const [filterRole, setFilterRole] = useState<'all' | UserRole>('all');                  // RF-018
@@ -66,7 +75,23 @@ export function UsersPanel({ showToast }: UsersPanelProps) {
   const inactivos = visibleUsers.filter((u: any) => !u.active);
   const admins = visibleUsers.filter((u: any) => u.role === 'admin');
 
-  const openCreate = () => { setEditingId(null); setForm(emptyForm); setConfirmPassword(''); setShowForm(true); };
+  const openCreate = () => {
+    setEditingId(null);
+    setForm(emptyForm);
+    setConfirmPassword('');
+    setModoSocio('existente');
+    setIdSocio('');
+    setSocioNuevo(SOCIO_VACIO);
+    setErroresSocio({});
+    setShowForm(true);
+  };
+
+  // Al elegir un socio sin cuenta se proponen su nombre y su correo si aún están vacíos.
+  const elegirSocio = (valor: string) => {
+    setIdSocio(valor);
+    const s = sociosSinCuenta.find(x => String(x.id_socio) === valor);
+    if (s) setForm(fm => ({ ...fm, fullName: fm.fullName || s.nombre, email: fm.email || s.email || '' }));
+  };
   const openEdit = (user: User) => {
     const datos = { username: user.username, password: '', fullName: user.fullName, email: user.email, role: user.role, active: user.active };
     setForm(datos);
@@ -88,13 +113,36 @@ export function UsersPanel({ showToast }: UsersPanelProps) {
       return;
     }
     if (editingId !== null && sinCambios(original, form)) return;
+
+    let vinculo: { idSocio?: number; socio?: ReturnType<typeof socioParaEnviar> } = {};
+    if (editingId === null && form.role === 'user') {
+      if (modoSocio === 'existente') {
+        if (!idSocio) {
+          showToast('Elige el socio al que pertenece la cuenta o registra uno nuevo', 'error');
+          return;
+        }
+        vinculo = { idSocio: Number(idSocio) };
+      } else {
+        const errs = validarSocio(socioNuevo);
+        setErroresSocio(errs);
+        if (Object.keys(errs).length > 0) {
+          showToast('Revisa los datos del socio', 'error');
+          return;
+        }
+        vinculo = { socio: socioParaEnviar(socioNuevo) };
+      }
+    }
+
     setSubmitting(true);
     try {
       const result = editingId !== null
         ? await updateUser(editingId, form)
-        : await createUser(form);
+        : await createUser({ ...form, ...vinculo } as Parameters<typeof createUser>[0]);
       showToast(result.message, result.success ? 'success' : 'error');
-      if (result.success) closeForm();
+      if (result.success) {
+        closeForm();
+        if (editingId === null && form.role === 'user') void fetchSocios();
+      }
     } finally {
       setSubmitting(false);
     }
@@ -145,6 +193,43 @@ export function UsersPanel({ showToast }: UsersPanelProps) {
                 </select>
               ))}
             </div>
+
+            {editingId === null && form.role === 'user' && (
+              <fieldset style={{ border: '1px solid #e5e7eb', borderRadius: '10px', padding: '16px', margin: '0 0 16px' }}>
+                <legend style={{ fontWeight: 700, fontSize: '14px', color: '#1f2937', padding: '0 6px' }}>Socio vinculado <span style={{ color: '#ef4444' }}>*</span></legend>
+                <p style={{ margin: '0 0 12px', fontSize: '12px', color: '#6b7280' }}>Toda cuenta con rol Usuario debe pertenecer a un socio del club.</p>
+                <div role="radiogroup" aria-label="Origen del socio" style={{ display: 'flex', gap: '16px', flexWrap: 'wrap', marginBottom: '12px', fontSize: '13px', color: '#374151' }}>
+                  <label style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+                    <input type="radio" name="modo-socio" checked={modoSocio === 'existente'} onChange={() => setModoSocio('existente')} />
+                    Socio existente sin cuenta
+                  </label>
+                  <label style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+                    <input type="radio" name="modo-socio" checked={modoSocio === 'nuevo'} onChange={() => setModoSocio('nuevo')} />
+                    Registrar socio nuevo
+                  </label>
+                </div>
+                {modoSocio === 'existente' ? (
+                  sociosSinCuenta.length > 0 ? (
+                    <select aria-label="Socio sin cuenta" value={idSocio} onChange={e => elegirSocio(e.target.value)} style={inputStyle}>
+                      <option value="">Elige un socio…</option>
+                      {sociosSinCuenta.map(s => (
+                        <option key={s.id_socio} value={s.id_socio}>{s.nombre} · {s.tipo_documento} {s.documento}{s.estado !== 'activo' ? ` (${s.estado})` : ''}</option>
+                      ))}
+                    </select>
+                  ) : (
+                    <p style={{ margin: 0, fontSize: '13px', color: '#92400e' }}>
+                      No hay socios sin cuenta.{' '}
+                      <button type="button" onClick={() => setModoSocio('nuevo')} style={{ background: 'none', border: 'none', padding: 0, color: CLUB_GREEN, fontWeight: 600, cursor: 'pointer', fontSize: '13px' }}>
+                        Registra el socio aquí
+                      </button>
+                    </p>
+                  )
+                ) : (
+                  <CamposSocio variante="panel" idPrefijo="nuevo-socio" inputStyle={inputStyle} valor={socioNuevo} errores={erroresSocio} onChange={setSocioNuevo} />
+                )}
+              </fieldset>
+            )}
+
             <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end', paddingTop: '16px', borderTop: '1px solid #f3f4f6', marginTop: '16px' }}>
               <button type="button" onClick={closeForm} disabled={submitting} style={{ padding: '11px 24px', borderRadius: '8px', border: '1.5px solid #e5e7eb', backgroundColor: 'white', color: '#374151', fontSize: '14px', fontWeight: '500', cursor: 'pointer' }}>Cancelar</button>
               <button type="submit" disabled={submitting} style={{ padding: '11px 28px', borderRadius: '8px', border: 'none', backgroundColor: submitting ? '#6ee7b7' : CLUB_GREEN, color: 'white', fontSize: '14px', fontWeight: '600', cursor: submitting ? 'default' : 'pointer' }}>

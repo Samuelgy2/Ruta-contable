@@ -2,15 +2,15 @@
 // Se edita un borrador; la landing pública sólo cambia al publicar.
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { ArrowUp, ArrowDown, Eye, Monitor, Tablet, Smartphone, X, Upload } from 'lucide-react';
+import { ArrowUp, ArrowDown, Eye, Monitor, Tablet, Smartphone, X, Upload, Trash2 } from 'lucide-react';
 import { CLUB_GREEN, ToastType, ConfirmDialog, inputStyle } from './shared';
 import { BotonArchivo } from './BotonArchivo';
 import { LandingVista } from '../../../features/landing';
 import {
-  ContenidoLanding, SeccionLanding, RedSocial, LANDING_POR_DEFECTO, NOMBRES_SECCIONES, SECCIONES_CON_IMAGENES,
+  ContenidoLanding, SeccionLanding, RedSocial, NoticiaLanding, LANDING_POR_DEFECTO, NOMBRES_SECCIONES, SECCIONES_CON_IMAGENES,
 } from '../../../features/landing/data';
 import { landingService, EstadoLanding, ImagenAdmin, VersionLanding } from '../../../services/landingService';
-import { formatDateTime } from '../../../utils/format';
+import { formatDateTime, hoyLocal } from '../../../utils/format';
 
 interface LandingPanelProps {
   showToast: (message: string, type?: ToastType) => void;
@@ -18,7 +18,7 @@ interface LandingPanelProps {
 
 interface ErrorCampo { campo: string; mensaje: string; }
 
-type Vista = 'secciones' | 'contacto' | 'imagenes' | 'historial';
+type Vista = 'secciones' | 'noticias' | 'contacto' | 'imagenes' | 'historial';
 type Dispositivo = 'computador' | 'tablet' | 'movil';
 type Confirmacion = { tipo: 'publicar' } | { tipo: 'restaurar'; numero: number } | { tipo: 'eliminar'; imagen: ImagenAdmin };
 
@@ -27,6 +27,8 @@ const TEXTO_MAX = 2000;
 const ALT_MAX = 150;
 const IMAGEN_MAX_BYTES = 2 * 1024 * 1024;
 const TIPOS_IMAGEN = ['image/jpeg', 'image/png', 'image/webp'];
+const NOTICIAS_MAX = 20;
+const RESUMEN_MAX = 500;
 
 const ANCHOS: Record<Dispositivo, { ancho: number; etiqueta: string; icono: typeof Monitor }> = {
   computador: { ancho: 1280, etiqueta: 'Computador', icono: Monitor },
@@ -36,6 +38,7 @@ const ANCHOS: Record<Dispositivo, { ancho: number; etiqueta: string; icono: type
 
 const VISTAS: { id: Vista; etiqueta: string }[] = [
   { id: 'secciones', etiqueta: 'Secciones' },
+  { id: 'noticias',  etiqueta: 'Noticias' },
   { id: 'contacto',  etiqueta: 'Contacto y redes' },
   { id: 'imagenes',  etiqueta: 'Imágenes' },
   { id: 'historial', etiqueta: 'Historial' },
@@ -104,7 +107,8 @@ export function LandingPanel({ showToast }: LandingPanelProps) {
   const cargar = useCallback(async () => {
     try {
       const [e, imgs, vers] = await Promise.all([landingService.getEstado(), landingService.getImagenes(), landingService.getVersiones()]);
-      const base = e.borrador?.contenido ?? LANDING_POR_DEFECTO;
+      const base = { ...LANDING_POR_DEFECTO, ...(e.borrador?.contenido ?? {}) } as ContenidoLanding;
+      if (!Array.isArray(base.noticias)) base.noticias = [];
       setEstado(e);
       setContenido(base);
       setGuardado(base);
@@ -169,6 +173,21 @@ export function LandingPanel({ showToast }: LandingPanelProps) {
     if (destino < 0 || destino >= secciones.length) return c;
     [secciones[indice], secciones[destino]] = [secciones[destino], secciones[indice]];
     return { ...c, secciones };
+  });
+
+  // ── Noticias (RF-109) ──
+  const editarNoticia = (indice: number, cambios: Partial<NoticiaLanding>) =>
+    setContenido(c => ({ ...c, noticias: c.noticias.map((n, i) => (i === indice ? { ...n, ...cambios } : n)) }));
+  const agregarNoticia = () =>
+    setContenido(c => ({ ...c, noticias: [{ titulo: '', fecha: hoyLocal(), resumen: '', imagen: null, enlace: '' }, ...c.noticias] }));
+  const quitarNoticia = (indice: number) =>
+    setContenido(c => ({ ...c, noticias: c.noticias.filter((_, i) => i !== indice) }));
+  const moverNoticia = (indice: number, delta: number) => setContenido(c => {
+    const noticias = [...c.noticias];
+    const destino = indice + delta;
+    if (destino < 0 || destino >= noticias.length) return c;
+    [noticias[indice], noticias[destino]] = [noticias[destino], noticias[indice]];
+    return { ...c, noticias };
   });
 
   const editarContacto = (cambios: Partial<ContenidoLanding['contacto']>) =>
@@ -352,6 +371,11 @@ export function LandingPanel({ showToast }: LandingPanelProps) {
                     <div style={{ fontSize: '11px', color: '#9ca3af', textAlign: 'right' }}>{s.titulo.length}/{TITULO_MAX}</div>
                     {mensajeError(`secciones.${s.id}.titulo`)}
                   </div>
+                  {s.id === 'noticias' && (
+                    <p style={{ margin: 0, fontSize: '12px', color: '#6b7280' }}>
+                      Las noticias se escriben en la pestaña «Noticias». Sin noticias, la sección no aparece en la página pública.
+                    </p>
+                  )}
                   {s.id !== 'cifras' && (
                     <div>
                       <label htmlFor={`texto-${s.id}`} style={etiqueta}>Texto</label>
@@ -405,6 +429,93 @@ export function LandingPanel({ showToast }: LandingPanelProps) {
             );
           })}
           {mensajeError('secciones')}
+        </div>
+      )}
+
+      {/* ── Noticias (RF-109) ── */}
+      {vista === 'noticias' && (
+        <div style={{ display: 'grid', gap: '12px', maxWidth: '860px' }}>
+          <div style={{ ...card, display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
+            <p style={{ margin: 0, fontSize: '13px', color: '#374151', flex: 1, minWidth: '220px' }}>
+              {contenido.noticias.length}/{NOTICIAS_MAX} noticias. Se muestran en este orden; la primera es la más destacada.
+              {contenido.secciones.find(s => s.id === 'noticias')?.visible === false && (
+                <strong style={{ display: 'block', color: '#92400e', marginTop: '4px' }}>La sección Noticias está oculta: actívala en «Secciones» para que se vea.</strong>
+              )}
+            </p>
+            <button type="button" style={botonSecundario} disabled={contenido.noticias.length >= NOTICIAS_MAX} onClick={agregarNoticia}>
+              + Añadir noticia
+            </button>
+          </div>
+
+          {contenido.noticias.length === 0 && (
+            <p style={{ ...card, margin: 0, fontSize: '13px', color: '#6b7280' }}>Aún no hay noticias. Añade la primera con el botón de arriba.</p>
+          )}
+
+          {contenido.noticias.map((n, i) => {
+            const base = `noticias.${i}`;
+            return (
+              <section key={i} aria-label={`Noticia ${i + 1}`} style={card}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '14px', flexWrap: 'wrap' }}>
+                  <span style={{ fontSize: '12px', color: '#6b7280', minWidth: '22px' }}>{i + 1}.</span>
+                  <h4 style={{ margin: 0, fontSize: '15px', color: '#1f2937', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{n.titulo || 'Noticia sin título'}</h4>
+                  <button type="button" style={botonIcono} disabled={i === 0} onClick={() => moverNoticia(i, -1)} aria-label={`Subir noticia ${i + 1}`}><ArrowUp size={16} /></button>
+                  <button type="button" style={botonIcono} disabled={i === contenido.noticias.length - 1} onClick={() => moverNoticia(i, 1)} aria-label={`Bajar noticia ${i + 1}`}><ArrowDown size={16} /></button>
+                  <button type="button" style={{ ...botonIcono, color: '#b91c1c' }} onClick={() => quitarNoticia(i)} aria-label={`Quitar noticia ${i + 1}`}><Trash2 size={16} /></button>
+                </div>
+
+                <div style={{ display: 'grid', gap: '12px' }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 180px), 1fr))', gap: '12px' }}>
+                    <div style={{ gridColumn: '1 / -1' }}>
+                      <label htmlFor={`noticia-titulo-${i}`} style={etiqueta}>Título <span style={{ color: '#ef4444' }}>*</span></label>
+                      <input id={`noticia-titulo-${i}`} value={n.titulo} maxLength={TITULO_MAX} required onChange={e => editarNoticia(i, { titulo: e.target.value })} {...accesible(`${base}.titulo`)} />
+                      <div style={{ fontSize: '11px', color: '#9ca3af', textAlign: 'right' }}>{n.titulo.length}/{TITULO_MAX}</div>
+                      {mensajeError(`${base}.titulo`)}
+                    </div>
+                    <div>
+                      <label htmlFor={`noticia-fecha-${i}`} style={etiqueta}>Fecha <span style={{ color: '#ef4444' }}>*</span></label>
+                      <input id={`noticia-fecha-${i}`} type="date" value={n.fecha} required onChange={e => editarNoticia(i, { fecha: e.target.value })} {...accesible(`${base}.fecha`)} />
+                      {mensajeError(`${base}.fecha`)}
+                    </div>
+                  </div>
+                  <div>
+                    <label htmlFor={`noticia-resumen-${i}`} style={etiqueta}>Resumen <span style={{ color: '#ef4444' }}>*</span></label>
+                    <textarea id={`noticia-resumen-${i}`} value={n.resumen} maxLength={RESUMEN_MAX} rows={3} required onChange={e => editarNoticia(i, { resumen: e.target.value })} {...accesible(`${base}.resumen`)} />
+                    <div style={{ fontSize: '11px', color: '#9ca3af', textAlign: 'right' }}>{n.resumen.length}/{RESUMEN_MAX}</div>
+                    {mensajeError(`${base}.resumen`)}
+                  </div>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '12px', alignItems: 'start' }}>
+                    <div>
+                      <label htmlFor={`noticia-enlace-${i}`} style={etiqueta}>Enlace (opcional)</label>
+                      <input id={`noticia-enlace-${i}`} type="url" placeholder="https://..." value={n.enlace} onChange={e => editarNoticia(i, { enlace: e.target.value })} {...accesible(`${base}.enlace`)} />
+                      <div style={{ fontSize: '11px', color: '#9ca3af' }}>Nota completa, publicación de Instagram, resultados…</div>
+                      {mensajeError(`${base}.enlace`)}
+                    </div>
+                    <div>
+                      <label htmlFor={`noticia-imagen-${i}`} style={etiqueta}>Imagen (opcional)</label>
+                      <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                        {n.imagen !== null && (urls[n.imagen]
+                          ? <img src={urls[n.imagen]} alt="" style={{ width: '64px', height: '40px', objectFit: 'cover', borderRadius: '6px', flexShrink: 0 }} />
+                          : <div style={{ width: '64px', height: '40px', borderRadius: '6px', backgroundColor: '#f3f4f6', flexShrink: 0 }} />)}
+                        <select
+                          id={`noticia-imagen-${i}`}
+                          value={n.imagen ?? ''}
+                          onChange={e => editarNoticia(i, { imagen: e.target.value ? Number(e.target.value) : null })}
+                          {...accesible(`${base}.imagen`)}
+                        >
+                          <option value="">Sin imagen</option>
+                          {n.imagen !== null && !imagenPorId.has(n.imagen) && <option value={n.imagen}>Imagen #{n.imagen} (no existe)</option>}
+                          {imagenes.map(img => <option key={img.id} value={img.id}>#{img.id} · {img.alt}</option>)}
+                        </select>
+                      </div>
+                      {imagenes.length === 0 && <div style={{ fontSize: '11px', color: '#9ca3af' }}>Sube imágenes en la pestaña «Imágenes».</div>}
+                      {mensajeError(`${base}.imagen`)}
+                    </div>
+                  </div>
+                </div>
+              </section>
+            );
+          })}
+          {mensajeError('noticias')}
         </div>
       )}
 

@@ -13,7 +13,7 @@ interface Socio {
   fecha_ingreso: string;
   tipo_membresia: string;
   nivel_aprendizaje: string | null;
-  estado: 'activo' | 'inactivo' | 'suspendido';
+  estado: 'activo' | 'inactivo' | 'suspendido' | 'pendiente';
   foto: string | null;
   observaciones: string | null;
   // Cuenta de acceso enlazada por socio_perfil.id_socio; null si no hay.

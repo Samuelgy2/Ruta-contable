@@ -19,6 +19,7 @@ export const ENLACES_SECCIONES = [
   { id: 'sedes',        etiqueta: 'Sedes' },
   { id: 'entrenadores', etiqueta: 'Entrenadores' },
   { id: 'galeria',      etiqueta: 'Galería' },
+  { id: 'noticias',     etiqueta: 'Noticias' },
   { id: 'contacto',     etiqueta: 'Contacto' },
 ];
 
@@ -76,7 +77,7 @@ export const SLIDES: { titulo: string; descripcion: string; imagen?: string }[] 
 // muestra este contenido por defecto (RF-097). La semilla del backend
 // (backend/migrations/20261028_landing.seed.sql) copia estos mismos textos.
 
-export type SeccionId = 'inicio' | 'cifras' | 'club' | 'escuela' | 'sedes' | 'entrenadores' | 'galeria' | 'contacto';
+export type SeccionId = 'inicio' | 'cifras' | 'club' | 'escuela' | 'sedes' | 'entrenadores' | 'galeria' | 'noticias' | 'contacto';
 
 export interface SeccionLanding {
   id: SeccionId;
@@ -95,16 +96,26 @@ export interface ContactoLanding {
   redes: RedSocial[];
 }
 
+// Noticia de la sección "Noticias" (RF-109). imagen: id de la biblioteca de la landing.
+export interface NoticiaLanding {
+  titulo: string;
+  fecha: string;      // YYYY-MM-DD
+  resumen: string;
+  imagen: number | null;
+  enlace: string;     // https://... o vacío
+}
+
 export interface ContenidoLanding {
   secciones: SeccionLanding[];
   contacto: ContactoLanding;
+  noticias: NoticiaLanding[];
 }
 
 export interface ImagenLanding { id: number; alt: string; }
 
 export const NOMBRES_SECCIONES: Record<SeccionId, string> = {
   inicio: 'Portada', cifras: 'Cifras', club: 'El club', escuela: 'Escuela',
-  sedes: 'Sedes', entrenadores: 'Entrenadores', galeria: 'Galería', contacto: 'Contacto',
+  sedes: 'Sedes', entrenadores: 'Entrenadores', galeria: 'Galería', noticias: 'Noticias', contacto: 'Contacto',
 };
 
 // Secciones que admiten imágenes (carrusel de la portada y galería).
@@ -121,6 +132,7 @@ export const LANDING_POR_DEFECTO: ContenidoLanding = {
     seccion('sedes', 'Sedes y frentes', 'Entrenamos en Medellín y competimos donde esté el calendario.'),
     seccion('entrenadores', 'Entrenadores', 'El equipo que acompaña a cada rider en la pista.'),
     seccion('galeria', 'Galería', `Podios, partidas y semillero. Todo el día a día del club está en ${CLUB.instagramUsuario}.`),
+    seccion('noticias', 'Noticias', 'Lo más reciente del club: competencias, resultados y anuncios.'),
     seccion('contacto', '¿Listo para rodar con nosotros?', 'Escríbenos y te contamos cómo inscribir a tu rider en el semillero o en el grupo competitivo.'),
   ],
   contacto: {
@@ -129,11 +141,16 @@ export const LANDING_POR_DEFECTO: ContenidoLanding = {
     direccion: CLUB.direccion,
     redes: [{ nombre: 'Instagram', url: CLUB.instagram, etiqueta: CLUB.instagramUsuario }],
   },
+  noticias: [],
 };
 
-// Enlaces del menú: secciones visibles con ancla, en el orden publicado.
+// Una sección se muestra si está visible; Noticias, además, sólo si tiene noticias.
+export const seccionSeMuestra = (contenido: ContenidoLanding, s: SeccionLanding) =>
+  s.visible && (s.id !== 'noticias' || (contenido.noticias ?? []).length > 0);
+
+// Enlaces del menú: secciones que se muestran y tienen ancla, en el orden publicado.
 export const enlacesDe = (contenido: ContenidoLanding) =>
-  contenido.secciones.filter(s => s.visible).flatMap(s => ENLACES_SECCIONES.filter(e => e.id === s.id));
+  contenido.secciones.filter(s => seccionSeMuestra(contenido, s)).flatMap(s => ENLACES_SECCIONES.filter(e => e.id === s.id));
 
 export const instagramDe = (contacto: ContactoLanding) =>
   contacto.redes.find(r => /instagram/i.test(r.nombre)) ?? null;

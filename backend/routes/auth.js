@@ -28,6 +28,24 @@ const registerLimiter = rateLimit({
 // Hash bcrypt (coste 12) de una clave aleatoria descartada: no corresponde a ninguna cuenta.
 const HASH_FICTICIO = bcrypt.hashSync(require('crypto').randomBytes(16).toString('hex'), 12);
 
+// Verificación del correo antes del registro (OTP). Cada paso tiene su limitador.
+const codigoRegistroLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 5,
+  message: { success: false, message: 'Demasiadas solicitudes de código. Intenta de nuevo en 15 minutos.' },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+const verificarRegistroLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 10,
+  message: { success: false, message: 'Demasiados intentos. Intenta de nuevo en 15 minutos.' },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+router.post('/registro/solicitar-codigo', codigoRegistroLimiter, authController.solicitarCodigo);
+router.post('/registro/verificar-codigo', verificarRegistroLimiter, authController.verificarCodigo);
 router.post('/register', registerLimiter, authController.register);
 
 router.post('/login', loginLimiter, async (req, res) => {

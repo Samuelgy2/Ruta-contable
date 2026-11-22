@@ -205,6 +205,7 @@ const dns = require('dns').promises;
     auditoria:     ['id'],
     jersey_campana: ['id'],
     landing_version: ['numero'],
+    registro_pendiente: ['email', 'codigo_hash', 'codigo_expira', 'intentos', 'token_hash', 'token_expira'],
   };
 
   async function verificarEsquema() {

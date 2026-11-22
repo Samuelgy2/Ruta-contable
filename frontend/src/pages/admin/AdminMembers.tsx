@@ -20,7 +20,7 @@ interface Socio {
   fecha_ingreso: string;
   tipo_membresia: string;
   nivel_aprendizaje: string | null;
-  estado: 'activo' | 'inactivo' | 'suspendido';
+  estado: 'activo' | 'inactivo' | 'suspendido' | 'pendiente';
   foto: string | null;
   observaciones: string | null;
   usuarioVinculado: { id: number; username: string; email: string } | null;
@@ -99,7 +99,7 @@ const emptyForm = {
   fecha_ingreso:    hoyLocal(),
   tipo_membresia:   'Media' as 'Media' | 'Completa' | 'Beca',
   nivel_aprendizaje: '' as '' | 'Iniciación' | 'Rider School' | 'Club',
-  estado:           'activo' as 'activo' | 'inactivo' | 'suspendido',
+  estado:           'activo' as 'activo' | 'inactivo' | 'suspendido' | 'pendiente',
   observaciones:    '',
 };
 
@@ -111,7 +111,12 @@ export function AdminMembers({ onNavigate }: AdminMembersProps) {
     socios, loading, error, fetchSocios, createSocio, updateSocio, deleteSocio,
     vincularUsuario, desvincularUsuario,
   } = useSocios();
-  const pagSocios = usePaginacion(socios);
+  // Registro público: los socios que se inscriben solos quedan pendientes de aprobación.
+  const [soloPendientes, setSoloPendientes] = useState<boolean>(false);
+  const pendientes = socios.filter(s => s.estado === 'pendiente');
+  const sociosVisibles = soloPendientes ? pendientes : socios;
+  const pagSocios = usePaginacion(sociosVisibles);
+  const [aprobandoId, setAprobandoId] = useState<number | null>(null);
   const [searchTerm, setSearchTerm] = useState<string>('');
   const [showForm, setShowForm] = useState<boolean>(false);
   const [editingId, setEditingId] = useState<number | null>(null);
@@ -180,6 +185,14 @@ export function AdminMembers({ onNavigate }: AdminMembersProps) {
     } else {
       setVinculoError(prev => ({ ...prev, [idSocio]: result.message }));
     }
+  };
+
+  const handleAprobar = async (socio: Socio) => {
+    setAprobandoId(socio.id_socio);
+    const result = await updateSocio(socio.id_socio, { estado: 'activo' });
+    setAprobandoId(null);
+    showToast(result.success ? `Inscripción de ${socio.nombre} aprobada` : result.message, result.success ? 'success' : 'error');
+    if (result.success && pendientes.length <= 1) setSoloPendientes(false);
   };
 
   // Búsqueda con debounce 400ms
@@ -283,6 +296,7 @@ export function AdminMembers({ onNavigate }: AdminMembersProps) {
       activo:     { bg: '#d1fae5', color: '#065f46', label: 'Activo' },
       inactivo:   { bg: '#f3f4f6', color: '#374151', label: 'Inactivo' },
       suspendido: { bg: '#fee2e2', color: '#991b1b', label: 'Suspendido' },
+      pendiente:  { bg: '#fef3c7', color: '#92400e', label: 'Pendiente' },
     };
     const s = map[estado] ?? map['activo'];
     return (
@@ -445,6 +459,7 @@ export function AdminMembers({ onNavigate }: AdminMembersProps) {
                   <option value="activo">Activo</option>
                   <option value="inactivo">Inactivo</option>
                   <option value="suspendido">Suspendido</option>
+                  <option value="pendiente">Pendiente de aprobación</option>
                 </select>
               )}
             </div>
@@ -518,6 +533,33 @@ export function AdminMembers({ onNavigate }: AdminMembersProps) {
           </button>
         </div>
 
+        {/* Inscripciones del registro público por aprobar */}
+        {(pendientes.length > 0 || soloPendientes) && (
+          <div role="status" style={{
+            display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap',
+            padding: '12px 16px', borderRadius: '10px', backgroundColor: '#fffbeb',
+            border: '1px solid #fde68a', marginBottom: '16px',
+          }}>
+            <span style={{ fontSize: '13px', color: '#92400e', fontWeight: '600', flex: 1 }}>
+              {pendientes.length === 1
+                ? '1 inscripción del registro público pendiente de aprobación'
+                : `${pendientes.length} inscripciones del registro público pendientes de aprobación`}
+            </span>
+            <button
+              type="button"
+              aria-pressed={soloPendientes}
+              onClick={() => setSoloPendientes(v => !v)}
+              style={{
+                padding: '6px 12px', borderRadius: '8px', border: '1px solid #f59e0b',
+                backgroundColor: soloPendientes ? '#f59e0b' : 'white',
+                color: soloPendientes ? 'white' : '#92400e', fontSize: '12px', fontWeight: '600', cursor: 'pointer',
+              }}
+            >
+              {soloPendientes ? 'Ver todos' : 'Ver pendientes'}
+            </button>
+          </div>
+        )}
+
         {/* Buscador */}
         <div style={{ marginBottom: '20px' }}>
           <div style={{ position: 'relative', maxWidth: '400px' }}>
@@ -567,7 +609,7 @@ export function AdminMembers({ onNavigate }: AdminMembersProps) {
                     <p style={{ margin: '8px 0 0', fontSize: '14px' }}>Cargando socios...</p>
                   </td>
                 </tr>
-              ) : socios.length === 0 ? (
+              ) : sociosVisibles.length === 0 ? (
                 <tr>
                   <td colSpan={9} style={{ textAlign: 'center', padding: '48px', color: '#9ca3af', fontSize: '15px' }}>
                     No hay socios que mostrar
@@ -702,6 +744,22 @@ export function AdminMembers({ onNavigate }: AdminMembersProps) {
                       )}
                     </td>
                     <td style={{ padding: '14px 16px', textAlign: 'right' }}>
+                      {socio.estado === 'pendiente' && (
+                        <button
+                          type="button"
+                          onClick={() => { void handleAprobar(socio); }}
+                          disabled={aprobandoId === socio.id_socio}
+                          aria-label={`Aprobar la inscripción de ${socio.nombre}`}
+                          style={{
+                            padding: '7px 12px', borderRadius: '8px', border: 'none',
+                            backgroundColor: aprobandoId === socio.id_socio ? '#6ee7b7' : CLUB_GREEN,
+                            color: 'white', fontSize: '12px', fontWeight: '600',
+                            cursor: aprobandoId === socio.id_socio ? 'not-allowed' : 'pointer', marginRight: '8px',
+                          }}
+                        >
+                          {aprobandoId === socio.id_socio ? '...' : 'Aprobar'}
+                        </button>
+                      )}
                       <button
                         onClick={() => setDocumentosDe({ id: socio.id_socio, nombre: socio.nombre })}
                         title="Documentos"

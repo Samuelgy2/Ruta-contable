@@ -8,11 +8,12 @@ import { Features } from '../components/Features';
 import { Sedes } from '../components/Sedes';
 import { Entrenadores } from '../components/Entrenadores';
 import { Galeria } from '../components/Galeria';
+import { Noticias } from '../components/Noticias';
 import { CTA } from '../components/CTA';
 import { Footer } from '../components/Footer';
 import { AppPage } from '../../../types/index';
 import {
-  ContenidoLanding, ImagenLanding, SeccionLanding, LANDING_POR_DEFECTO, enlacesDe, instagramDe,
+  ContenidoLanding, ImagenLanding, SeccionLanding, LANDING_POR_DEFECTO, enlacesDe, instagramDe, seccionSeMuestra,
 } from '../data';
 import { landingService, LandingPublicada } from '../../../services/landingService';
 
@@ -31,6 +32,11 @@ export function LandingVista({ contenido, imagenes, srcImagen, onNavigate }: Lan
   const fotos = (s: SeccionLanding) => s.imagenes
     .map(id => ({ src: srcImagen(id), alt: altDe.get(id) }))
     .filter((f): f is { src: string; alt: string } => Boolean(f.src && f.alt));
+  const foto = (id: number | null) => {
+    const src = id === null ? undefined : srcImagen(id);
+    const alt = id === null ? undefined : altDe.get(id);
+    return src && alt ? { src, alt } : null;
+  };
   const instagram = instagramDe(contenido.contacto)?.url ?? null;
   const enlaces = enlacesDe(contenido);
 
@@ -43,6 +49,7 @@ export function LandingVista({ contenido, imagenes, srcImagen, onNavigate }: Lan
       case 'sedes':        return <Sedes seccion={s} />;
       case 'entrenadores': return <Entrenadores seccion={s} />;
       case 'galeria':      return <Galeria seccion={s} imagenes={fotos(s)} instagram={instagram} />;
+      case 'noticias':     return <Noticias seccion={s} noticias={contenido.noticias ?? []} foto={foto} />;
       case 'contacto':     return <CTA seccion={s} contacto={contenido.contacto} />;
     }
   };
@@ -50,7 +57,7 @@ export function LandingVista({ contenido, imagenes, srcImagen, onNavigate }: Lan
   return (
     <div className="landing-page">
       <Navbar onNavigate={onNavigate} currentPage="home" enlaces={enlaces} />
-      {contenido.secciones.filter(s => s.visible).map(s => (
+      {contenido.secciones.filter(s => seccionSeMuestra(contenido, s)).map(s => (
         <React.Fragment key={s.id}>{seccion(s)}</React.Fragment>
       ))}
       <Footer onNavigate={onNavigate} contacto={contenido.contacto} enlaces={enlaces} />

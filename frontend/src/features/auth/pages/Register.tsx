@@ -6,20 +6,14 @@ import { AppPage } from '../../../types/index';
 
 interface RegisterProps {
   onNavigate: (page: AppPage) => void;
-  onRegister: (data: {
-    firstName: string;
-    lastName: string;
-    email: string;
-    password: string;
-  }) => Promise<boolean>;
 }
 
-export function Register({ onNavigate, onRegister }: RegisterProps) {
+export function Register({ onNavigate }: RegisterProps) {
   return (
     <div className="landing-page">
       <Navbar onNavigate={onNavigate} currentPage="register" />
       <div className="register-page" style={{ position: 'relative' }}>
-        <RegisterForm onNavigate={onNavigate} onRegister={onRegister} />
+        <RegisterForm onNavigate={onNavigate} />
       </div>
       <Footer />
     </div>

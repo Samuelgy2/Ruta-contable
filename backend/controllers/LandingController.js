@@ -5,10 +5,10 @@ const CONTENIDO_POR_DEFECTO = require('./landingPorDefecto.json');
 
 // ─── Reglas de contenido (RF-089, RF-091, RF-092) ─────────────────────────────
 // Secciones fijas de la landing; el orden del array es el orden público.
-const SECCIONES = ['inicio', 'cifras', 'club', 'escuela', 'sedes', 'entrenadores', 'galeria', 'contacto'];
+const SECCIONES = ['inicio', 'cifras', 'club', 'escuela', 'sedes', 'entrenadores', 'galeria', 'noticias', 'contacto'];
 const NOMBRES = {
   inicio: 'Portada', cifras: 'Cifras', club: 'El club', escuela: 'Escuela',
-  sedes: 'Sedes', entrenadores: 'Entrenadores', galeria: 'Galería', contacto: 'Contacto',
+  sedes: 'Sedes', entrenadores: 'Entrenadores', galeria: 'Galería', noticias: 'Noticias', contacto: 'Contacto',
 };
 
 const TITULO_MAX    = 100;
@@ -16,6 +16,9 @@ const TEXTO_MAX     = 2000;
 const ALT_MAX       = 150;
 const IMAGENES_MAX  = 12;
 const REDES_MAX     = 10;
+const NOTICIAS_MAX  = 20;
+const RESUMEN_MAX   = 500;
+const ENLACE_MAX    = 300;
 const IMAGEN_MAX_BYTES = 2 * 1024 * 1024;
 const TIPOS_IMAGEN  = ['image/jpeg', 'image/png', 'image/webp'];
 
@@ -45,9 +48,33 @@ function esHttps(url) {
   }
 }
 
+// 'YYYY-MM-DD' que corresponde a un día real.
+function fechaValida(valor) {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(valor)) return false;
+  const [a, m, d] = valor.split('-').map(Number);
+  const f = new Date(Date.UTC(a, m - 1, d));
+  return f.getUTCFullYear() === a && f.getUTCMonth() === m - 1 && f.getUTCDate() === d;
+}
+
+// Los borradores y versiones guardados antes de la sección de noticias no la
+// traen: se agrega con su texto por defecto (antes de Contacto) y una lista
+// vacía. Así esos contenidos se pueden ver, guardar, publicar y restaurar.
+const SECCION_NOTICIAS_DEFECTO = CONTENIDO_POR_DEFECTO.secciones.find(s => s.id === 'noticias');
+function normalizarContenido(contenido) {
+  if (!contenido || typeof contenido !== 'object' || !Array.isArray(contenido.secciones)) return contenido;
+  let secciones = contenido.secciones;
+  if (!secciones.some(s => s && s.id === 'noticias')) {
+    const iContacto = secciones.findIndex(s => s && s.id === 'contacto');
+    const pos = iContacto === -1 ? secciones.length : iContacto;
+    secciones = [...secciones.slice(0, pos), { ...SECCION_NOTICIAS_DEFECTO }, ...secciones.slice(pos)];
+  }
+  return { ...contenido, secciones, noticias: Array.isArray(contenido.noticias) ? contenido.noticias : [] };
+}
+
 // Devuelve { contenido, errores }. `contenido` sólo trae campos conocidos y ya
 // sanitizados; si hay errores no debe guardarse.
-function validarContenido(entrada) {
+function validarContenido(original) {
+  const entrada = normalizarContenido(original);
   const errores = [];
   const error = (campo, mensaje) => errores.push({ campo, mensaje });
 
@@ -105,11 +132,37 @@ function validarContenido(entrada) {
     return { nombre, url, etiqueta };
   });
 
-  return { contenido: { secciones, contacto: { correo, telefono, direccion, redes } }, errores };
+  // Noticias (RF-109): título, fecha, resumen, imagen opcional de la biblioteca y enlace https opcional.
+  const noticiasIn = entrada.noticias;
+  if (noticiasIn.length > NOTICIAS_MAX) error('noticias', `Se admiten hasta ${NOTICIAS_MAX} noticias.`);
+  const noticias = noticiasIn.slice(0, NOTICIAS_MAX).map((n, i) => {
+    const campo   = `noticias.${i}`;
+    const num     = i + 1;
+    const titulo  = limpiarTexto(n && n.titulo);
+    const fecha   = String((n && n.fecha) ?? '').trim();
+    const resumen = limpiarTexto(n && n.resumen);
+    const enlace  = String((n && n.enlace) ?? '').trim();
+    const imagen  = n && n.imagen !== undefined && n.imagen !== null && n.imagen !== '' ? n.imagen : null;
+
+    if (!titulo) error(`${campo}.titulo`, `La noticia ${num} necesita un título.`);
+    if (titulo.length > TITULO_MAX) error(`${campo}.titulo`, `El título de la noticia ${num} no puede superar ${TITULO_MAX} caracteres (tiene ${titulo.length}).`);
+    if (!fechaValida(fecha)) error(`${campo}.fecha`, `La noticia ${num} necesita una fecha válida.`);
+    if (!resumen) error(`${campo}.resumen`, `La noticia ${num} necesita un resumen.`);
+    if (resumen.length > RESUMEN_MAX) error(`${campo}.resumen`, `El resumen de la noticia ${num} no puede superar ${RESUMEN_MAX} caracteres (tiene ${resumen.length}).`);
+    if (enlace && (!esHttps(enlace) || enlace.length > ENLACE_MAX)) error(`${campo}.enlace`, `El enlace de la noticia ${num} debe iniciar con https://.`);
+    if (imagen !== null && (!Number.isInteger(imagen) || imagen <= 0)) error(`${campo}.imagen`, `La imagen de la noticia ${num} no es válida.`);
+
+    return { titulo, fecha, resumen, imagen, enlace };
+  });
+
+  return { contenido: { secciones, contacto: { correo, telefono, direccion, redes }, noticias }, errores };
 }
 
 function imagenesDe(contenido) {
-  return new Set((contenido?.secciones ?? []).flatMap(s => s.imagenes ?? []));
+  return new Set([
+    ...(contenido?.secciones ?? []).flatMap(s => s.imagenes ?? []),
+    ...(Array.isArray(contenido?.noticias) ? contenido.noticias : []).map(n => n && n.imagen).filter(Number.isInteger),
+  ]);
 }
 
 // Reconoce el formato por sus primeros bytes, no por lo que diga el cliente.
@@ -189,8 +242,8 @@ async function getEstado(req, res) {
          WHERE b.id = 1`),
       pool.query(SELECT_PUBLICADA),
     ]);
-    const b = borrador.rows[0];
-    const p = publicada.rows[0];
+    const b = borrador.rows[0] && { ...borrador.rows[0], contenido: normalizarContenido(borrador.rows[0].contenido) };
+    const p = publicada.rows[0] && { ...publicada.rows[0], contenido: normalizarContenido(publicada.rows[0].contenido) };
 
     res.json({
       success: true,
@@ -231,6 +284,7 @@ async function guardarBorrador(req, res) {
       const antes = new Map((previo?.secciones ?? []).map(s => [s.id, s]));
       const cambios = contenido.secciones.filter(s => !mismoContenido(antes.get(s.id), s)).map(s => s.id);
       if (!previo || !mismoContenido(previo.contacto, contenido.contacto)) cambios.push('datos-contacto');
+      if (!previo || !mismoContenido(previo.noticias ?? [], contenido.noticias)) cambios.push('noticias');
       if (previo && !mismoContenido(previo.secciones.map(s => s.id), contenido.secciones.map(s => s.id))) cambios.push('orden');
       await auditar(cliente, req, 'guardar_borrador', { cambios });
 
@@ -375,7 +429,7 @@ async function publicar(req, res) {
       }
 
       const actual = (await cliente.query(SELECT_PUBLICADA)).rows[0];
-      if (actual && mismoContenido(actual.contenido, contenido)) {
+      if (actual && mismoContenido(normalizarContenido(actual.contenido), contenido)) {
         return { status: 409, message: 'No hay cambios por publicar: el borrador es igual a la versión publicada.' };
       }
 
@@ -450,7 +504,8 @@ async function getPublicada(req, res) {
     // no-cache: cada visita revalida, así una publicación se ve sin reiniciar.
     res.set('Cache-Control', 'no-cache');
     if (!p) return res.json({ success: true, data: { numero: null, porDefecto: true, contenido: CONTENIDO_POR_DEFECTO, imagenes: [] } });
-    res.json({ success: true, data: { numero: p.numero, porDefecto: false, contenido: p.contenido, imagenes: await metadatosImagenes(p.contenido) } });
+    const contenido = normalizarContenido(p.contenido);
+    res.json({ success: true, data: { numero: p.numero, porDefecto: false, contenido, imagenes: await metadatosImagenes(contenido) } });
   } catch (error) {
     console.error('Error get landing pública:', error);
     res.status(500).json({ success: false, message: 'Error al obtener la landing' });
@@ -466,9 +521,11 @@ async function archivoImagenPublica(req, res) {
        WHERE i.id = $1
          AND EXISTS (
            SELECT 1
-             FROM (SELECT contenido FROM landing_version ORDER BY numero DESC LIMIT 1) v,
-                  jsonb_array_elements(v.contenido->'secciones') s
-            WHERE s->'imagenes' @> jsonb_build_array($1::int))`,
+             FROM (SELECT contenido FROM landing_version ORDER BY numero DESC LIMIT 1) v
+            WHERE EXISTS (SELECT 1 FROM jsonb_array_elements(v.contenido->'secciones') s
+                           WHERE s->'imagenes' @> jsonb_build_array($1::int))
+               OR EXISTS (SELECT 1 FROM jsonb_array_elements(COALESCE(v.contenido->'noticias', '[]'::jsonb)) n
+                           WHERE n->'imagen' = to_jsonb($1::int)))`,
       [Number(req.params.id) || 0]
     );
     if (!rows[0]) return res.status(404).json({ success: false, message: 'Imagen no encontrada' });
@@ -491,6 +548,6 @@ module.exports = {
   eliminarImagen, publicar, listarVersiones, restaurarVersion,
   getPublicada, archivoImagenPublica,
   // Expuestos para las pruebas.
-  validarContenido, limpiarTexto, detectarTipoImagen,
+  validarContenido, normalizarContenido, limpiarTexto, detectarTipoImagen,
   TIPOS_IMAGEN, IMAGEN_MAX_BYTES,
 };

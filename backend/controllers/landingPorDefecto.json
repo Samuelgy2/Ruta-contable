@@ -50,6 +50,13 @@
       "texto": "Podios, partidas y semillero. Todo el día a día del club está en @ridersclubdebmx."
     },
     {
+      "id": "noticias",
+      "visible": true,
+      "imagenes": [],
+      "titulo": "Noticias",
+      "texto": "Lo más reciente del club: competencias, resultados y anuncios."
+    },
+    {
       "id": "contacto",
       "visible": true,
       "imagenes": [],
@@ -68,5 +75,6 @@
         "etiqueta": "@ridersclubdebmx"
       }
     ]
-  }
+  },
+  "noticias": []
 }
